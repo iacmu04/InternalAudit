@@ -121,6 +121,20 @@ const app = createApp({
 
     const teamList = computed(() => teamOptions.value);
 
+    // Master_Lists Column D Dropdown for Non-Audit Days Reasons
+    const nonAuditReasonOptions = computed(() => {
+      const set = new Set();
+      masterLists.value.forEach(item => {
+        const val = item["ประเภท_เหตุผล_ไม่เข้าตรวจ"] || item["ประเภท/เหตุผล"] || item["เหตุผล_ไม่เข้าตรวจ"] || item["คอลัมน์ D"];
+        if (val && String(val).trim() !== "") set.add(String(val).trim());
+      });
+
+      if (set.size === 0) {
+        ["ติดประชุมมหาวิทยาลัย", "อบรม/สัมมนา", "วันหยุดนักขัตฤกษ์", "ติดภารกิจอื่น"].forEach(r => set.add(r));
+      }
+      return Array.from(set);
+    });
+
     // CTS Cycle Options strictly from Master_Lists Column C
     const ctsCycleOptions = computed(() => {
       const set = new Set();
@@ -298,14 +312,36 @@ const app = createApp({
       })).sort((a,b) => a.teamName.localeCompare(b.teamName));
     });
 
-    // Extension Request Summary Counts (Global)
-    const pendingCounts = computed(() => countPendingRequests(delayList.value));
-    const pendingSupervisorCount = computed(() => pendingCounts.value.supervisorCount);
-    const pendingDirectorCount = computed(() => pendingCounts.value.directorCount);
-
+    // Accessible delay list by current user role
     const accessibleDelayList = computed(() => {
       return filterDelayListByRole(delayList.value, currentUser.value);
     });
+
+    // Extension Request Summary Counts (Global & Accessible)
+    const pendingCounts = computed(() => {
+      const listToCount = delayList.value.length > 0 ? delayList.value : accessibleDelayList.value;
+      return countPendingRequests(listToCount);
+    });
+    const pendingSupervisorCount = computed(() => pendingCounts.value.supervisorCount);
+    const pendingDirectorCount = computed(() => pendingCounts.value.directorCount);
+
+    // Dynamic Non_Audit_Days functions inside Audit Form
+    const addNonAuditDateRow = () => {
+      if (!auditForm.value.nonAuditDays) {
+        auditForm.value.nonAuditDays = [];
+      }
+      auditForm.value.nonAuditDays.push({
+        date: "",
+        reason: nonAuditReasonOptions.value[0] || "ติดประชุมมหาวิทยาลัย",
+        details: ""
+      });
+    };
+
+    const removeNonAuditDateRow = (index) => {
+      if (auditForm.value.nonAuditDays && auditForm.value.nonAuditDays.length > index) {
+        auditForm.value.nonAuditDays.splice(index, 1);
+      }
+    };
 
     // Config Modal Actions
     const openConfigModal = () => {
@@ -350,7 +386,7 @@ const app = createApp({
     const openAuditModal = (rowToEdit = null) => {
       if (rowToEdit) {
         editingRowIndex.value = rowToEdit._rowIndex;
-        auditForm.value = populateAuditFormFromRow(rowToEdit);
+        auditForm.value = populateAuditFormFromRow(rowToEdit, nonAuditDaysList.value);
       } else {
         editingRowIndex.value = null;
         auditForm.value = createInitialAuditFormState();
@@ -383,6 +419,24 @@ const app = createApp({
       }
 
       if (!handleApiResponse(res)) return;
+
+      // Update local nonAuditDaysList for calculation
+      if (Array.isArray(auditForm.value.nonAuditDays)) {
+        // Filter out existing entries for this department
+        const updatedList = nonAuditDaysList.value.filter(item => String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase() !== deptName.trim().toLowerCase());
+        auditForm.value.nonAuditDays.forEach(entry => {
+          if (entry.date) {
+            updatedList.push({
+              "ส่วนงาน": deptName,
+              "วันที่": entry.date,
+              "ประเภท": entry.reason,
+              "สาเหตุ/หมายเหตุ": entry.reason,
+              "รายละเอียด": entry.details
+            });
+          }
+        });
+        nonAuditDaysList.value = updatedList;
+      }
 
       showAuditModal.value = false;
       await loadData();
@@ -536,6 +590,7 @@ const app = createApp({
       departmentOptions,
       teamOptions,
       teamList,
+      nonAuditReasonOptions,
       ctsCycleOptions,
       supervisorOptions,
       selectedFiscalYear,
@@ -576,6 +631,8 @@ const app = createApp({
       editingRowIndex,
       delayForm,
       isEditingDelay,
+      addNonAuditDateRow,
+      removeNonAuditDateRow,
       openAuditModal,
       submitAuditForm,
       openDelayModal,
@@ -588,7 +645,8 @@ const app = createApp({
       openEditManagerModal,
       openLoginModal,
       selectUser,
-      formatDateDMY
+      formatDateDMY,
+      getDelayFields
     };
   }
 });

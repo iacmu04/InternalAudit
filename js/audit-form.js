@@ -19,14 +19,15 @@ function createInitialAuditFormState() {
     "ครั้งที่ประชุม_คตส": "",
     "วันที่หน่วยรับตรวจชี้แจง": "",
     "วันที่เสนออธิการบดี_ชี้แจง": "",
-    "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์": ""
+    "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์": "",
+    "nonAuditDays": []
   };
 }
 
-function populateAuditFormFromRow(row) {
+function populateAuditFormFromRow(row, existingNonAuditList = []) {
   const form = createInitialAuditFormState();
   Object.keys(form).forEach(key => {
-    if (row[key]) {
+    if (key !== "nonAuditDays" && row[key]) {
       form[key] = formatISODate(row[key]);
     }
   });
@@ -34,5 +35,19 @@ function populateAuditFormFromRow(row) {
   form["ปีงบประมาณ"] = row["ปีงบประมาณ"] || "2569";
   form["ทีม"] = String(row["ทีม"] || "1");
   form["ครั้งที่ประชุม_คตส"] = row["ครั้งที่ประชุม_คตส"] || "";
+
+  // Load existing non-audit days for this unit
+  if (Array.isArray(existingNonAuditList) && form["ส่วนงาน"]) {
+    const deptClean = String(form["ส่วนงาน"]).trim().toLowerCase();
+    form.nonAuditDays = existingNonAuditList.filter(item => {
+      const itemDept = String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase();
+      return itemDept === deptClean;
+    }).map(item => ({
+      date: formatISODate(item["วันที่"] || item.date),
+      reason: item["ประเภท"] || item["สาเหตุ/หมายเหตุ"] || item.reason || "ติดประชุมมหาวิทยาลัย",
+      details: item["รายละเอียด"] || item.details || ""
+    }));
+  }
+
   return form;
 }

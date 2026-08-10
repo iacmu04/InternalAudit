@@ -14,6 +14,33 @@ function getDelayStatus(item) {
   return String(item.Status || item.status || "").trim();
 }
 
+function getDelayFields(item) {
+  if (!item) {
+    return { department: "ไม่ระบุส่วนงาน", requestor: "ไม่ระบุผู้ขอ", email: "", supervisor: "ไม่ระบุหัวหน้างาน", status: "รอพิจารณา" };
+  }
+
+  let department = item.Department || item.department || item["ส่วนงาน"] || item["หน่วยงาน"] || "";
+  let requestor = item.Requestor || item.requestor || item["ผู้ขอ"] || item.Name || item.name || "";
+  let email = item.Email || item.email || item["อีเมล"] || "";
+  let supervisor = item["Supervisor Name"] || item.supervisorName || item["หัวหน้างาน"] || "";
+  let status = getDelayStatus(item);
+
+  // Fix field swap edge cases: if department is "Team 2" / "Pui" and requestor is "กองพัฒนานักศึกษา" / "คณะเกษตรศาสตร์"
+  if (department && (department.toLowerCase().startsWith("team") || department === "Pui") && requestor && !requestor.toLowerCase().startsWith("team")) {
+    const temp = department;
+    department = requestor;
+    requestor = temp;
+  }
+
+  return {
+    department: department || "ไม่ระบุส่วนงาน",
+    requestor: requestor || "ไม่ระบุผู้ขอ",
+    email: email,
+    supervisor: supervisor || "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)",
+    status: status || "รอพิจารณา"
+  };
+}
+
 function filterDelayListByRole(delayList, currentUser) {
   if (!Array.isArray(delayList)) return [];
 
@@ -44,13 +71,26 @@ function countPendingRequests(delayList) {
 
   if (Array.isArray(delayList)) {
     delayList.forEach(item => {
-      const status = getDelayStatus(item);
-      if (status.includes("รอพิจารณา") || status.includes("หัวหน้า")) {
-        supervisorCount++;
-      } else if (status.includes("รออนุมัติ") || status.includes("ผู้อำนวยการ") || status.includes("ผอ.")) {
+      let status = getDelayStatus(item);
+      if (!status) {
+        for (let k in item) {
+          const val = String(item[k]);
+          if (val.includes("รอพิจารณา") || val.includes("รออนุมัติ")) {
+            status = val;
+            break;
+          }
+        }
+      }
+
+      if (status.includes("รออนุมัติ") || status.includes("ผู้อำนวยการ") || status.includes("ผอ.")) {
         directorCount++;
-      } else if (!status || status === "รอพิจารณา") {
+      } else if (status.includes("รอพิจารณา") || status.includes("หัวหน้า") || !status || status === "รอพิจารณา") {
         supervisorCount++;
+      } else {
+        const lower = status.toLowerCase();
+        if (!lower.includes("อนุมัติแล้ว") && !lower.includes("ตีกลับ") && !lower.includes("ยกเลิก") && !lower.includes("ไม้อนุมัติ")) {
+          supervisorCount++;
+        }
       }
     });
   }
