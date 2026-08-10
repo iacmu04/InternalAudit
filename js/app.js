@@ -27,6 +27,7 @@ const app = createApp({
     const selectedFiscalYear = ref("ALL");
     const selectedTeam = ref("ALL");
     const selectedPhase = ref("ALL");
+    const selectedCtsCycle = ref("ALL");
     const searchQuery = ref("");
 
     // Manager Modal Filters
@@ -129,9 +130,6 @@ const app = createApp({
         if (val && String(val).trim() !== "") set.add(String(val).trim());
       });
 
-      if (set.size === 0) {
-        ["ติดประชุมมหาวิทยาลัย", "อบรม/สัมมนา", "วันหยุดนักขัตฤกษ์", "ติดภารกิจอื่น"].forEach(r => set.add(r));
-      }
       return Array.from(set);
     });
 
@@ -215,6 +213,10 @@ const app = createApp({
         }
       }
 
+      if (selectedCtsCycle.value !== "ALL") {
+        list = list.filter(u => u.raw["ครั้งที่ประชุม_คตส"] === selectedCtsCycle.value || u.raw["รอบประชุม_คตส"] === selectedCtsCycle.value || String(u.ctsCycle) === selectedCtsCycle.value);
+      }
+
       if (searchQuery.value.trim() !== "") {
         const q = searchQuery.value.toLowerCase().trim();
         list = list.filter(u => u.name.toLowerCase().includes(q) || u.team.includes(q));
@@ -257,6 +259,7 @@ const app = createApp({
       return selectedFiscalYear.value !== "ALL" ||
              selectedTeam.value !== "ALL" ||
              selectedPhase.value !== "ALL" ||
+             selectedCtsCycle.value !== "ALL" ||
              searchQuery.value !== "";
     });
 
@@ -264,6 +267,7 @@ const app = createApp({
       selectedFiscalYear.value = "ALL";
       selectedTeam.value = "ALL";
       selectedPhase.value = "ALL";
+      selectedCtsCycle.value = "ALL";
       searchQuery.value = "";
     };
 
@@ -560,6 +564,31 @@ const app = createApp({
 
     const allAuditUnits = computed(() => rawAuditList.value);
 
+    const calculateExtensionDays = (item) => {
+      const startDate = item['Start Date'] || item.startDate;
+      const endDate = item['End Date'] || item.endDate;
+      if (!startDate || !endDate) return null;
+      
+      const dept = getDelayFields(item).department;
+      const result = calculateActualAuditDays(startDate, endDate, dept, holidaysList.value, nonAuditDaysList.value);
+      return result;
+    };
+
+    const warningDeptsList = computed(() => {
+      return filteredUnits.value.filter(u => {
+        const dateJ = u.raw['วันที่ปิดตรวจ'];
+        const dateN = u.raw['วันที่เสนอ_คตส'];
+        if (!dateJ || dateN) return false;
+        
+        const daysSinceClose = dateDiffInDays(dateJ, new Date());
+        return daysSinceClose !== null && daysSinceClose >= 50;
+      }).map(u => ({
+        name: u.name,
+        team: u.team,
+        daysSinceClose: dateDiffInDays(u.raw['วันที่ปิดตรวจ'], new Date())
+      }));
+    });
+
     // Watchers to trigger Chart re-render
     watch(phaseChartStats, (newStats) => {
       nextTick(() => {
@@ -596,6 +625,7 @@ const app = createApp({
       selectedFiscalYear,
       selectedTeam,
       selectedPhase,
+      selectedCtsCycle,
       searchQuery,
       editSearchQuery,
       editSelectedYear,
@@ -645,6 +675,9 @@ const app = createApp({
       openEditManagerModal,
       openLoginModal,
       selectUser,
+      dateDiffInDays,
+      calculateExtensionDays,
+      warningDeptsList,
       formatDateDMY,
       getDelayFields
     };

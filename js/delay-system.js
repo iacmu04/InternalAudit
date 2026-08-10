@@ -71,32 +71,15 @@ function countPendingRequests(delayList) {
 
   if (Array.isArray(delayList)) {
     delayList.forEach(item => {
-      let status = getDelayStatus(item);
-      if (!status) {
-        for (let k in item) {
-          const val = String(item[k]);
-          if (val.includes("รอพิจารณา") || val.includes("รออนุมัติ")) {
-            status = val;
-            break;
-          }
-        }
-      }
-
-      if (status.includes("รออนุมัติ") || status.includes("ผู้อำนวยการ") || status.includes("ผอ.")) {
-        directorCount++;
-      } else if (status.includes("รอพิจารณา") || status.includes("หัวหน้า") || !status || status === "รอพิจารณา") {
+      const status = getDelayStatus(item);
+      if (status.includes('รอพิจารณา') || status.includes('ค้างอยู่ที่หัวหน้า')) {
         supervisorCount++;
-      } else {
-        const lower = status.toLowerCase();
-        if (!lower.includes("อนุมัติแล้ว") && !lower.includes("ตีกลับ") && !lower.includes("ยกเลิก") && !lower.includes("ไม้อนุมัติ")) {
-          supervisorCount++;
-        }
+      } else if (status.includes('รออนุมัติ') || status.includes('ค้างอยู่ที่ผู้อำนวยการ')) {
+        directorCount++;
       }
+      // Do NOT count อนุมัติแล้ว, ไม้อนุมัติ, ตีกลับ, ขอยกเลิก
     });
   }
 
-  return {
-    supervisorCount,
-    directorCount
-  };
+  return { supervisorCount, directorCount };
 }
