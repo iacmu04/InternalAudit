@@ -6,10 +6,13 @@
 const SPREADSHEET_ID = "1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw";
 
 function getSpreadsheet() {
-  if (SPREADSHEET_ID) {
-    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  try {
+    const active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (e) {
+    // If not container bound, open by ID
   }
-  return SpreadsheetApp.getActiveSpreadsheet();
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
 }
 
 function doGet(e) {
@@ -28,7 +31,11 @@ function doGet(e) {
       responseData = getAllData(ss);
     }
   } catch (err) {
-    responseData = { status: "error", message: err.toString() };
+    responseData = { 
+      status: "error", 
+      message: err.toString(),
+      hint: "หากพบข้อผิดพลาดสิทธิ์สเปรดชีต ให้กดเรียกใช้ (Run) ฟังก์ชัน getAllData ใน Apps Script Editor 1 ครั้งเพื่อกดยอมรับอนุญาตสิทธิ์ (Grant Access)"
+    };
   }
 
   return ContentService.createTextOutput(JSON.stringify(responseData))
@@ -72,7 +79,11 @@ function doPost(e) {
       responseData = { status: "error", message: "Unknown action: " + action };
     }
   } catch (err) {
-    responseData = { status: "error", message: err.toString() };
+    responseData = { 
+      status: "error", 
+      message: err.toString(),
+      hint: "หากพบข้อผิดพลาดสิทธิ์สเปรดชีต ให้กดเรียกใช้ (Run) ฟังก์ชัน getAllData ใน Apps Script Editor 1 ครั้งเพื่อกดยอมรับอนุญาตสิทธิ์ (Grant Access)"
+    };
   }
 
   return ContentService.createTextOutput(JSON.stringify(responseData))
