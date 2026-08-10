@@ -35,6 +35,11 @@ const app = createApp({
     const showApprovalDrawer = ref(false);
     const showLoginModal = ref(false);
     const showEditManagerModal = ref(false);
+    const showConfigModal = ref(false);
+
+    // Google Apps Script API Connection
+    const apiUrlInput = ref(API.getApiUrl());
+    const isApiConnected = computed(() => !!API.getApiUrl());
 
     // Form States
     const auditForm = ref(createInitialAuditFormState());
@@ -65,8 +70,7 @@ const app = createApp({
           holidaysList.value = data.holidays || [];
           nonAuditDaysList.value = data.nonAuditDays || [];
 
-          // If current logged-in user is default, match with Users sheet if available
-          if (userList.value.length > 0) {
+          if (userList.value.length > 0 && !currentUser.value.email) {
             const adminUser = userList.value.find(u => (u.Role || "").toLowerCase() === "admin") || userList.value[0];
             if (adminUser && adminUser.Email) {
               currentUser.value = {
@@ -140,7 +144,6 @@ const app = createApp({
     const filteredUnits = computed(() => {
       let list = dashboardResult.value.units;
 
-      // Role-based access filtering
       if (currentUser.value.role !== "Admin" && currentUser.value.role !== "Dean") {
         const userTeam = String(currentUser.value.team);
         const auth = String(currentUser.value.authorize);
@@ -251,6 +254,45 @@ const app = createApp({
       return filterDelayListByRole(delayList.value, currentUser.value);
     });
 
+    // Config Modal Actions
+    const openConfigModal = () => {
+      apiUrlInput.value = API.getApiUrl();
+      showConfigModal.value = true;
+    };
+
+    const saveConfigUrl = async () => {
+      if (!apiUrlInput.value.trim()) {
+        alert("กรุณากรอก Web App URL");
+        return;
+      }
+      API.setApiUrl(apiUrlInput.value);
+      showConfigModal.value = false;
+      await loadData();
+      alert("เชื่อมต่อ Google Apps Script เรียบร้อยแล้ว! ข้อมูลใหม่จะถูกบันทึกลงใน Google Sheet ทันที");
+    };
+
+    const clearConfigUrl = async () => {
+      API.setApiUrl("");
+      apiUrlInput.value = "";
+      showConfigModal.value = false;
+      await loadData();
+      alert("ยกเลิกการเชื่อมต่อเรียบร้อยแล้ว");
+    };
+
+    // Helper for checking write response
+    const handleApiResponse = (res) => {
+      if (res && res.status === "need_config") {
+        alert("กรุณาเชื่อมต่อ Web App URL จาก Google Apps Script เพื่อบันทึกลง Google Sheet จริง");
+        openConfigModal();
+        return false;
+      }
+      if (res && res.status === "error") {
+        alert("เกิดข้อผิดพลาดในการบันทึก: " + res.message);
+        return false;
+      }
+      return true;
+    };
+
     // Modal Actions
     const openAuditModal = (rowToEdit = null) => {
       if (rowToEdit) {
@@ -280,15 +322,18 @@ const app = createApp({
         return;
       }
 
+      let res;
       if (editingRowIndex.value) {
-        await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: auditForm.value });
+        res = await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: auditForm.value });
       } else {
-        await API.postAction("saveAuditEntry", { data: auditForm.value });
+        res = await API.postAction("saveAuditEntry", { data: auditForm.value });
       }
+
+      if (!handleApiResponse(res)) return;
 
       showAuditModal.value = false;
       await loadData();
-      alert("บันทึกข้อมูลเรียบร้อยแล้ว");
+      alert(res.message || "บันทึกข้อมูลเรียบร้อยแล้ว");
     };
 
     const openDelayModal = () => {
@@ -315,15 +360,18 @@ const app = createApp({
         supervisorName: delayForm.value.supervisorName
       };
 
+      let res;
       if (isEditingDelay.value && editingDelayIndex.value) {
-        await API.postAction("resubmitExtension", { id: editingDelayIndex.value, data: payload });
+        res = await API.postAction("resubmitExtension", { id: editingDelayIndex.value, data: payload });
       } else {
-        await API.postAction("submitExtension", { data: payload });
+        res = await API.postAction("submitExtension", { data: payload });
       }
+
+      if (!handleApiResponse(res)) return;
 
       showDelayModal.value = false;
       await loadData();
-      alert("เสนอขอขยายเวลาเรียบร้อยแล้ว");
+      alert(res.message || "เสนอขอขยายเวลาเรียบร้อยแล้ว");
     };
 
     const editAndResubmitDelay = (item) => {
@@ -342,35 +390,38 @@ const app = createApp({
 
     const cancelDelayRequest = async (rowIndex) => {
       if (confirm("คุณต้องการยกเลิกคำขอขยายเวลานี้ใช่หรือไม่?")) {
-        await API.postAction("cancelExtension", { id: rowIndex, userEmail: currentUser.value.email });
+        const res = await API.postAction("cancelExtension", { id: rowIndex, userEmail: currentUser.value.email });
+        if (!handleApiResponse(res)) return;
         await loadData();
       }
     };
 
     const processApproval = async (rowIndex, actionStatus) => {
-      await API.postAction("processApproval", {
+      const res = await API.postAction("processApproval", {
         id: rowIndex,
         status: actionStatus,
         comment: "",
         userEmail: currentUser.value.email,
         userRole: currentUser.value.role
       });
+      if (!handleApiResponse(res)) return;
       await loadData();
-      alert("ดำเนินการเรียบร้อยแล้ว");
+      alert(res.message || "ดำเนินการเรียบร้อยแล้ว");
     };
 
     const promptReject = async (rowIndex) => {
       const reason = prompt("กรุณาระบุเหตุผลการตีกลับ / ไม้อนุมัติ:");
       if (reason !== null) {
-        await API.postAction("processApproval", {
+        const res = await API.postAction("processApproval", {
           id: rowIndex,
           status: "rejected",
           comment: reason,
           userEmail: currentUser.value.email,
           userRole: currentUser.value.role
         });
+        if (!handleApiResponse(res)) return;
         await loadData();
-        alert("ดำเนินการตีกลับเรียบร้อยแล้ว");
+        alert(res.message || "ดำเนินการตีกลับเรียบร้อยแล้ว");
       }
     };
 
@@ -414,7 +465,7 @@ const app = createApp({
       });
     });
 
-    watch([filteredUnits, showApprovalDrawer, showAuditModal, showDelayModal], () => {
+    watch([filteredUnits, showApprovalDrawer, showAuditModal, showDelayModal, showConfigModal], () => {
       nextTick(() => {
         if (window.lucide) lucide.createIcons();
       });
@@ -454,6 +505,12 @@ const app = createApp({
       showApprovalDrawer,
       showLoginModal,
       showEditManagerModal,
+      showConfigModal,
+      apiUrlInput,
+      isApiConnected,
+      openConfigModal,
+      saveConfigUrl,
+      clearConfigUrl,
       auditForm,
       newDepartmentInput,
       editingRowIndex,

@@ -1,10 +1,21 @@
 /**
- * API Bridge for Google Apps Script Backend + Live Google Sheet CSV Fetcher
+ * API Bridge for Google Apps Script Backend + Live Google Sheet Data
  * Spreadsheet ID: 1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw
  */
 
-let APPS_SCRIPT_URL = ""; 
 const SPREADSHEET_ID = "1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw";
+
+function getStoredApiUrl() {
+  return localStorage.getItem("APPS_SCRIPT_URL") || "";
+}
+
+function setStoredApiUrl(url) {
+  if (url) {
+    localStorage.setItem("APPS_SCRIPT_URL", url.trim());
+  } else {
+    localStorage.removeItem("APPS_SCRIPT_URL");
+  }
+}
 
 function parseCSV(csvText) {
   if (!csvText) return [];
@@ -52,7 +63,7 @@ function parseCSV(csvText) {
 }
 
 async function fetchLiveSheetCSV(sheetName) {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
@@ -65,18 +76,25 @@ async function fetchLiveSheetCSV(sheetName) {
 }
 
 class API {
+  static getApiUrl() {
+    return getStoredApiUrl();
+  }
+
   static setApiUrl(url) {
-    APPS_SCRIPT_URL = url;
+    setStoredApiUrl(url);
   }
 
   static async fetchInitialData() {
-    if (APPS_SCRIPT_URL) {
+    const apiUrl = getStoredApiUrl();
+    if (apiUrl) {
       try {
-        const res = await fetch(`${APPS_SCRIPT_URL}?action=getInitialData`);
+        const res = await fetch(`${apiUrl}?action=getInitialData&t=${Date.now()}`);
         const json = await res.json();
-        if (json.status === "success") return json;
+        if (json && json.status === "success") {
+          return json;
+        }
       } catch (err) {
-        console.warn("Backend API fetch failed, falling back to direct Google Sheet fetching:", err);
+        console.warn("Backend Web App fetch failed, falling back to direct GViz CSV:", err);
       }
     }
 
@@ -90,14 +108,12 @@ class API {
       fetchLiveSheetCSV("Delay")
     ]);
 
-    // Standardize masterLists keys
     const masterLists = masterListsRaw.map(r => ({
       "ส่วนงาน": r["รายชื่อส่วนงาน"] || r["ส่วนงาน"] || "",
       "ทีม": r["รายชื่อทีม"] || r["ทีม"] || "",
       "ครั้งที่ประชุม_คตส": r["รอบประชุม_คตส"] || r["ครั้งที่ประชุม_คตส"] || r["ครั้งที่ประชุม คตส."] || ""
     }));
 
-    // Standardize users keys
     const users = usersRaw.map(r => {
       const keys = Object.keys(r);
       return {
@@ -121,13 +137,16 @@ class API {
   }
 
   static async postAction(action, payload) {
-    if (!APPS_SCRIPT_URL) {
-      console.warn(`No APPS_SCRIPT_URL configured. Action ${action} performed locally.`, payload);
-      return { status: "success", message: "ดำเนินการเรียบร้อยแล้ว (โปรดเชื่อมต่อ Google Apps Script URL เพื่อเขียนลง Google Sheet ถาวร)" };
+    const apiUrl = getStoredApiUrl();
+    if (!apiUrl) {
+      return { 
+        status: "need_config", 
+        message: "กรุณาเชื่อมต่อ Web App URL ของ Google Apps Script ก่อนส่งข้อมูลลง Google Sheet" 
+      };
     }
 
     try {
-      const res = await fetch(APPS_SCRIPT_URL, {
+      const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action, ...payload })

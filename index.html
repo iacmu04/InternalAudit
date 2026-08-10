@@ -13,110 +13,142 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Custom Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Custom Styles -->
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800">
+<body class="min-h-screen text-slate-800">
 
 <div id="app" class="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
 
     <!-- Header Bar -->
-    <header class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div class="flex items-center gap-3">
-            <div class="p-3 bg-sky-600 text-white rounded-xl shadow-md shadow-sky-600/20">
-                <i data-lucide="shield-check" class="w-7 h-7"></i>
+    <header class="glass-card rounded-2xl p-5 border border-slate-200/90 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="flex items-center gap-3.5">
+            <div class="p-3.5 bg-gradient-to-br from-sky-500 to-indigo-600 text-white rounded-2xl shadow-lg shadow-sky-500/25">
+                <i data-lucide="shield-check" class="w-8 h-8"></i>
             </div>
             <div>
-                <h1 class="text-xl md:text-2xl font-bold text-slate-800 leading-tight">
+                <h1 class="text-xl md:text-2xl font-black text-slate-900 leading-tight tracking-tight">
                     ระบบติดตามงานตรวจสอบและขอขยายระยะเวลา
                 </h1>
-                <p class="text-xs md:text-sm text-slate-500 mt-0.5">
-                    สำนักงานการตรวจสอบภายใน | ติดตามสถานะ คุมระยะเวลา และขอขยายเวลาออนไลน์ Real-time
+                <p class="text-xs md:text-sm text-slate-500 mt-1 font-semibold flex items-center gap-2 flex-wrap">
+                    <span>สำนักงานการตรวจสอบภายใน</span>
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                    <span :class="isApiConnected ? 'text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200' : 'text-amber-700 font-bold flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200'">
+                        <span class="w-2 h-2 rounded-full dot-pulse" :class="isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'"></span>
+                        {{ isApiConnected ? 'เชื่อมต่อ Google Sheet Real-time' : 'โหมดอ่านสดจาก Google Sheet (อ่านได้อย่างเดียว)' }}
+                    </span>
                 </p>
             </div>
         </div>
 
-        <!-- Right Side: User Profile & Main 3 Action Buttons -->
+        <!-- Right Side: User Profile & 3 Main Action Buttons + Google Sheet Setup -->
         <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
             <!-- User Status Badge -->
-            <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
-                <i data-lucide="user" class="w-4 h-4 text-sky-600"></i>
+            <div class="flex items-center gap-2 bg-slate-100/90 px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                <i data-lucide="user-check" class="w-4 h-4 text-sky-600"></i>
                 <div>
-                    <span class="font-bold text-slate-800">{{ currentUser.name }}</span>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-semibold ml-1">{{ currentUser.role }}</span>
+                    <span class="font-bold text-slate-900">{{ currentUser.name }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-sky-100 text-sky-800 font-black ml-1">{{ currentUser.role }}</span>
                 </div>
-                <button @click="openLoginModal" class="ml-1 text-slate-400 hover:text-sky-600" title="สลับผู้ใช้งาน">
-                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                <button @click="openLoginModal" class="ml-1 text-slate-400 hover:text-sky-600 p-1 rounded-md hover:bg-slate-200/60" title="สลับผู้ใช้งาน">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
                 </button>
             </div>
 
+            <!-- Google Sheet Web App Connect Button -->
+            <button @click="openConfigModal" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all shadow-2xs"
+                    :class="isApiConnected ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600 animate-pulse'">
+                <i data-lucide="link-2" class="w-4 h-4"></i>
+                <span>{{ isApiConnected ? '⚙️ ตั้งค่าเชื่อมต่อ Google Sheet' : '⚙️ เชื่อมต่อ Google Sheet API (บันทึกข้อมูล)' }}</span>
+            </button>
+
             <!-- 3 Main Action Buttons -->
-            <button @click="openAuditModal()" class="btn-action-primary flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-xl transition-all">
+            <button @click="openAuditModal()" class="btn-action-primary flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl transition-all">
                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
                 <span>เพิ่มข้อมูลการตรวจสอบ</span>
             </button>
 
-            <button @click="openDelayModal()" class="btn-action-warning flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-xl transition-all">
+            <button @click="openDelayModal()" class="btn-action-warning flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl transition-all">
                 <i data-lucide="clock" class="w-4 h-4"></i>
                 <span>ขอขยายระยะเวลาการตรวจสอบ</span>
             </button>
 
-            <button @click="openEditManagerModal()" class="btn-action-secondary flex items-center gap-1.5 px-3.5 py-2 text-xs md:text-sm font-semibold rounded-xl transition-all">
+            <button @click="openEditManagerModal()" class="btn-action-secondary flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl transition-all">
                 <i data-lucide="edit-3" class="w-4 h-4"></i>
                 <span>แก้ไขข้อมูล</span>
             </button>
         </div>
     </header>
 
-    <!-- Global Extension Requests Summary Banner (Visible to ALL roles) -->
-    <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <!-- Alert Banner when API is NOT connected -->
+    <div v-if="!isApiConnected" class="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white rounded-2xl p-4 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div class="flex items-center gap-3">
-            <div class="p-2.5 bg-amber-500 text-white rounded-xl shadow-xs">
-                <i data-lucide="alert-circle" class="w-6 h-6"></i>
+            <div class="p-2.5 bg-white/20 rounded-xl backdrop-blur-md">
+                <i data-lucide="alert-triangle" class="w-6 h-6 text-amber-100"></i>
             </div>
             <div>
-                <h3 class="text-sm font-bold text-amber-950 flex items-center gap-2">
+                <h3 class="text-sm font-extrabold flex items-center gap-2">
+                    ยังไม่ได้ตั้งค่า Web App URL สำหรับเขียนลง Google Sheet
+                </h3>
+                <p class="text-xs text-amber-100 mt-0.5 font-medium">
+                    ระบบดึงข้อมูลมาแสดงบน Dashboard ได้ปกติ หากต้องการให้ปุ่มเพิ่ม/แก้ไขบันทึกลงไฟล์ Google Sheet จริง ให้ตั้งค่า Web App URL
+                </p>
+            </div>
+        </div>
+        <button @click="openConfigModal" class="px-4 py-2 bg-white text-amber-800 text-xs font-black rounded-xl hover:bg-amber-50 shadow-md transition-all shrink-0">
+            วิธีตั้งค่าการเชื่อมต่อ (3 ขั้นตอน) &rarr;
+        </button>
+    </div>
+
+    <!-- Global Extension Requests Summary Banner -->
+    <div class="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border border-amber-200/90 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 glass-card">
+        <div class="flex items-center gap-3.5">
+            <div class="p-2.5 bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl shadow-sm">
+                <i data-lucide="bell" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-extrabold text-amber-950 flex items-center gap-2">
                     สรุปรายการขอขยายระยะเวลาการตรวจสอบในระบบ
                 </h3>
-                <p class="text-xs text-amber-800 mt-0.5">
-                    ผู้ใช้งานทุกคนสามารถดูจำนวนรวมรายการที่อยู่ระหว่างรอพิจารณาและรออนุมัติได้
+                <p class="text-xs text-amber-900/80 mt-0.5 font-medium">
+                    แสดงจำนวนรวมคำขอขยายเวลาที่อยู่ระหว่างดำเนินการพิจารณาและอนุมัติ (ทุกคนเห็นตัวเลขสรุปรวม)
                 </p>
             </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <!-- Count 1: รอพิจารณา (หัวหน้างาน) -->
-            <div class="bg-white px-3.5 py-2 rounded-xl border border-amber-200/80 shadow-2xs flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+            <div class="bg-white/95 px-4 py-2 rounded-xl border border-amber-200 shadow-2xs flex items-center gap-2.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 dot-pulse"></span>
                 <div class="text-xs">
-                    <span class="text-slate-500">รอพิจารณา (ค้างที่หัวหน้างาน):</span>
-                    <strong class="text-amber-600 font-extrabold text-sm ml-1">{{ pendingSupervisorCount }}</strong>
+                    <span class="text-slate-600 font-medium">รอพิจารณา (ค้างที่หัวหน้างาน):</span>
+                    <strong class="text-amber-600 font-black text-base ml-1.5">{{ pendingSupervisorCount }}</strong>
                     <span class="text-[10px] text-slate-400 ml-0.5">รายการ</span>
                 </div>
             </div>
 
             <!-- Count 2: รออนุมัติ (ผอ.) -->
-            <div class="bg-white px-3.5 py-2 rounded-xl border border-orange-200/80 shadow-2xs flex items-center gap-2">
+            <div class="bg-white/95 px-4 py-2 rounded-xl border border-orange-200 shadow-2xs flex items-center gap-2.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
                 <div class="text-xs">
-                    <span class="text-slate-500">รออนุมัติ (ค้างที่ผู้อำนวยการ):</span>
-                    <strong class="text-orange-600 font-extrabold text-sm ml-1">{{ pendingDirectorCount }}</strong>
+                    <span class="text-slate-600 font-medium">รออนุมัติ (ค้างที่ผู้อำนวยการ):</span>
+                    <strong class="text-orange-600 font-black text-base ml-1.5">{{ pendingDirectorCount }}</strong>
                     <span class="text-[10px] text-slate-400 ml-0.5">รายการ</span>
                 </div>
             </div>
 
             <!-- Open Approval Drawer Button -->
-            <button @click="openApprovalDrawer" class="px-3.5 py-2 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-xs transition-all flex items-center gap-1.5">
-                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <button @click="openApprovalDrawer" class="px-4 py-2 text-xs font-bold bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl shadow-xs transition-all flex items-center gap-1.5">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
                 <span>ดูรายละเอียดคำขอ (ตามสิทธิ์)</span>
             </button>
         </div>
     </div>
 
     <!-- Filter Bar -->
-    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">
+    <div class="glass-card p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-1.5 text-xs font-black text-slate-600 uppercase tracking-wider mr-1">
             <i data-lucide="filter" class="w-4 h-4 text-sky-600"></i>
             ตัวกรองข้อมูล:
         </div>
@@ -124,7 +156,7 @@
         <!-- Filter: Year -->
         <div class="flex items-center gap-1.5">
             <label class="text-xs text-slate-600 font-medium">ปีงบประมาณ:</label>
-            <select v-model="selectedFiscalYear" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:ring-2 focus:ring-sky-500/20">
+            <select v-model="selectedFiscalYear" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-sky-500/20">
                 <option value="ALL">ทุกปีงบประมาณ</option>
                 <option value="2568">2568</option>
                 <option value="2569">2569</option>
@@ -137,57 +169,57 @@
         <!-- Filter: Team -->
         <div class="flex items-center gap-1.5">
             <label class="text-xs text-slate-600 font-medium">ทีม:</label>
-            <select v-model="selectedTeam" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:ring-2 focus:ring-sky-500/20">
+            <select v-model="selectedTeam" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-sky-500/20">
                 <option value="ALL">ทุกทีม</option>
-                <option v-for="team in teamList" :key="team" :value="team">ทีม {{ team }}</option>
+                <option v-for="team in teamList" :key="team" :value="team">{{ team.includes('ทีม') ? team : 'ทีม ' + team }}</option>
             </select>
         </div>
 
         <!-- Filter: Phase -->
         <div class="flex items-center gap-1.5">
             <label class="text-xs text-slate-600 font-medium">สถานะหลัก:</label>
-            <select v-model="selectedPhase" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:ring-2 focus:ring-sky-500/20">
+            <select v-model="selectedPhase" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-sky-500/20">
                 <option value="ALL">ทุกสถานะหลัก</option>
                 <option value="1.1">1.1 ก่อนเข้าตรวจ</option>
                 <option value="1.2">1.2 ระหว่างการตรวจสอบ</option>
                 <option value="1.3">1.3 รายงานผลการตรวจสอบ</option>
                 <option value="1.4">1.4 ชี้แจงผลการดำเนินงาน</option>
-                <option value="COMPLETED">เสร็จสมบูรณ์แล้ว</option>
+                <option value="COMPLETED">เสร็จสมบูรณ์แล้ว (คอลัมน์ S)</option>
             </select>
         </div>
 
         <!-- Filter: Search Query -->
-        <div class="relative flex-1 min-w-[200px]">
-            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <div class="relative flex-1 min-w-[220px]">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
             <input type="text" v-model="searchQuery" placeholder="ค้นหาส่วนงาน..." 
-                   class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-500/20 transition-all">
+                   class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-xl font-semibold focus:ring-2 focus:ring-sky-500/20 transition-all">
         </div>
 
-        <button v-if="hasActiveFilters" @click="resetFilters" class="text-xs text-sky-600 hover:text-sky-800 font-medium flex items-center gap-1 py-1 px-2 hover:bg-sky-50 rounded-md">
+        <button v-if="hasActiveFilters" @click="resetFilters" class="text-xs text-sky-600 hover:text-sky-800 font-bold flex items-center gap-1 py-1.5 px-2.5 hover:bg-sky-50 rounded-xl transition-all">
             <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> ล้างตัวกรอง
         </button>
     </div>
 
-    <!-- Overview Progress & Status Distribution Graph -->
-    <section class="w-full bg-white rounded-2xl p-5 md:p-6 border border-slate-200/80 shadow-sm space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+    <!-- Overview Progress Graph -->
+    <section class="w-full glass-card rounded-2xl p-5 md:p-6 border border-slate-200/90 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
             <div>
-                <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                <h2 class="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="bar-chart-3" class="w-5 h-5 text-sky-600"></i>
                     กราฟแสดงจำนวนส่วนงานในแต่ละสถานะหลัก (อัตราร้อยละความคืบหน้า)
                 </h2>
-                <p class="text-xs text-slate-500 mt-0.5">
+                <p class="text-xs text-slate-500 mt-0.5 font-medium">
                     สัดส่วนงานดำเนินการเสร็จสิ้นสมบูรณ์ {{ overallCompletionRate }}% จากทั้งหมด {{ filteredUnits.length }} ส่วนงาน
                 </p>
             </div>
 
             <!-- Overall Completion Rate Pill -->
-            <div class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl">
+            <div class="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-emerald-100/70 border border-emerald-300 px-4 py-2.5 rounded-2xl shadow-2xs">
                 <div class="text-right">
-                    <div class="text-[10px] text-emerald-800 font-medium uppercase">ดำเนินการเสร็จสิ้น (คอลัมน์ S)</div>
-                    <div class="text-lg font-extrabold text-emerald-700 leading-none mt-0.5">{{ completedUnitsCount }} / {{ filteredUnits.length }} ส่วนงาน ({{ overallCompletionRate }}%)</div>
+                    <div class="text-[10px] text-emerald-800 font-extrabold uppercase tracking-wider">เสร็จสมบูรณ์ (คอลัมน์ S)</div>
+                    <div class="text-lg font-black text-emerald-900 leading-none mt-0.5">{{ completedUnitsCount }} / {{ filteredUnits.length }} ส่วนงาน ({{ overallCompletionRate }}%)</div>
                 </div>
-                <div class="w-10 h-10 rounded-full border-4 border-emerald-500 flex items-center justify-center font-bold text-xs text-emerald-800 bg-white">
+                <div class="w-12 h-12 rounded-full border-4 border-emerald-500 flex items-center justify-center font-black text-xs text-emerald-900 bg-white shadow-xs">
                     {{ overallCompletionRate }}%
                 </div>
             </div>
@@ -200,70 +232,70 @@
             </div>
 
             <!-- Stats Breakdown Card -->
-            <div class="lg:col-span-1 space-y-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/70 w-full">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">สรุปตามสถานะหลัก</h3>
+            <div class="lg:col-span-1 space-y-2.5 bg-slate-50/90 p-4 rounded-2xl border border-slate-200/90 w-full">
+                <h3 class="text-xs font-black uppercase tracking-wider text-slate-500 mb-2.5">สรุปรายสถานะหลัก</h3>
                 
-                <div v-for="st in phaseChartStats" :key="st.key" class="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center shadow-2xs">
-                    <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: st.color }"></span>
-                        <span class="text-xs font-semibold text-slate-700">{{ st.name }}</span>
+                <div v-for="st in phaseChartStats" :key="st.key" class="p-3 bg-white rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs" :style="{ backgroundColor: st.color }"></span>
+                        <span class="text-xs font-bold text-slate-800">{{ st.name }}</span>
                     </div>
                     <div class="flex items-baseline gap-1 shrink-0">
-                        <span class="text-sm font-extrabold text-slate-800">{{ st.count }}</span>
-                        <span class="text-[10px] text-slate-400">ส่วนงาน</span>
+                        <span class="text-base font-black text-slate-900">{{ st.count }}</span>
+                        <span class="text-[10px] text-slate-400 font-semibold">ส่วนงาน</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Section 1: สถานะการตรวจสอบล่าสุด (4 Main Color Blocks) -->
-    <section class="w-full bg-white rounded-2xl p-5 md:p-6 border border-slate-200/80 shadow-sm space-y-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+    <!-- Section 1: สถานะการตรวจสอบล่าสุด (4 Vibrant Status Blocks) -->
+    <section class="w-full glass-card rounded-2xl p-5 md:p-6 border border-slate-200/90 shadow-sm space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200/80 pb-3.5">
             <div>
-                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="layers" class="w-5 h-5 text-sky-600"></i>
-                    1. สถานะการตรวจสอบล่าสุด (จำแนกตาม 4 ขั้นตอนหลัก)
+                <h2 class="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <i data-lucide="layers" class="w-5 h-5 text-indigo-600"></i>
+                    1. สถานะการตรวจสอบล่าสุด (แยกตาม 4 ขั้นตอนหลัก)
                 </h2>
-                <p class="text-xs text-slate-500 mt-0.5">
-                    ระบบดึงข้อมูลสถานะล่าสุดโดยอ่านย้อนหลังจากคอลัมน์ S ไปทางซ้าย
+                <p class="text-xs text-slate-500 mt-0.5 font-medium">
+                    อ่านย้อนหลังจากคอลัมน์ S ไปทางซ้าย (แสดงส่วนงานในขั้นตอนล่าสุดพร้อมวันที่)
                 </p>
             </div>
-            <div class="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                <span class="inline-block w-3 h-3 rounded-full" style="background-color: #5167D7;"></span> ก่อนเข้าตรวจ
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #B086DF;"></span> ระหว่างตรวจสอบ
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #E2DCF5; border: 1px solid #aaa;"></span> รายงานผล
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #839B77;"></span> ชี้แจงผล (เสร็จ)
+            <div class="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                <span class="inline-block w-3 h-3 rounded-full" style="background-color: #5167D7;"></span> 1.1 ก่อนเข้าตรวจ (#5167D7)
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #B086DF;"></span> 1.2 ระหว่างตรวจ (#B086DF)
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #E2DCF5; border: 1px solid #999;"></span> 1.3 รายงานผล (#E2DCF5)
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #839B77;"></span> 1.4 ชี้แจงผล (#839B77)
             </div>
         </div>
 
         <div class="space-y-6 w-full">
 
-            <!-- Block 1.1: ก่อนเข้าตรวจ (Color: #5167D7) -->
-            <div class="w-full bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
-                <div class="flex items-center justify-between border-b border-indigo-200/70 pb-2.5">
-                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                        <span class="w-3.5 h-3.5 rounded-full" style="background-color: #5167D7;"></span>
-                        1.1 ก่อนเข้าตรวจ
-                    </h3>
-                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-indigo-200" style="background-color: #EBF0FF; color: #5167D7;">
-                        รวม {{ getPhaseCount('1.1') }} ส่วนงาน
+            <!-- Block 1.1: ก่อนเข้าตรวจ (#5167D7) -->
+            <div class="w-full phase-box-1-1 rounded-2xl overflow-hidden">
+                <div class="phase-header-1-1 p-3.5 px-5 flex items-center justify-between">
+                    <div class="font-extrabold text-sm flex items-center gap-2">
+                        <i data-lucide="clipboard-list" class="w-4.5 h-4.5"></i>
+                        1.1 ก่อนเข้าตรวจ (Col D, E, F)
+                    </div>
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-indigo-800 shadow-2xs">
+                        {{ getPhaseCount('1.1') }} ส่วนงาน
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                    <div v-for="sub in phaseStructure['1.1']" :key="sub.code" class="w-full bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-                        <div class="text-xs font-bold text-slate-700 mb-2 flex justify-between items-center pb-1.5 border-b border-slate-100">
-                            <span>{{ sub.title }} <span class="text-[10px] font-normal text-slate-400">({{ sub.col }})</span></span>
-                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="color: #5167D7; background-color: #EBF0FF;">{{ getUnitsByStatus(sub.col).length }}</span>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div v-for="sub in phaseStructure['1.1']" :key="sub.code" class="w-full bg-white/95 p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <div class="text-xs font-bold text-slate-800 mb-2.5 flex justify-between items-center pb-2 border-b border-slate-100">
+                            <span>{{ sub.title }} <span class="text-[10px] text-slate-400">({{ sub.col }})</span></span>
+                            <span class="text-xs font-black px-2.5 py-0.5 rounded-lg status-pill-1-1">{{ getUnitsByStatus(sub.col).length }}</span>
                         </div>
-                        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
                             <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
-                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2 text-xs rounded-lg border bg-slate-50 border-slate-200 text-slate-800">
-                                <div class="font-semibold line-clamp-1 text-slate-800">{{ u.name }}</div>
-                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center">
-                                    <span class="font-medium bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-semibold" style="color: #5167D7;">({{ u.latestDate }})</span>
+                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2.5 text-xs rounded-xl border bg-slate-50 border-slate-200 text-slate-800 hover:shadow-2xs transition-all">
+                                <div class="font-bold text-slate-900 line-clamp-1">{{ u.name }}</div>
+                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center font-medium">
+                                    <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
+                                    <span class="font-bold" style="color: #5167D7;">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -271,31 +303,31 @@
                 </div>
             </div>
 
-            <!-- Block 1.2: ระหว่างการตรวจสอบ (Color: #B086DF) -->
-            <div class="w-full bg-purple-50/50 p-4 rounded-xl border border-purple-100 space-y-3">
-                <div class="flex items-center justify-between border-b border-purple-200/70 pb-2.5">
-                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                        <span class="w-3.5 h-3.5 rounded-full" style="background-color: #B086DF;"></span>
-                        1.2 ระหว่างการตรวจสอบ
-                    </h3>
-                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-purple-200" style="background-color: #F6ECFE; color: #7b42b8;">
-                        รวม {{ getPhaseCount('1.2') }} ส่วนงาน
+            <!-- Block 1.2: ระหว่างการตรวจสอบ (#B086DF) -->
+            <div class="w-full phase-box-1-2 rounded-2xl overflow-hidden">
+                <div class="phase-header-1-2 p-3.5 px-5 flex items-center justify-between">
+                    <div class="font-extrabold text-sm flex items-center gap-2">
+                        <i data-lucide="search" class="w-4.5 h-4.5"></i>
+                        1.2 ระหว่างการตรวจสอบ (Col G, H, J)
+                    </div>
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-purple-900 shadow-2xs">
+                        {{ getPhaseCount('1.2') }} ส่วนงาน
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                    <div v-for="sub in phaseStructure['1.2']" :key="sub.code" class="w-full bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-                        <div class="text-xs font-bold text-slate-700 mb-2 flex justify-between items-center pb-1.5 border-b border-slate-100">
-                            <span>{{ sub.title }} <span class="text-[10px] font-normal text-slate-400">({{ sub.col }})</span></span>
-                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="color: #7b42b8; background-color: #F6ECFE;">{{ getUnitsByStatus(sub.col).length }}</span>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div v-for="sub in phaseStructure['1.2']" :key="sub.code" class="w-full bg-white/95 p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <div class="text-xs font-bold text-slate-800 mb-2.5 flex justify-between items-center pb-2 border-b border-slate-100">
+                            <span>{{ sub.title }} <span class="text-[10px] text-slate-400">({{ sub.col }})</span></span>
+                            <span class="text-xs font-black px-2.5 py-0.5 rounded-lg status-pill-1-2">{{ getUnitsByStatus(sub.col).length }}</span>
                         </div>
-                        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
                             <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
-                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2 text-xs rounded-lg border bg-slate-50 border-slate-200 text-slate-800">
-                                <div class="font-semibold line-clamp-1 text-slate-800">{{ u.name }}</div>
-                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center">
-                                    <span class="font-medium bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-semibold" style="color: #7b42b8;">({{ u.latestDate }})</span>
+                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2.5 text-xs rounded-xl border bg-slate-50 border-slate-200 text-slate-800 hover:shadow-2xs transition-all">
+                                <div class="font-bold text-slate-900 line-clamp-1">{{ u.name }}</div>
+                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center font-medium">
+                                    <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
+                                    <span class="font-bold text-purple-700">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -303,31 +335,31 @@
                 </div>
             </div>
 
-            <!-- Block 1.3: รายงานผลการตรวจสอบ (Color: #E2DCF5) -->
-            <div class="w-full bg-indigo-50/30 p-4 rounded-xl border border-indigo-100 space-y-3">
-                <div class="flex items-center justify-between border-b border-indigo-200/50 pb-2.5">
-                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                        <span class="w-3.5 h-3.5 rounded-full" style="background-color: #E2DCF5; border: 1px solid #aaa;"></span>
-                        1.3 รายงานผลการตรวจสอบ
-                    </h3>
-                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-indigo-200/80" style="background-color: #F5F3FB; color: #4F4B78;">
-                        รวม {{ getPhaseCount('1.3') }} ส่วนงาน
+            <!-- Block 1.3: รายงานผลการตรวจสอบ (#E2DCF5) -->
+            <div class="w-full phase-box-1-3 rounded-2xl overflow-hidden">
+                <div class="phase-header-1-3 p-3.5 px-5 flex items-center justify-between">
+                    <div class="font-extrabold text-sm flex items-center gap-2">
+                        <i data-lucide="file-check-2" class="w-4.5 h-4.5"></i>
+                        1.3 รายงานผลการตรวจสอบ (Col K, M, N)
+                    </div>
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-purple-950 shadow-2xs">
+                        {{ getPhaseCount('1.3') }} ส่วนงาน
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                    <div v-for="sub in phaseStructure['1.3']" :key="sub.code" class="w-full bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-                        <div class="text-xs font-bold text-slate-700 mb-2 flex justify-between items-center pb-1.5 border-b border-slate-100">
-                            <span>{{ sub.title }} <span class="text-[10px] font-normal text-slate-400">({{ sub.col }})</span></span>
-                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="color: #4F4B78; background-color: #F5F3FB;">{{ getUnitsByStatus(sub.col).length }}</span>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div v-for="sub in phaseStructure['1.3']" :key="sub.code" class="w-full bg-white/95 p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <div class="text-xs font-bold text-slate-800 mb-2.5 flex justify-between items-center pb-2 border-b border-slate-100">
+                            <span>{{ sub.title }} <span class="text-[10px] text-slate-400">({{ sub.col }})</span></span>
+                            <span class="text-xs font-black px-2.5 py-0.5 rounded-lg status-pill-1-3">{{ getUnitsByStatus(sub.col).length }}</span>
                         </div>
-                        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
                             <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
-                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2 text-xs rounded-lg border bg-slate-50 border-slate-200 text-slate-800">
-                                <div class="font-semibold line-clamp-1 text-slate-800">{{ u.name }}</div>
-                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center">
-                                    <span class="font-medium bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-semibold" style="color: #4F4B78;">({{ u.latestDate }})</span>
+                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2.5 text-xs rounded-xl border bg-slate-50 border-slate-200 text-slate-800 hover:shadow-2xs transition-all">
+                                <div class="font-bold text-slate-900 line-clamp-1">{{ u.name }}</div>
+                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center font-medium">
+                                    <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
+                                    <span class="font-bold" style="color: #4F4B78;">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -335,36 +367,36 @@
                 </div>
             </div>
 
-            <!-- Block 1.4: ชี้แจงผลการดำเนินงาน (Color: #839B77) -->
-            <div class="w-full bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-3">
-                <div class="flex items-center justify-between border-b border-emerald-200/70 pb-2.5">
-                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                        <span class="w-3.5 h-3.5 rounded-full" style="background-color: #839B77;"></span>
-                        1.4 ชี้แจงผลการดำเนินงาน
-                    </h3>
-                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-emerald-200" style="background-color: #EEF4EB; color: #374730;">
-                        รวม {{ getPhaseCount('1.4') }} ส่วนงาน
+            <!-- Block 1.4: ชี้แจงผลการดำเนินงาน (#839B77) -->
+            <div class="w-full phase-box-1-4 rounded-2xl overflow-hidden">
+                <div class="phase-header-1-4 p-3.5 px-5 flex items-center justify-between">
+                    <div class="font-extrabold text-sm flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4.5 h-4.5"></i>
+                        1.4 ชี้แจงผลการดำเนินงาน / เสร็จสมบูรณ์ (Col Q, R, S)
+                    </div>
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-emerald-900 shadow-2xs">
+                        {{ getPhaseCount('1.4') }} ส่วนงาน
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                    <div v-for="sub in phaseStructure['1.4']" :key="sub.code" class="w-full bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
-                        <div class="text-xs font-bold text-slate-800 mb-2 flex justify-between items-center pb-1.5 border-b border-slate-100">
-                            <span>{{ sub.title }} <span class="text-[10px] font-normal text-slate-400">({{ sub.col }})</span></span>
-                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="color: #374730; background-color: #EEF4EB;">{{ getUnitsByStatus(sub.col).length }}</span>
+                <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div v-for="sub in phaseStructure['1.4']" :key="sub.code" class="w-full bg-white/95 p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <div class="text-xs font-bold text-slate-800 mb-2.5 flex justify-between items-center pb-2 border-b border-slate-100">
+                            <span>{{ sub.title }} <span class="text-[10px] text-slate-400">({{ sub.col }})</span></span>
+                            <span class="text-xs font-black px-2.5 py-0.5 rounded-lg status-pill-1-4">{{ getUnitsByStatus(sub.col).length }}</span>
                         </div>
-                        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                        <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
                             <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
                             <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" 
-                                 class="p-2 text-xs rounded-lg border transition-all"
-                                 :class="u.isCompleted ? 'completed-unit-card font-semibold' : 'bg-slate-50 border-slate-200 text-slate-800'">
+                                 class="p-2.5 text-xs rounded-xl border transition-all hover:shadow-2xs"
+                                 :class="u.isCompleted ? 'completed-unit-card font-bold' : 'bg-slate-50 border-slate-200 text-slate-800'">
                                 <div class="flex items-center justify-between gap-1">
-                                    <span class="line-clamp-1">{{ u.name }}</span>
-                                    <i v-if="u.isCompleted" data-lucide="check-circle" class="w-3.5 h-3.5 shrink-0" style="color: #839B77;"></i>
+                                    <span class="line-clamp-1 font-bold">{{ u.name }}</span>
+                                    <i v-if="u.isCompleted" data-lucide="check-circle-2" class="w-4.5 h-4.5 shrink-0" style="color: #839B77;"></i>
                                 </div>
-                                <div class="text-[10px] mt-1 flex justify-between items-center">
-                                    <span class="font-medium bg-slate-200/80 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-bold" style="color: #374730;">({{ u.latestDate }})</span>
+                                <div class="text-[10px] mt-1 flex justify-between items-center font-medium">
+                                    <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
+                                    <span class="font-extrabold" style="color: #2D3E27;">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -378,44 +410,44 @@
     <!-- Section 3 & 4: Team Performance Averages -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- Section 3: ระยะเวลาเฉลี่ยที่แต่ละทีมใช้ในการตรวจสอบ (ข้อ 2.3) -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+        <div class="glass-card p-5 rounded-2xl border border-slate-200/90 shadow-sm space-y-3">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
-                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="users" class="w-4 h-4 text-sky-600"></i>
+                <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <i data-lucide="users" class="w-4.5 h-4.5 text-sky-600"></i>
                     3. ระยะเวลาเฉลี่ยที่ใช้ในการตรวจสอบจริง (รายทีม)
                 </h3>
-                <span class="text-xs text-slate-400">ข้อ 2.3 &divide; จำนวนส่วนงาน</span>
+                <span class="text-xs text-slate-400 font-semibold">ข้อ 2.3 &divide; จำนวนส่วนงาน</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div v-for="t in teamMetrics" :key="t.teamName" class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex justify-between items-center">
+                <div v-for="t in teamMetrics" :key="t.teamName" class="p-3.5 bg-slate-50/90 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
                     <div>
-                        <div class="text-xs font-semibold text-slate-700">ทีม {{ t.teamName }}</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">รับผิดชอบ {{ t.count }} ส่วนงาน</div>
+                        <div class="text-xs font-bold text-slate-800">{{ t.teamName.includes('ทีม') ? t.teamName : 'ทีม ' + t.teamName }}</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5 font-medium">รับผิดชอบ {{ t.count }} ส่วนงาน</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-lg font-bold text-sky-600">{{ t.avgAuditDays.toFixed(1) }} <span class="text-xs font-normal text-slate-500">วัน</span></div>
+                        <div class="text-xl font-black text-sky-600">{{ t.avgAuditDays.toFixed(1) }} <span class="text-xs font-normal text-slate-500">วัน</span></div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Section 4: ระยะเวลาเฉลี่ยที่แต่ละทีมใช้ในการเสนอรายงานต่อ คตส. (ข้อ 2.5) -->
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+        <div class="glass-card p-5 rounded-2xl border border-slate-200/90 shadow-sm space-y-3">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
-                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="award" class="w-4 h-4 text-indigo-600"></i>
+                <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <i data-lucide="award" class="w-4.5 h-4.5 text-indigo-600"></i>
                     4. ระยะเวลาเฉลี่ยที่ใช้ในการเสนอรายงานต่อ คตส. (รายทีม)
                 </h3>
-                <span class="text-xs text-slate-400">ข้อ 2.5 &divide; จำนวนส่วนงาน</span>
+                <span class="text-xs text-slate-400 font-semibold">ข้อ 2.5 &divide; จำนวนส่วนงาน</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div v-for="t in teamMetrics" :key="'cts-'+t.teamName" class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex justify-between items-center">
+                <div v-for="t in teamMetrics" :key="'cts-'+t.teamName" class="p-3.5 bg-slate-50/90 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
                     <div>
-                        <div class="text-xs font-semibold text-slate-700">ทีม {{ t.teamName }}</div>
-                        <div class="text-[11px] text-slate-400 mt-0.5">รับผิดชอบ {{ t.count }} ส่วนงาน</div>
+                        <div class="text-xs font-bold text-slate-800">{{ t.teamName.includes('ทีม') ? t.teamName : 'ทีม ' + t.teamName }}</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5 font-medium">รับผิดชอบ {{ t.count }} ส่วนงาน</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-lg font-bold" :class="t.avgCtsDays > 60 ? 'text-red-600' : 'text-indigo-600'">
+                        <div class="text-xl font-black" :class="t.avgCtsDays > 60 ? 'text-red-600' : 'text-indigo-600'">
                             {{ t.avgCtsDays.toFixed(1) }} <span class="text-xs font-normal text-slate-500">วัน</span>
                         </div>
                     </div>
@@ -425,20 +457,20 @@
     </div>
 
     <!-- Section 2: ตารางแสดงรายละเอียดการตรวจสอบแต่ละส่วนงาน -->
-    <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50/50">
+    <section class="glass-card rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50/70">
             <div>
-                <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                <h2 class="text-base font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="table" class="w-5 h-5 text-sky-600"></i>
                     2. ตารางแสดงรายละเอียดการตรวจสอบแต่ละส่วนงาน
                 </h2>
-                <p class="text-xs text-slate-500 mt-0.5">
-                    แสดงวันตรวจจริง, ระยะเวลารายงานอธิการบดี, และการเสนอ คตส. พร้อมการแจ้งเตือน
+                <p class="text-xs text-slate-500 mt-0.5 font-medium">
+                    แสดงวันตรวจจริง (หักเสาร์-อาทิตย์/วันหยุด/ไม่เข้าตรวจ), ระยะเวลารายงานอธิการบดี, และการเสนอ คตส.
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                <span class="text-xs text-slate-500">แสดงผล {{ filteredUnits.length }} รายการ</span>
-                <button @click="openAuditModal()" class="px-2.5 py-1 text-xs font-semibold bg-sky-600 text-white rounded-lg hover:bg-sky-700">
+                <span class="text-xs font-bold text-slate-600">แสดงผล {{ filteredUnits.length }} รายการ</span>
+                <button @click="openAuditModal()" class="px-3.5 py-1.5 text-xs font-bold bg-sky-600 text-white rounded-xl hover:bg-sky-700 shadow-2xs">
                     + เพิ่มรายการ
                 </button>
             </div>
@@ -447,79 +479,79 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-100/80 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
-                        <th class="py-3 px-4 w-10 text-center">#</th>
-                        <th class="py-3 px-4 min-w-[200px]">2.1 ชื่อส่วนงาน</th>
-                        <th class="py-3 px-4 min-w-[260px]">2.2 สถานะล่าสุด</th>
-                        <th class="py-3 px-4 text-center min-w-[140px]">
+                    <tr class="bg-slate-100 text-slate-800 text-xs font-black uppercase tracking-wider border-b border-slate-200">
+                        <th class="py-3.5 px-4 w-10 text-center">#</th>
+                        <th class="py-3.5 px-4 min-w-[200px]">2.1 ชื่อส่วนงาน</th>
+                        <th class="py-3.5 px-4 min-w-[260px]">2.2 สถานะล่าสุด</th>
+                        <th class="py-3.5 px-4 text-center min-w-[140px]">
                             2.3 วันตรวจจริง
-                            <span class="block text-[10px] font-normal text-slate-500">(G-H หักหยุด/ไม่ตรวจ)</span>
+                            <span class="block text-[10px] font-medium text-slate-500">(G-H หักหยุด/ไม่ตรวจ)</span>
                         </th>
-                        <th class="py-3 px-4 text-center min-w-[140px]">
+                        <th class="py-3.5 px-4 text-center min-w-[140px]">
                             2.4 ปิดตรวจ &rarr; อธิการบดี
-                            <span class="block text-[10px] font-normal text-slate-500">(K-J)</span>
+                            <span class="block text-[10px] font-medium text-slate-500">(K-J)</span>
                         </th>
-                        <th class="py-3 px-4 text-center min-w-[160px]">
+                        <th class="py-3.5 px-4 text-center min-w-[160px]">
                             2.5 ปิดตรวจ &rarr; คตส.
-                            <span class="block text-[10px] font-normal text-slate-500">(ครั้งประชุม / วัน N-J)</span>
+                            <span class="block text-[10px] font-medium text-slate-500">(ครั้งประชุม / วัน N-J)</span>
                         </th>
-                        <th class="py-3 px-4 text-center w-28">2.6 สถานะเตือน</th>
-                        <th class="py-3 px-4 text-center w-16">จัดการ</th>
+                        <th class="py-3.5 px-4 text-center w-28">2.6 สถานะเตือน</th>
+                        <th class="py-3.5 px-4 text-center w-16">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs">
                     <tr v-if="filteredUnits.length === 0">
-                        <td colspan="8" class="py-8 text-center text-slate-400">ไม่พบข้อมูลส่วนงานตามเงื่อนไข</td>
+                        <td colspan="8" class="py-10 text-center text-slate-400 font-bold">ไม่พบข้อมูลส่วนงานตามเงื่อนไขที่เลือก</td>
                     </tr>
                     <tr v-for="(u, index) in filteredUnits" :key="u.id" 
                         class="hover:bg-slate-50 transition-colors"
                         :class="{'warning-delay-row': u.isWarning}">
-                        <td class="py-3 px-4 text-center font-medium text-slate-400">{{ index + 1 }}</td>
+                        <td class="py-3.5 px-4 text-center font-bold text-slate-400">{{ index + 1 }}</td>
                         
-                        <td class="py-3 px-4 font-semibold text-slate-800">
+                        <td class="py-3.5 px-4 font-bold text-slate-900">
                             <div class="flex items-center gap-1.5">
                                 <span>{{ u.name }}</span>
-                                <span v-if="u.isWarning" class="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping" title="เตือนใกล้ครบ/เกินกำหนดเสนอ คตส."></span>
+                                <span v-if="u.isWarning" class="inline-block w-2.5 h-2.5 rounded-full bg-red-600 dot-pulse" title="เตือนใกล้ครบ/เกินกำหนดเสนอ คตส."></span>
                             </div>
-                            <span class="block text-[10px] font-normal text-slate-400 mt-0.5">ทีม {{ u.team }} | ปี {{ u.fiscalYear }}</span>
+                            <span class="block text-[10px] font-medium text-slate-400 mt-0.5">ทีม {{ u.team }} | ปี {{ u.fiscalYear }}</span>
                         </td>
 
-                        <td class="py-3 px-4">
-                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
-                                 :class="u.isCompleted ? 'phase-tag-1-4 font-bold' : 'bg-slate-100 text-slate-700 border border-slate-200'">
-                                <i v-if="u.isCompleted" data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                        <td class="py-3.5 px-4">
+                            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold"
+                                 :class="u.isCompleted ? 'status-pill-1-4' : 'bg-slate-100 text-slate-800 border border-slate-300'">
+                                <i v-if="u.isCompleted" data-lucide="check-circle" class="w-4 h-4"></i>
                                 <span>{{ u.statusFormatted }}</span>
                             </div>
                         </td>
 
-                        <td class="py-3 px-4 text-center">
-                            <span class="font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md">
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="font-black text-slate-900 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
                                 {{ u.actualAuditDays }} วัน
                             </span>
-                            <span class="block text-[10px] text-slate-400 mt-1" v-if="u.interruptedDays > 0 || u.holidayDays > 0">
-                                (หักหยุด {{ u.weekendDays + u.holidayDays }}d / ไม่เข้าตรวจ {{ u.interruptedDays }}d)
+                            <span class="block text-[10px] text-slate-500 font-medium mt-1" v-if="u.interruptedDays > 0 || u.holidayDays > 0">
+                                (หักหยุด {{ u.weekendDays + u.holidayDays }}d / ไม่ตรวจ {{ u.interruptedDays }}d)
                             </span>
                         </td>
 
-                        <td class="py-3 px-4 text-center">
-                            <span v-if="u.aeDuration !== null" class="font-medium text-slate-700">
+                        <td class="py-3.5 px-4 text-center">
+                            <span v-if="u.aeDuration !== null" class="font-bold text-slate-800">
                                 {{ u.aeDuration }} วัน
                             </span>
                             <span v-else class="text-slate-300">-</span>
                         </td>
 
-                        <td class="py-3 px-4 text-center">
+                        <td class="py-3.5 px-4 text-center">
                             <div class="space-y-1">
-                                <div class="text-xs font-bold text-slate-700">
-                                    <span v-if="u.ctsCycle" class="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-800">
+                                <div class="text-xs font-bold text-slate-800">
+                                    <span v-if="u.ctsCycle" class="px-2.5 py-0.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-800">
                                         ครั้งที่ {{ u.ctsCycle }}
                                     </span>
                                     <span v-else class="text-slate-300">-</span>
                                 </div>
                                 <div>
                                     <span v-if="u.ctsDuration !== null" 
-                                          class="inline-block text-xs font-bold px-2 py-0.5 rounded"
-                                          :class="u.ctsDuration > 60 ? 'bg-red-600 text-white shadow-xs' : 'bg-indigo-50 text-indigo-700'">
+                                          class="inline-block text-xs font-black px-2.5 py-0.5 rounded-lg"
+                                          :class="u.ctsDuration > 60 ? 'bg-red-600 text-white shadow-xs' : 'bg-indigo-50 text-indigo-800 border border-indigo-200'">
                                         {{ u.ctsDuration }} วัน
                                     </span>
                                     <span v-else class="text-slate-300">-</span>
@@ -527,20 +559,20 @@
                             </div>
                         </td>
 
-                        <td class="py-3 px-4 text-center">
-                            <span v-if="u.ctsDuration !== null && u.ctsDuration > 60" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
-                                <i data-lucide="x-circle" class="w-3 h-3 text-red-600"></i> เกิน 60 วัน
+                        <td class="py-3.5 px-4 text-center">
+                            <span v-if="u.ctsDuration !== null && u.ctsDuration > 60" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
+                                <i data-lucide="x-circle" class="w-3.5 h-3.5 text-red-600"></i> เกิน 60 วัน
                             </span>
-                            <span v-else-if="u.isWarning" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-700 border border-red-300 animate-pulse">
-                                <i data-lucide="alert-triangle" class="w-3 h-3 text-red-600"></i> เตือน &ge; 50 วัน
+                            <span v-else-if="u.isWarning" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-red-100 text-red-800 border border-red-300 dot-pulse">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-red-600"></i> เตือน &ge; 50 วัน
                             </span>
-                            <span v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700">
-                                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i> ปกติ
+                            <span v-else class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> ปกติ
                             </span>
                         </td>
 
-                        <td class="py-3 px-4 text-center">
-                            <button @click="openAuditModal(u.raw)" class="p-1 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded" title="แก้ไขแถวนี้">
+                        <td class="py-3.5 px-4 text-center">
+                            <button @click="openAuditModal(u.raw)" class="p-1.5 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded-lg transition-all" title="แก้ไขแถวนี้">
                                 <i data-lucide="edit-2" class="w-4 h-4"></i>
                             </button>
                         </td>
@@ -550,11 +582,60 @@
         </div>
     </section>
 
+    <!-- Modal 0: Google Sheet Web App Setup Guide & URL Config Modal -->
+    <div v-if="showConfigModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="link-2" class="w-5 h-5 text-sky-600"></i>
+                    วิธีการตั้งค่า Web App URL เพื่อบันทึกข้อมูลลง Google Sheet
+                </h3>
+                <button @click="showConfigModal = false" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3.5 text-xs">
+                <!-- Step-by-Step Box -->
+                <div class="bg-gradient-to-br from-sky-50 to-indigo-50/60 p-4 rounded-2xl border border-sky-200 text-sky-950 space-y-2">
+                    <div class="font-black text-sm flex items-center gap-2 text-sky-900">
+                        <i data-lucide="check-square" class="w-4 h-4 text-sky-600"></i>
+                        ขั้นตอนการเอา Web App URL มาใส่ (ทำเพียงครั้งเดียว):
+                    </div>
+                    <ol class="list-decimal list-inside space-y-1.5 text-slate-700 font-medium pl-1 leading-relaxed">
+                        <li>เปิดไฟล์ Google Sheet ทะเบียนคุมงานของคุณ</li>
+                        <li>ไปที่เมนูด้านบน <strong>ส่วนขยาย (Extensions)</strong> &rarr; <strong>Apps Script</strong></li>
+                        <li>วางซอร์สโค้ดจากไฟล์ <code>apps-script/Code.gs</code> ในโปรเจกต์นี้</li>
+                        <li>กดปุ่มสีส้ม <strong>ทำให้ใช้งานได้ (Deploy)</strong> &rarr; <strong>การทำให้ใช้งานได้ใหม่ (New deployment)</strong></li>
+                        <li>เลือกประเภท ⚙️ <strong>เว็บแอป (Web app)</strong> กำหนดสิทธิ์ผู้เข้าถึงเป็น <strong>"ทุกคน" (Anyone)</strong> *(สำคัญมาก!)*</li>
+                        <li>กด <strong>Deploy</strong> แล้วคัดลอก URL ที่ได้ (ลงท้ายด้วย <code>/exec</code>) มาวางในช่องด้านล่างนี้</li>
+                    </ol>
+                </div>
+
+                <div>
+                    <label class="font-black text-slate-800 block mb-1">วาง Google Apps Script Web App URL ที่นี่:</label>
+                    <input type="url" v-model="apiUrlInput" placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                           class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl font-mono text-xs font-bold focus:ring-2 focus:ring-sky-500">
+                </div>
+
+                <div v-if="isApiConnected" class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-900 font-extrabold flex items-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600"></i>
+                    เชื่อมต่อ Web App เรียบร้อยแล้ว! ทุกการกรอกและแก้ไขจะบันทึกลง Google Sheet จริงทันที
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 text-xs">
+                <button type="button" @click="clearConfigUrl" class="px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl font-bold">ยกเลิกการเชื่อมต่อ</button>
+                <button type="button" @click="saveConfigUrl" class="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-black rounded-xl shadow-xs">บันทึก URL</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal 1: Audit Form Modal (บันทึก/แก้ไขข้อมูลการตรวจสอบ) -->
     <div v-if="showAuditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="file-plus" class="w-5 h-5 text-sky-600"></i>
                     {{ editingRowIndex ? 'แก้ไขข้อมูลการตรวจสอบ' : 'เพิ่มข้อมูลการตรวจสอบใหม่' }}
                 </h3>
@@ -564,24 +645,23 @@
             </div>
 
             <form @submit.prevent="submitAuditForm" class="space-y-4 text-xs">
-                <!-- Row 1: Dropdowns -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                        <label class="font-semibold text-slate-700 block mb-1">ส่วนงาน <span class="text-red-500">*</span></label>
+                        <label class="font-black text-slate-800 block mb-1">ส่วนงาน <span class="text-red-500">*</span></label>
                         <div class="space-y-1">
-                            <select v-model="auditForm['ส่วนงาน']" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                            <select v-model="auditForm['ส่วนงาน']" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold">
                                 <option value="">-- เลือกส่วนงาน --</option>
                                 <option v-for="d in departmentOptions" :key="d" :value="d">{{ d }}</option>
                                 <option value="__NEW__">+ เพิ่มส่วนงานใหม่...</option>
                             </select>
                             <input v-if="auditForm['ส่วนงาน'] === '__NEW__'" type="text" v-model="newDepartmentInput" placeholder="กรอกชื่อส่วนงานใหม่"
-                                   class="w-full p-2 border border-sky-300 rounded-lg focus:ring-2 focus:ring-sky-500">
+                                   class="w-full p-2 border border-sky-400 rounded-xl focus:ring-2 focus:ring-sky-500 font-bold">
                         </div>
                     </div>
 
                     <div>
-                        <label class="font-semibold text-slate-700 block mb-1">ปีงบประมาณ <span class="text-red-500">*</span></label>
-                        <select v-model="auditForm['ปีงบประมาณ']" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                        <label class="font-black text-slate-800 block mb-1">ปีงบประมาณ <span class="text-red-500">*</span></label>
+                        <select v-model="auditForm['ปีงบประมาณ']" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold">
                             <option value="2568">2568</option>
                             <option value="2569">2569</option>
                             <option value="2570">2570</option>
@@ -591,76 +671,76 @@
                     </div>
 
                     <div>
-                        <label class="font-semibold text-slate-700 block mb-1">ทีมที่รับผิดชอบ <span class="text-red-500">*</span></label>
-                        <select v-model="auditForm['ทีม']" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
-                            <option v-for="t in teamOptions" :key="t" :value="t">ทีม {{ t }}</option>
+                        <label class="font-black text-slate-800 block mb-1">ทีมที่รับผิดชอบ <span class="text-red-500">*</span></label>
+                        <select v-model="auditForm['ทีม']" class="w-full p-2 bg-slate-50 border border-slate-300 rounded-xl font-bold">
+                            <option v-for="t in teamOptions" :key="t" :value="t">{{ t.includes('ทีม') ? t : 'ทีม ' + t }}</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- 1.1 ก่อนเข้าตรวจ -->
-                <div class="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-2">
-                    <div class="font-bold text-slate-800 flex items-center gap-1.5" style="color: #5167D7;">
-                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: #5167D7;"></span> 1.1 ขั้นตอนก่อนเข้าตรวจ
+                <div class="phase-box-1-1 p-4 rounded-2xl space-y-2">
+                    <div class="font-black text-slate-900 flex items-center gap-1.5" style="color: #5167D7;">
+                        <span class="w-3 h-3 rounded-full shadow-2xs" style="background-color: #5167D7;"></span> 1.1 ขั้นตอนก่อนเข้าตรวจ
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่มอบหมายงาน (Col D)</label>
-                            <input type="date" v-model="auditForm['วันที่มอบหมายงาน']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่มอบหมายงาน (Col D)</label>
+                            <input type="date" v-model="auditForm['วันที่มอบหมายงาน']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่แจ้งเข้าตรวจ (Col E)</label>
-                            <input type="date" v-model="auditForm['วันที่แจ้งเข้าตรวจ']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่แจ้งเข้าตรวจ (Col E)</label>
+                            <input type="date" v-model="auditForm['วันที่แจ้งเข้าตรวจ']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่อนุมัติแผน (Col F)</label>
-                            <input type="date" v-model="auditForm['วันที่อนุมัติแผน']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่อนุมัติแผน (Col F)</label>
+                            <input type="date" v-model="auditForm['วันที่อนุมัติแผน']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                     </div>
                 </div>
 
                 <!-- 1.2 ระหว่างการตรวจสอบ -->
-                <div class="p-3 bg-purple-50/60 rounded-xl border border-purple-100 space-y-2">
-                    <div class="font-bold text-slate-800 flex items-center gap-1.5" style="color: #7b42b8;">
-                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: #B086DF;"></span> 1.2 ขั้นตอนระหว่างการตรวจสอบ
+                <div class="phase-box-1-2 p-4 rounded-2xl space-y-2">
+                    <div class="font-black text-purple-900 flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full shadow-2xs" style="background-color: #B086DF;"></span> 1.2 ขั้นตอนระหว่างการตรวจสอบ
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่เริ่มตรวจสอบ (Col G)</label>
-                            <input type="date" v-model="auditForm['วันที่เริ่มตรวจสอบ']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่เริ่มตรวจสอบ (Col G)</label>
+                            <input type="date" v-model="auditForm['วันที่เริ่มตรวจสอบ']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่สิ้นสุดการตรวจสอบ (Col H)</label>
-                            <input type="date" v-model="auditForm['วันที่สิ้นสุดการตรวจสอบ']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่สิ้นสุดการตรวจสอบ (Col H)</label>
+                            <input type="date" v-model="auditForm['วันที่สิ้นสุดการตรวจสอบ']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่ปิดตรวจ (Col J)</label>
-                            <input type="date" v-model="auditForm['วันที่ปิดตรวจ']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่ปิดตรวจ (Col J)</label>
+                            <input type="date" v-model="auditForm['วันที่ปิดตรวจ']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                     </div>
                 </div>
 
                 <!-- 1.3 รายงานผลการตรวจสอบ -->
-                <div class="p-3 bg-indigo-50/30 rounded-xl border border-indigo-100 space-y-2">
-                    <div class="font-bold text-slate-800 flex items-center gap-1.5" style="color: #4F4B78;">
-                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: #E2DCF5; border: 1px solid #aaa;"></span> 1.3 ขั้นตอนรายงานผลการตรวจสอบ
+                <div class="phase-box-1-3 p-4 rounded-2xl space-y-2">
+                    <div class="font-black text-purple-950 flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full shadow-2xs" style="background-color: #E2DCF5; border: 1px solid #aaa;"></span> 1.3 ขั้นตอนรายงานผลการตรวจสอบ
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่เสนออธิการบดี_รายงาน (Col K)</label>
-                            <input type="date" v-model="auditForm['วันที่เสนออธิการบดี_รายงาน']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่เสนออธิการบดี (Col K)</label>
+                            <input type="date" v-model="auditForm['วันที่เสนออธิการบดี_รายงาน']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่แจ้งหน่วยรับตรวจ_รายงาน (Col M)</label>
-                            <input type="date" v-model="auditForm['วันที่แจ้งหน่วยรับตรวจ_รายงาน']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่แจ้งหน่วยรับตรวจ (Col M)</label>
+                            <input type="date" v-model="auditForm['วันที่แจ้งหน่วยรับตรวจ_รายงาน']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่เสนอ_คตส (Col N)</label>
-                            <input type="date" v-model="auditForm['วันที่เสนอ_คตส']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่เสนอ_คตส (Col N)</label>
+                            <input type="date" v-model="auditForm['วันที่เสนอ_คตส']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1">ครั้งที่ประชุม_คตส (Col P)</label>
-                            <select v-model="auditForm['ครั้งที่ประชุม_คตส']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">ครั้งที่ประชุม_คตส (Col P)</label>
+                            <select v-model="auditForm['ครั้งที่ประชุม_คตส']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                                 <option value="">-- เลือกครั้งที่ประชุม --</option>
                                 <option v-for="c in ctsCycleOptions" :key="c" :value="c">ครั้งที่ {{ c }}</option>
                             </select>
@@ -669,39 +749,39 @@
                 </div>
 
                 <!-- 1.4 ชี้แจงผลการดำเนินงาน -->
-                <div class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 space-y-2">
-                    <div class="font-bold text-slate-800 flex items-center gap-1.5" style="color: #374730;">
-                        <span class="w-2.5 h-2.5 rounded-full" style="background-color: #839B77;"></span> 1.4 ขั้นตอนชี้แจงผลการดำเนินงาน
+                <div class="phase-box-1-4 p-4 rounded-2xl space-y-2">
+                    <div class="font-black text-emerald-950 flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full shadow-2xs" style="background-color: #839B77;"></span> 1.4 ขั้นตอนชี้แจงผลการดำเนินงาน
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่หน่วยรับตรวจชี้แจง (Col Q)</label>
-                            <input type="date" v-model="auditForm['วันที่หน่วยรับตรวจชี้แจง']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่หน่วยรับตรวจชี้แจง (Col Q)</label>
+                            <input type="date" v-model="auditForm['วันที่หน่วยรับตรวจชี้แจง']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1">วันที่เสนออธิการบดี_ชี้แจง (Col R)</label>
-                            <input type="date" v-model="auditForm['วันที่เสนออธิการบดี_ชี้แจง']" class="w-full p-1.5 border rounded-lg bg-white">
+                            <label class="text-slate-700 block mb-1 font-bold">วันที่เสนออธิการบดี (Col R)</label>
+                            <input type="date" v-model="auditForm['วันที่เสนออธิการบดี_ชี้แจง']" class="w-full p-2 border rounded-xl bg-white font-semibold">
                         </div>
                         <div>
-                            <label class="text-slate-600 block mb-1 font-bold text-emerald-800">วันที่เสร็จสมบูรณ์ (Col S)</label>
-                            <input type="date" v-model="auditForm['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์']" class="w-full p-1.5 border border-emerald-300 rounded-lg bg-emerald-50 font-bold">
+                            <label class="text-slate-900 block mb-1 font-extrabold text-emerald-800">วันที่เสร็จสมบูรณ์ (Col S)</label>
+                            <input type="date" v-model="auditForm['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์']" class="w-full p-2 border border-emerald-400 rounded-xl bg-emerald-50 font-bold text-emerald-900">
                         </div>
                     </div>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" @click="showAuditModal = false" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">ยกเลิก</button>
-                    <button type="submit" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg shadow-xs">บันทึกข้อมูล</button>
+                    <button type="button" @click="showAuditModal = false" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">ยกเลิก</button>
+                    <button type="submit" class="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-black rounded-xl shadow-xs">บันทึกข้อมูลลง Google Sheet</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal 2: Delay Request Form Modal (ฟอร์มขอขยายระยะเวลา) -->
+    <!-- Modal 2: Delay Request Form Modal -->
     <div v-if="showDelayModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 border border-slate-200">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="clock" class="w-5 h-5 text-amber-600"></i>
                     {{ isEditingDelay ? 'แก้ไขคำขอขยายระยะเวลาการตรวจสอบ' : 'ยื่นขอขยายระยะเวลาการตรวจสอบ' }}
                 </h3>
@@ -712,13 +792,13 @@
 
             <form @submit.prevent="submitDelayForm" class="space-y-3.5 text-xs">
                 <div>
-                    <label class="font-semibold text-slate-700 block mb-1">ผู้ยื่นคำขอ (อ้างอิงอีเมลผู้ล็อกอิน)</label>
-                    <input type="text" :value="currentUser.name + ' (' + currentUser.email + ')'" disabled class="w-full p-2 bg-slate-100 border rounded-lg text-slate-600">
+                    <label class="font-black text-slate-800 block mb-1">ผู้ยื่นคำขอ (อ้างอิงอีเมลผู้ล็อกอิน)</label>
+                    <input type="text" :value="currentUser.name + ' (' + currentUser.email + ')'" disabled class="w-full p-2.5 bg-slate-100 border rounded-xl text-slate-600 font-bold">
                 </div>
 
                 <div>
-                    <label class="font-semibold text-slate-700 block mb-1">ส่วนงานที่ต้องการขอขยายเวลา <span class="text-red-500">*</span></label>
-                    <select v-model="delayForm.department" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    <label class="font-black text-slate-800 block mb-1">ส่วนงานที่ต้องการขอขยายเวลา <span class="text-red-500">*</span></label>
+                    <select v-model="delayForm.department" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold">
                         <option value="">-- เลือกส่วนงาน --</option>
                         <option v-for="d in departmentOptions" :key="d" :value="d">{{ d }}</option>
                     </select>
@@ -726,31 +806,31 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="font-semibold text-slate-700 block mb-1">วันที่เริ่มต้นขอขยาย <span class="text-red-500">*</span></label>
-                        <input type="date" v-model="delayForm.startDate" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                        <label class="font-black text-slate-800 block mb-1">วันที่เริ่มต้นขอขยาย <span class="text-red-500">*</span></label>
+                        <input type="date" v-model="delayForm.startDate" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold">
                     </div>
                     <div>
-                        <label class="font-semibold text-slate-700 block mb-1">วันที่สิ้นสุดขอขยาย <span class="text-red-500">*</span></label>
-                        <input type="date" v-model="delayForm.endDate" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                        <label class="font-black text-slate-800 block mb-1">วันที่สิ้นสุดขอขยาย <span class="text-red-500">*</span></label>
+                        <input type="date" v-model="delayForm.endDate" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold">
                     </div>
                 </div>
 
                 <div>
-                    <label class="font-semibold text-slate-700 block mb-1">เหตุผลในการขอขยายระยะเวลา <span class="text-red-500">*</span></label>
-                    <textarea v-model="delayForm.reason" rows="3" required placeholder="ระบุเหตุผลความจำเป็น..." class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg"></textarea>
+                    <label class="font-black text-slate-800 block mb-1">เหตุผลในการขอขยายระยะเวลา <span class="text-red-500">*</span></label>
+                    <textarea v-model="delayForm.reason" rows="3" required placeholder="ระบุเหตุผลความจำเป็น..." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold"></textarea>
                 </div>
 
                 <div>
-                    <label class="font-semibold text-slate-700 block mb-1">เลือกหัวหน้างานผู้รับผิดชอบ <span class="text-red-500">*</span></label>
-                    <select v-model="delayForm.supervisorName" required class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    <label class="font-black text-slate-800 block mb-1">เลือกหัวหน้างานผู้รับผิดชอบ <span class="text-red-500">*</span></label>
+                    <select v-model="delayForm.supervisorName" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold">
                         <option value="">-- เลือกหัวหน้างาน --</option>
                         <option v-for="s in supervisorOptions" :key="s.email" :value="s.name">{{ s.name }} ({{ s.email }})</option>
                     </select>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" @click="showDelayModal = false" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">ยกเลิก</button>
-                    <button type="submit" class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shadow-xs">
+                    <button type="button" @click="showDelayModal = false" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">ยกเลิก</button>
+                    <button type="submit" class="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl shadow-xs">
                         {{ isEditingDelay ? 'ส่งแก้ไขคำขอ' : 'เสนอเพื่อพิจารณา' }}
                     </button>
                 </div>
@@ -758,11 +838,11 @@
         </div>
     </div>
 
-    <!-- Drawer 3: Extension Approval & Status Drawer (รายการขอขยายเวลา + การอนุมัติ) -->
+    <!-- Drawer 3: Extension Approval & Status Drawer -->
     <div v-if="showApprovalDrawer" class="fixed inset-0 z-50 flex justify-end modal-backdrop">
         <div class="bg-white max-w-xl w-full h-full p-6 shadow-2xl space-y-4 overflow-y-auto border-l border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="check-square" class="w-5 h-5 text-amber-600"></i>
                     รายการขอขยายระยะเวลาทั้งหมด
                 </h3>
@@ -772,76 +852,72 @@
             </div>
 
             <!-- Total Status Summary Bar -->
-            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs flex justify-around text-center">
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs flex justify-around text-center shadow-2xs">
                 <div>
-                    <div class="text-slate-400">รอพิจารณา (หัวหน้า)</div>
-                    <div class="text-lg font-bold text-amber-600">{{ pendingSupervisorCount }}</div>
+                    <div class="text-slate-500 font-bold">รอพิจารณา (หัวหน้า)</div>
+                    <div class="text-xl font-black text-amber-600 mt-0.5">{{ pendingSupervisorCount }}</div>
                 </div>
                 <div class="border-r border-slate-200"></div>
                 <div>
-                    <div class="text-slate-400">รออนุมัติ (ผอ.)</div>
-                    <div class="text-lg font-bold text-orange-600">{{ pendingDirectorCount }}</div>
+                    <div class="text-slate-500 font-bold">รออนุมัติ (ผอ.)</div>
+                    <div class="text-xl font-black text-orange-600 mt-0.5">{{ pendingDirectorCount }}</div>
                 </div>
             </div>
 
             <!-- List of Extension Requests -->
             <div class="space-y-3">
-                <div v-if="accessibleDelayList.length === 0" class="py-8 text-center text-slate-400 text-xs">
+                <div v-if="accessibleDelayList.length === 0" class="py-10 text-center text-slate-400 text-xs font-bold">
                     ไม่พบรายการคำขอขยายระยะเวลาที่คุณมีสิทธิ์เข้าถึง
                 </div>
 
-                <div v-for="item in accessibleDelayList" :key="item._rowIndex" class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+                <div v-for="item in accessibleDelayList" :key="item._rowIndex" class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2.5">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="font-bold text-slate-800 text-sm">{{ item.Department }}</span>
-                            <div class="text-[11px] text-slate-500">ผู้ขอ: {{ item.Requestor }} ({{ item.Email }})</div>
+                            <span class="font-black text-slate-900 text-sm">{{ item.Department }}</span>
+                            <div class="text-[11px] text-slate-500 font-semibold mt-0.5">ผู้ขอ: {{ item.Requestor }} ({{ item.Email }})</div>
                         </div>
-                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold"
+                        <span class="px-3 py-1 rounded-full text-[10px] font-black"
                               :class="{
-                                'bg-amber-100 text-amber-800 border border-amber-300': item.Status.includes('รอพิจารณา'),
-                                'bg-orange-100 text-orange-800 border border-orange-300': item.Status.includes('รออนุมัติ'),
-                                'bg-emerald-100 text-emerald-800 border border-emerald-300': item.Status === 'อนุมัติแล้ว',
-                                'bg-red-100 text-red-800 border border-red-300': item.Status === 'ตีกลับ' || item.Status === 'ไม้อนุมัติ',
+                                'bg-amber-100 text-amber-900 border border-amber-300': item.Status.includes('รอพิจารณา'),
+                                'bg-orange-100 text-orange-900 border border-orange-300': item.Status.includes('รออนุมัติ'),
+                                'bg-emerald-100 text-emerald-900 border border-emerald-300': item.Status === 'อนุมัติแล้ว',
+                                'bg-red-100 text-red-900 border border-red-300': item.Status === 'ตีกลับ' || item.Status === 'ไม้อนุมัติ',
                                 'bg-slate-200 text-slate-700': item.Status === 'ขอยกเลิก'
                               }">
                             {{ item.Status }}
                         </span>
                     </div>
 
-                    <div class="text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200">
+                    <div class="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 font-semibold">
                         <div><strong>ช่วงวันที่ขอขยาย:</strong> {{ item['Start Date'] }} ถึง {{ item['End Date'] }}</div>
                         <div class="mt-1"><strong>เหตุผล:</strong> {{ item.Reason }}</div>
-                        <div v-if="item.Remarks" class="mt-1 text-amber-700"><strong>หมายเหตุ/ข้อความตีกลับ:</strong> {{ item.Remarks }}</div>
+                        <div v-if="item.Remarks" class="mt-1 text-amber-800 font-black"><strong>ข้อความตีกลับ:</strong> {{ item.Remarks }}</div>
                     </div>
 
-                    <!-- Actions based on role & status -->
                     <div class="flex justify-end gap-2 pt-1">
-                        <!-- User Actions when Returned/Rejected -->
                         <template v-if="item.Email === currentUser.email && item.Status === 'ตีกลับ'">
-                            <button @click="editAndResubmitDelay(item)" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-md">
+                            <button @click="editAndResubmitDelay(item)" class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl">
                                 แก้ไขแล้วส่งใหม่
                             </button>
-                            <button @click="cancelDelayRequest(item._rowIndex)" class="px-3 py-1 bg-slate-300 hover:bg-slate-400 text-slate-800 font-semibold rounded-md">
+                            <button @click="cancelDelayRequest(item._rowIndex)" class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl">
                                 ขอยกเลิกคำขอ
                             </button>
                         </template>
 
-                        <!-- Leader Actions -->
                         <template v-if="(currentUser.role === 'Leader' || currentUser.role === 'Admin') && item.Status.includes('รอพิจารณา')">
-                            <button @click="processApproval(item._rowIndex, 'approved')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md">
+                            <button @click="processApproval(item._rowIndex, 'approved')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-2xs">
                                 ผ่านพิจารณาเสนอ ผอ.
                             </button>
-                            <button @click="promptReject(item._rowIndex)" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md">
+                            <button @click="promptReject(item._rowIndex)" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-2xs">
                                 ตีกลับคำขอ
                             </button>
                         </template>
 
-                        <!-- Dean Actions -->
                         <template v-if="(currentUser.role === 'Dean' || currentUser.role === 'Admin') && item.Status.includes('รออนุมัติ')">
-                            <button @click="processApproval(item._rowIndex, 'approved')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md">
+                            <button @click="processApproval(item._rowIndex, 'approved')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-2xs">
                                 อนุมัติการขยายเวลา
                             </button>
-                            <button @click="promptReject(item._rowIndex)" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md">
+                            <button @click="promptReject(item._rowIndex)" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-2xs">
                                 ไม้อนุมัติ
                             </button>
                         </template>
@@ -853,9 +929,9 @@
 
     <!-- Modal 4: Login & Account Switcher Modal -->
     <div v-if="showLoginModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-200">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="key-round" class="w-5 h-5 text-sky-600"></i>
                     เข้าสู่ระบบด้วยสิทธิ์ผู้ใช้งาน (Google Account)
                 </h3>
@@ -864,20 +940,20 @@
                 </button>
             </div>
 
-            <p class="text-xs text-slate-500">
-                กรุณาเลือกหรือกรอกอีเมลที่มีสิทธิ์ในชีท Users (ตรวจสอบสิทธิ์คอลัมน์ A):
+            <p class="text-xs text-slate-500 font-medium">
+                เลือกรายชื่อผู้ใช้งานที่ตรงกับสิทธิ์ในชีท Users (คอลัมน์ A):
             </p>
 
-            <div class="space-y-2 text-xs">
+            <div class="space-y-2 text-xs max-h-80 overflow-y-auto pr-1">
                 <div v-for="u in userList" :key="u.Email" 
                      @click="selectUser(u)"
                      class="p-3 bg-slate-50 hover:bg-sky-50 rounded-xl border border-slate-200 cursor-pointer flex justify-between items-center transition-all">
                     <div>
-                        <div class="font-bold text-slate-800">{{ u.Name }}</div>
-                        <div class="text-[10px] text-slate-500">{{ u.Email }}</div>
+                        <div class="font-bold text-slate-900">{{ u.Name }}</div>
+                        <div class="text-[10px] text-slate-500 font-medium">{{ u.Email }}</div>
                     </div>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold"
-                          :class="u.Role === 'Admin' ? 'bg-purple-100 text-purple-800' : (u.Role === 'Dean' ? 'bg-indigo-100 text-indigo-800' : (u.Role === 'Leader' ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-700'))">
+                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-black"
+                          :class="u.Role === 'Admin' ? 'bg-purple-100 text-purple-900' : (u.Role === 'Dean' ? 'bg-indigo-100 text-indigo-900' : (u.Role === 'Leader' ? 'bg-blue-100 text-blue-900' : 'bg-slate-200 text-slate-800'))">
                         {{ u.Role }}
                     </span>
                 </div>
@@ -887,9 +963,9 @@
 
     <!-- Modal 5: Edit Data Manager Modal -->
     <div v-if="showEditManagerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
-        <div class="bg-white rounded-2xl max-w-5xl w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 text-xs">
+        <div class="bg-white rounded-2xl max-w-5xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 text-xs">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="edit-3" class="w-5 h-5 text-indigo-600"></i>
                     จัดการและแก้ไขข้อมูลการตรวจสอบทั้งหมด
                 </h3>
@@ -900,33 +976,33 @@
 
             <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-96">
                 <table class="w-full text-left border-collapse text-[11px]">
-                    <thead class="bg-slate-100 font-bold text-slate-700 sticky top-0">
+                    <thead class="bg-slate-100 font-black text-slate-800 sticky top-0">
                         <tr>
-                            <th class="p-2 border-b">ส่วนงาน</th>
-                            <th class="p-2 border-b w-16">ปี</th>
-                            <th class="p-2 border-b w-16">ทีม</th>
-                            <th class="p-2 border-b min-w-[100px]">เริ่มตรวจ (G)</th>
-                            <th class="p-2 border-b min-w-[100px]">สิ้นสุดตรวจ (H)</th>
-                            <th class="p-2 border-b min-w-[100px]">ปิดตรวจ (J)</th>
-                            <th class="p-2 border-b min-w-[100px]">เสนออธิการ (K)</th>
-                            <th class="p-2 border-b min-w-[100px]">เสนอ คตส. (N)</th>
-                            <th class="p-2 border-b min-w-[100px]">เสร็จสมบูรณ์ (S)</th>
-                            <th class="p-2 border-b text-center w-16">จัดการ</th>
+                            <th class="p-2.5 border-b">ส่วนงาน</th>
+                            <th class="p-2.5 border-b w-16">ปี</th>
+                            <th class="p-2.5 border-b w-16">ทีม</th>
+                            <th class="p-2.5 border-b min-w-[100px]">เริ่มตรวจ (G)</th>
+                            <th class="p-2.5 border-b min-w-[100px]">สิ้นสุดตรวจ (H)</th>
+                            <th class="p-2.5 border-b min-w-[100px]">ปิดตรวจ (J)</th>
+                            <th class="p-2.5 border-b min-w-[100px]">เสนออธิการ (K)</th>
+                            <th class="p-2.5 border-b min-w-[100px]">เสนอ คตส. (N)</th>
+                            <th class="p-2.5 border-b min-w-[100px]">เสร็จสมบูรณ์ (S)</th>
+                            <th class="p-2.5 border-b text-center w-16">จัดการ</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-slate-100 font-medium">
                         <tr v-for="u in allAuditUnits" :key="u._rowIndex" class="hover:bg-slate-50">
-                            <td class="p-2 font-semibold">{{ u['ส่วนงาน'] }}</td>
-                            <td class="p-2">{{ u['ปีงบประมาณ'] }}</td>
-                            <td class="p-2">ทีม {{ u['ทีม'] }}</td>
-                            <td class="p-2">{{ u['วันที่เริ่มตรวจสอบ'] || '-' }}</td>
-                            <td class="p-2">{{ u['วันที่สิ้นสุดการตรวจสอบ'] || '-' }}</td>
-                            <td class="p-2">{{ u['วันที่ปิดตรวจ'] || '-' }}</td>
-                            <td class="p-2">{{ u['วันที่เสนออธิการบดี_รายงาน'] || '-' }}</td>
-                            <td class="p-2">{{ u['วันที่เสนอ_คตส'] || '-' }}</td>
-                            <td class="p-2 text-emerald-700 font-bold">{{ u['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์'] || '-' }}</td>
-                            <td class="p-2 text-center">
-                                <button @click="openAuditModal(u); showEditManagerModal = false" class="px-2 py-1 bg-sky-600 text-white rounded hover:bg-sky-700">
+                            <td class="p-2.5 font-bold text-slate-900">{{ u['ส่วนงาน'] }}</td>
+                            <td class="p-2.5">{{ u['ปีงบประมาณ'] }}</td>
+                            <td class="p-2.5">ทีม {{ u['ทีม'] }}</td>
+                            <td class="p-2.5">{{ u['วันที่เริ่มตรวจสอบ'] || '-' }}</td>
+                            <td class="p-2.5">{{ u['วันที่สิ้นสุดการตรวจสอบ'] || '-' }}</td>
+                            <td class="p-2.5">{{ u['วันที่ปิดตรวจ'] || '-' }}</td>
+                            <td class="p-2.5">{{ u['วันที่เสนออธิการบดี_รายงาน'] || '-' }}</td>
+                            <td class="p-2.5">{{ u['วันที่เสนอ_คตส'] || '-' }}</td>
+                            <td class="p-2.5 text-emerald-800 font-bold">{{ u['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์'] || '-' }}</td>
+                            <td class="p-2.5 text-center">
+                                <button @click="openAuditModal(u); showEditManagerModal = false" class="px-2.5 py-1 bg-sky-600 text-white font-bold rounded-lg hover:bg-sky-700 shadow-2xs">
                                     แก้ไข
                                 </button>
                             </td>
