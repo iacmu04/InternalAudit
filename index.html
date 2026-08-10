@@ -21,62 +21,65 @@
 
 <div id="app" class="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
 
-    <!-- Header Bar -->
-    <header class="glass-card rounded-2xl p-5 border border-slate-200/90 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div class="flex items-center gap-3.5">
-            <div class="p-3.5 bg-gradient-to-br from-indigo-600 to-sky-600 text-white rounded-2xl shadow-lg shadow-indigo-500/25">
-                <i data-lucide="shield-check" class="w-8 h-8"></i>
+    <!-- Header Bar (User-Friendly Executive Redesign) -->
+    <header class="glass-card rounded-2xl p-5 border border-slate-200/90 space-y-4">
+        <!-- Top Row: System Identity & User Controls -->
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
+            <div class="flex items-center gap-3.5">
+                <div class="p-3.5 bg-gradient-to-br from-indigo-600 to-sky-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 shrink-0">
+                    <i data-lucide="shield-check" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black text-slate-900 leading-tight tracking-tight">
+                        ระบบติดตามงานตรวจสอบและขอขยายระยะเวลา
+                    </h1>
+                    <p class="text-xs md:text-sm text-slate-500 mt-1 font-semibold flex items-center gap-2 flex-wrap">
+                        <span>สำนักงานการตรวจสอบภายใน</span>
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                        <span :class="isApiConnected ? 'text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200' : 'text-amber-700 font-bold flex items-center gap-1 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200'">
+                            <span class="w-2 h-2 rounded-full dot-pulse" :class="isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'"></span>
+                            {{ isApiConnected ? 'เชื่อมต่อ Google Sheet Real-time' : 'โหมดอ่านสดจาก Google Sheet' }}
+                        </span>
+                    </p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-xl md:text-2xl font-black text-slate-900 leading-tight tracking-tight">
-                    ระบบติดตามงานตรวจสอบและขอขยายระยะเวลา
-                </h1>
-                <p class="text-xs md:text-sm text-slate-500 mt-1 font-semibold flex items-center gap-2 flex-wrap">
-                    <span>สำนักงานการตรวจสอบภายใน</span>
-                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                    <span :class="isApiConnected ? 'text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200' : 'text-amber-700 font-bold flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200'">
-                        <span class="w-2 h-2 rounded-full dot-pulse" :class="isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'"></span>
-                        {{ isApiConnected ? 'เชื่อมต่อ Google Sheet Real-time' : 'โหมดอ่านสดจาก Google Sheet' }}
-                    </span>
-                </p>
+
+            <!-- Right Controls: Profile Pill + Sheet Config -->
+            <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+                <div class="flex items-center gap-2 bg-slate-100/90 px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                    <i data-lucide="user-check" class="w-4 h-4 text-indigo-600"></i>
+                    <div>
+                        <span class="font-bold text-slate-900">{{ currentUser.name }}</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-black ml-1">{{ currentUser.role }}</span>
+                    </div>
+                    <button @click="openLoginModal" class="ml-1 text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200/60" title="สลับผู้ใช้งาน">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <button @click="openConfigModal" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all shadow-2xs"
+                        :class="isApiConnected ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600 animate-pulse'">
+                    <i data-lucide="link-2" class="w-4 h-4"></i>
+                    <span>{{ isApiConnected ? '⚙️ เชื่อมต่อ Google Sheet แล้ว' : '⚙️ เชื่อมต่อ Google Sheet API' }}</span>
+                </button>
             </div>
         </div>
 
-        <!-- Right Side: User Profile & 3 Main Action Buttons + Google Sheet Setup -->
-        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-            <!-- User Status Badge -->
-            <div class="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-xl border border-slate-200 text-xs">
-                <i data-lucide="user-check" class="w-4 h-4 text-indigo-600"></i>
-                <div>
-                    <span class="font-bold text-slate-900">{{ currentUser.name }}</span>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-black ml-1">{{ currentUser.role }}</span>
-                </div>
-                <button @click="openLoginModal" class="ml-1 text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200/60" title="สลับผู้ใช้งาน">
-                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                </button>
-            </div>
-
-            <!-- Google Sheet Web App Connect Button -->
-            <button @click="openConfigModal" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all shadow-2xs"
-                    :class="isApiConnected ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' : 'bg-amber-500 text-white border-amber-600 hover:bg-amber-600 animate-pulse'">
-                <i data-lucide="link-2" class="w-4 h-4"></i>
-                <span>{{ isApiConnected ? '⚙️ เชื่อมต่อ Google Sheet แล้ว' : '⚙️ เชื่อมต่อ Google Sheet API' }}</span>
-            </button>
-
-            <!-- 3 Main Action Buttons matching exact phase status colors -->
-            <button @click="openAuditModal()" class="btn-action-primary flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl transition-all">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+        <!-- Row 2: 3 Main Primary Action Buttons -->
+        <div class="flex flex-wrap items-center gap-3">
+            <button @click="openAuditModal()" class="btn-action-primary flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[200px]">
+                <i data-lucide="plus-circle" class="w-4.5 h-4.5"></i>
                 <span>เพิ่มข้อมูลการตรวจสอบ</span>
             </button>
 
-            <button @click="openDelayModal()" class="btn-action-warning flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl transition-all">
-                <i data-lucide="clock" class="w-4 h-4"></i>
+            <button @click="openDelayModal()" class="btn-action-warning flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[200px]">
+                <i data-lucide="clock" class="w-4.5 h-4.5"></i>
                 <span>ขอขยายระยะเวลาการตรวจสอบ</span>
             </button>
 
-            <button @click="openEditManagerModal()" class="btn-action-secondary flex items-center gap-1.5 px-4 py-2 text-xs md:text-sm font-bold rounded-xl transition-all">
-                <i data-lucide="edit-3" class="w-4 h-4"></i>
-                <span>แก้ไขข้อมูล</span>
+            <button @click="openEditManagerModal()" class="btn-action-secondary flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[200px]">
+                <i data-lucide="edit-3" class="w-4.5 h-4.5"></i>
+                <span>จัดการและแก้ไขข้อมูล</span>
             </button>
         </div>
     </header>
@@ -238,7 +241,7 @@
                     1. สถานะการตรวจสอบล่าสุด (แยกตาม 4 ขั้นตอนหลัก)
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5 font-medium">
-                    แสดงส่วนงานในขั้นตอนล่าสุดพร้อมวันที่
+                    แสดงส่วนงานในขั้นตอนล่าสุดพร้อมวันที่ (แสดงรูปแบบ วัน/เดือน/ปี)
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
@@ -389,14 +392,13 @@
 
     <!-- Section 3 & 4: Team Performance Averages -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Section 3: ระยะเวลาเฉลี่ยที่แต่ละทีมใช้ในการตรวจสอบ (ข้อ 2.3) -->
+        <!-- Section 3: ระยะเวลาเฉลี่ยที่แต่ละทีมใช้ในการตรวจสอบ -->
         <div class="glass-card p-5 rounded-2xl border border-slate-200/90 shadow-sm space-y-3">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
                 <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="users" class="w-4.5 h-4.5 text-indigo-600"></i>
                     3. ระยะเวลาเฉลี่ยที่ใช้ในการตรวจสอบจริง (รายทีม)
                 </h3>
-                <span class="text-xs text-slate-400 font-semibold">ข้อ 2.3 &divide; จำนวนส่วนงาน</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div v-for="t in teamMetrics" :key="t.teamName" class="p-3.5 bg-slate-50/90 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
@@ -411,14 +413,13 @@
             </div>
         </div>
 
-        <!-- Section 4: ระยะเวลาเฉลี่ยที่แต่ละทีมใช้ในการเสนอรายงานต่อ คตส. (ข้อ 2.5) -->
+        <!-- Section 4: ระยะเวลาเฉลี่ยที่แต่ละทีมใช้ในการเสนอรายงานต่อ คตส. -->
         <div class="glass-card p-5 rounded-2xl border border-slate-200/90 shadow-sm space-y-3">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
                 <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="award" class="w-4.5 h-4.5 text-purple-600"></i>
                     4. ระยะเวลาเฉลี่ยที่ใช้ในการเสนอรายงานต่อ คตส. (รายทีม)
                 </h3>
-                <span class="text-xs text-slate-400 font-semibold">ข้อ 2.5 &divide; จำนวนส่วนงาน</span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div v-for="t in teamMetrics" :key="'cts-'+t.teamName" class="p-3.5 bg-slate-50/90 rounded-xl border border-slate-200 flex justify-between items-center shadow-2xs">
@@ -567,7 +568,6 @@
             </div>
 
             <div class="space-y-3.5 text-xs">
-                <!-- Step-by-Step Box -->
                 <div class="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-2xl border border-indigo-200 text-indigo-950 space-y-2">
                     <div class="font-black text-sm flex items-center gap-2 text-indigo-900">
                         <i data-lucide="check-square" class="w-4 h-4 text-indigo-600"></i>
@@ -577,9 +577,9 @@
                         <li>เปิดไฟล์ Google Sheet ทะเบียนคุมงานของคุณ</li>
                         <li>ไปที่เมนูด้านบน <strong>ส่วนขยาย (Extensions)</strong> &rarr; <strong>Apps Script</strong></li>
                         <li>วางซอร์สโค้ดจากไฟล์ <code>apps-script/Code.gs</code> ในโปรเจกต์นี้</li>
-                        <li>กดปุ่มสีส้ม <strong>ทำให้ใช้งานได้ (Deploy)</strong> &rarr; <strong>การทำให้ใช้งานได้ใหม่ (New deployment)</strong></li>
-                        <li>เลือกประเภท ⚙️ <strong>เว็บแอป (Web app)</strong> กำหนดสิทธิ์ผู้เข้าถึงเป็น <strong>"ทุกคน" (Anyone)</strong></li>
-                        <li>กด <strong>Deploy</strong> แล้วคัดลอก URL ที่ได้ (ลงท้ายด้วย <code>/exec</code>) มาวางในช่องด้านล่างนี้</li>
+                        <li>เลือกฟังก์ชัน <code>testRunAuthorization</code> แล้วกดปุ่ม <strong>Run (เรียกใช้)</strong> 1 ครั้งเพื่ออนุมัติสิทธิ์</li>
+                        <li>กดปุ่มสีฟ้า <strong>Deploy</strong> &rarr; <strong>New deployment</strong> เลือกประเภท <strong>Web app</strong> ตั้งค่าสิทธิ์เป็น <strong>Anyone (ทุกคน)</strong></li>
+                        <li>กด Deploy คัดลอก URL มาวางในช่องด้านล่างนี้</li>
                     </ol>
                 </div>
 
@@ -602,7 +602,7 @@
         </div>
     </div>
 
-    <!-- Modal 1: Audit Form Modal (บันทึก/แก้ไขข้อมูลการตรวจสอบ) -->
+    <!-- Modal 1: Audit Form Modal -->
     <div v-if="showAuditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop overflow-y-auto">
         <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -844,29 +844,29 @@
                 <div v-for="item in accessibleDelayList" :key="item._rowIndex" class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2.5">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="font-black text-slate-900 text-sm">{{ item.Department }}</span>
-                            <div class="text-[11px] text-slate-500 font-semibold mt-0.5">ผู้ขอ: {{ item.Requestor }} ({{ item.Email }})</div>
+                            <span class="font-black text-slate-900 text-sm">{{ item.Department || item.department || item['ส่วนงาน'] }}</span>
+                            <div class="text-[11px] text-slate-500 font-semibold mt-0.5">ผู้ขอ: {{ item.Requestor || item.requestor || item.Email || item.email }}</div>
                         </div>
                         <span class="px-3 py-1 rounded-full text-[10px] font-black"
                               :class="{
-                                'bg-purple-100 text-purple-900 border border-purple-300': item.Status.includes('รอพิจารณา'),
-                                'bg-indigo-100 text-indigo-900 border border-indigo-300': item.Status.includes('รออนุมัติ'),
-                                'bg-emerald-100 text-emerald-900 border border-emerald-300': item.Status === 'อนุมัติแล้ว',
-                                'bg-red-100 text-red-900 border border-red-300': item.Status === 'ตีกลับ' || item.Status === 'ไม้อนุมัติ',
-                                'bg-slate-200 text-slate-700': item.Status === 'ขอยกเลิก'
+                                'bg-purple-100 text-purple-900 border border-purple-300': (item.Status || item.status || '').includes('รอพิจารณา'),
+                                'bg-indigo-100 text-indigo-900 border border-indigo-300': (item.Status || item.status || '').includes('รออนุมัติ'),
+                                'bg-emerald-100 text-emerald-900 border border-emerald-300': (item.Status || item.status || '') === 'อนุมัติแล้ว',
+                                'bg-red-100 text-red-900 border border-red-300': (item.Status || item.status || '') === 'ตีกลับ' || (item.Status || item.status || '') === 'ไม้อนุมัติ',
+                                'bg-slate-200 text-slate-700': (item.Status || item.status || '') === 'ขอยกเลิก'
                               }">
-                            {{ item.Status }}
+                            {{ item.Status || item.status || 'รอพิจารณา' }}
                         </span>
                     </div>
 
                     <div class="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 font-semibold">
-                        <div><strong>ช่วงวันที่ขอขยาย:</strong> {{ item['Start Date'] }} ถึง {{ item['End Date'] }}</div>
-                        <div class="mt-1"><strong>เหตุผล:</strong> {{ item.Reason }}</div>
+                        <div><strong>ช่วงวันที่ขอขยาย:</strong> {{ formatDateDMY(item['Start Date'] || item.startDate) }} ถึง {{ formatDateDMY(item['End Date'] || item.endDate) }}</div>
+                        <div class="mt-1"><strong>เหตุผล:</strong> {{ item.Reason || item.reason }}</div>
                         <div v-if="item.Remarks" class="mt-1 text-purple-800 font-black"><strong>ข้อความตีกลับ:</strong> {{ item.Remarks }}</div>
                     </div>
 
                     <div class="flex justify-end gap-2 pt-1">
-                        <template v-if="item.Email === currentUser.email && item.Status === 'ตีกลับ'">
+                        <template v-if="(item.Email || item.email) === currentUser.email && (item.Status || item.status || '').includes('ตีกลับ')">
                             <button @click="editAndResubmitDelay(item)" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-xl">
                                 แก้ไขแล้วส่งใหม่
                             </button>
@@ -875,7 +875,7 @@
                             </button>
                         </template>
 
-                        <template v-if="(currentUser.role === 'Leader' || currentUser.role === 'Admin') && item.Status.includes('รอพิจารณา')">
+                        <template v-if="(currentUser.role === 'Leader' || currentUser.role === 'Admin') && (item.Status || item.status || '').includes('รอพิจารณา')">
                             <button @click="processApproval(item._rowIndex, 'approved')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-2xs">
                                 ผ่านพิจารณาเสนอ ผอ.
                             </button>
@@ -884,7 +884,7 @@
                             </button>
                         </template>
 
-                        <template v-if="(currentUser.role === 'Dean' || currentUser.role === 'Admin') && item.Status.includes('รออนุมัติ')">
+                        <template v-if="(currentUser.role === 'Dean' || currentUser.role === 'Admin') && (item.Status || item.status || '').includes('รออนุมัติ')">
                             <button @click="processApproval(item._rowIndex, 'approved')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-2xs">
                                 อนุมัติการขยายเวลา
                             </button>
@@ -932,54 +932,102 @@
         </div>
     </div>
 
-    <!-- Modal 5: Edit Data Manager Modal -->
+    <!-- Modal 5: Edit Data Manager Modal (Enhanced with Search/Filter & Close Buttons) -->
     <div v-if="showEditManagerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
-        <div class="bg-white rounded-2xl max-w-5xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 text-xs">
+        <div class="bg-white rounded-2xl max-w-6xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 text-xs">
+            <!-- Modal Header with Explicit X Close Button -->
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
                 <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="edit-3" class="w-5 h-5 text-indigo-600"></i>
                     จัดการและแก้ไขข้อมูลการตรวจสอบทั้งหมด
                 </h3>
-                <button @click="showEditManagerModal = false" class="text-slate-400 hover:text-slate-600">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button @click="showEditManagerModal = false" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all" title="ปิดหน้าต่าง">
+                    <i data-lucide="x" class="w-6 h-6"></i>
                 </button>
             </div>
 
-            <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-96">
+            <!-- Modal Search & Filter Controls -->
+            <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200 flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-1 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <i data-lucide="filter" class="w-4 h-4 text-indigo-600"></i>
+                    กรองข้อมูล:
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <label class="text-slate-600 font-medium">ปีงบประมาณ:</label>
+                    <select v-model="editSelectedYear" class="py-1.5 px-2.5 bg-white border border-slate-300 rounded-xl font-bold">
+                        <option value="ALL">ทุกปีงบประมาณ</option>
+                        <option value="2568">2568</option>
+                        <option value="2569">2569</option>
+                        <option value="2570">2570</option>
+                        <option value="2571">2571</option>
+                        <option value="2572">2572</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <label class="text-slate-600 font-medium">ทีม:</label>
+                    <select v-model="editSelectedTeam" class="py-1.5 px-2.5 bg-white border border-slate-300 rounded-xl font-bold">
+                        <option value="ALL">ทุกทีม</option>
+                        <option v-for="t in teamList" :key="t" :value="t">{{ t.includes('ทีม') ? t : 'ทีม ' + t }}</option>
+                    </select>
+                </div>
+
+                <div class="relative flex-1 min-w-[200px]">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" v-model="editSearchQuery" placeholder="ค้นหาส่วนงาน..." 
+                           class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-xl font-semibold">
+                </div>
+
+                <span class="text-slate-500 font-bold ml-auto">พบ {{ filteredManagerUnits.length }} รายการ</span>
+            </div>
+
+            <!-- Table with Thai DMY Dates -->
+            <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-[50vh]">
                 <table class="w-full text-left border-collapse text-[11px]">
-                    <thead class="bg-slate-100 font-black text-slate-800 sticky top-0">
+                    <thead class="bg-slate-100 font-black text-slate-800 sticky top-0 border-b border-slate-200">
                         <tr>
-                            <th class="p-2.5 border-b">ส่วนงาน</th>
-                            <th class="p-2.5 border-b w-16">ปี</th>
-                            <th class="p-2.5 border-b w-16">ทีม</th>
-                            <th class="p-2.5 border-b min-w-[100px]">เริ่มตรวจ</th>
-                            <th class="p-2.5 border-b min-w-[100px]">สิ้นสุดตรวจ</th>
-                            <th class="p-2.5 border-b min-w-[100px]">ปิดตรวจ</th>
-                            <th class="p-2.5 border-b min-w-[100px]">เสนออธิการ</th>
-                            <th class="p-2.5 border-b min-w-[100px]">เสนอ คตส.</th>
-                            <th class="p-2.5 border-b min-w-[100px]">เสร็จสมบูรณ์</th>
-                            <th class="p-2.5 border-b text-center w-16">จัดการ</th>
+                            <th class="p-3 border-b min-w-[180px]">ส่วนงาน</th>
+                            <th class="p-3 border-b w-16 text-center">ปี</th>
+                            <th class="p-3 border-b w-20 text-center">ทีม</th>
+                            <th class="p-3 border-b min-w-[110px] text-center">เริ่มตรวจ</th>
+                            <th class="p-3 border-b min-w-[110px] text-center">สิ้นสุดตรวจ</th>
+                            <th class="p-3 border-b min-w-[110px] text-center">ปิดตรวจ</th>
+                            <th class="p-3 border-b min-w-[110px] text-center">เสนออธิการบดี</th>
+                            <th class="p-3 border-b min-w-[110px] text-center">เสนอ คตส.</th>
+                            <th class="p-3 border-b min-w-[110px] text-center">เสร็จสมบูรณ์</th>
+                            <th class="p-3 border-b text-center w-20">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 font-medium">
-                        <tr v-for="u in allAuditUnits" :key="u._rowIndex" class="hover:bg-slate-50">
-                            <td class="p-2.5 font-bold text-slate-900">{{ u['ส่วนงาน'] }}</td>
-                            <td class="p-2.5">{{ u['ปีงบประมาณ'] }}</td>
-                            <td class="p-2.5">ทีม {{ u['ทีม'] }}</td>
-                            <td class="p-2.5">{{ u['วันที่เริ่มตรวจสอบ'] || '-' }}</td>
-                            <td class="p-2.5">{{ u['วันที่สิ้นสุดการตรวจสอบ'] || '-' }}</td>
-                            <td class="p-2.5">{{ u['วันที่ปิดตรวจ'] || '-' }}</td>
-                            <td class="p-2.5">{{ u['วันที่เสนออธิการบดี_รายงาน'] || '-' }}</td>
-                            <td class="p-2.5">{{ u['วันที่เสนอ_คตส'] || '-' }}</td>
-                            <td class="p-2.5 text-emerald-800 font-bold">{{ u['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์'] || '-' }}</td>
-                            <td class="p-2.5 text-center">
-                                <button @click="openAuditModal(u); showEditManagerModal = false" class="px-2.5 py-1 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-2xs">
+                        <tr v-if="filteredManagerUnits.length === 0">
+                            <td colspan="10" class="py-8 text-center text-slate-400 font-bold">ไม่พบข้อมูลส่วนงานตามเงื่อนไขค้นหา</td>
+                        </tr>
+                        <tr v-for="u in filteredManagerUnits" :key="u._rowIndex" class="hover:bg-slate-50">
+                            <td class="p-3 font-bold text-slate-900">{{ u['ส่วนงาน'] }}</td>
+                            <td class="p-3 text-center">{{ u['ปีงบประมาณ'] }}</td>
+                            <td class="p-3 text-center">ทีม {{ u['ทีม'] }}</td>
+                            <td class="p-3 text-center font-semibold text-slate-700">{{ formatDateDMY(u['วันที่เริ่มตรวจสอบ']) }}</td>
+                            <td class="p-3 text-center font-semibold text-slate-700">{{ formatDateDMY(u['วันที่สิ้นสุดการตรวจสอบ']) }}</td>
+                            <td class="p-3 text-center font-semibold text-slate-700">{{ formatDateDMY(u['วันที่ปิดตรวจ']) }}</td>
+                            <td class="p-3 text-center font-semibold text-slate-700">{{ formatDateDMY(u['วันที่เสนออธิการบดี_รายงาน']) }}</td>
+                            <td class="p-3 text-center font-semibold text-slate-700">{{ formatDateDMY(u['วันที่เสนอ_คตส']) }}</td>
+                            <td class="p-3 text-center font-bold text-emerald-800">{{ formatDateDMY(u['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์']) }}</td>
+                            <td class="p-3 text-center">
+                                <button @click="openAuditModal(u); showEditManagerModal = false" class="px-3 py-1 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-2xs">
                                     แก้ไข
                                 </button>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Modal Footer with Close Button -->
+            <div class="flex justify-end pt-3 border-t border-slate-100">
+                <button type="button" @click="showEditManagerModal = false" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl shadow-xs transition-all">
+                    ปิดหน้าต่าง
+                </button>
             </div>
         </div>
     </div>

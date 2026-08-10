@@ -13,7 +13,7 @@ const THAI_MONTHS_SHORT = [
 ];
 
 /**
- * Parse any date string (Thai date "31 ตุลาคม 2569", ISO "2026-10-31", etc.) into a JS Date object
+ * Parse any date string into a JS Date object
  */
 function parseDate(dateStr) {
   if (!dateStr) return null;
@@ -26,6 +26,14 @@ function parseDate(dateStr) {
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
     const parts = str.split('T')[0].split('-');
     return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  }
+
+  // Check Thai date format e.g. "31/10/2569" or "31/10/2026"
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
+    const parts = str.split('/');
+    let yr = parseInt(parts[2]);
+    if (yr > 2400) yr -= 543;
+    return new Date(yr, parseInt(parts[1]) - 1, parseInt(parts[0]));
   }
 
   // Check Thai date format e.g. "31 ตุลาคม 2569" or "31 ต.ค. 2569"
@@ -66,19 +74,26 @@ function parseDate(dateStr) {
 }
 
 /**
- * Format a Date object to Thai display string e.g. "31 ต.ค. 69"
+ * Format a Date object to Thai display string e.g. "31/10/2569" (วัน/เดือน/ปี พ.ศ.)
  */
-function formatThaiDateShort(dateStr) {
+function formatDateDMY(dateStr) {
   const d = parseDate(dateStr);
   if (!d) return dateStr || "-";
-  const day = d.getDate();
-  const monthStr = THAI_MONTHS_SHORT[d.getMonth()];
-  const yearBE = (d.getFullYear() + 543) % 100;
-  return `${day} ${monthStr} ${yearBE}`;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const yearBE = d.getFullYear() + 543;
+  return `${day}/${month}/${yearBE}`;
 }
 
 /**
- * Format a Date object to YYYY-MM-DD for input fields
+ * Format a Date object to Thai short text e.g. "31 ต.ค. 69"
+ */
+function formatThaiDateShort(dateStr) {
+  return formatDateDMY(dateStr);
+}
+
+/**
+ * Format a Date object to YYYY-MM-DD for HTML input fields
  */
 function formatISODate(dateStr) {
   const d = parseDate(dateStr);
@@ -90,12 +105,7 @@ function formatISODate(dateStr) {
 }
 
 /**
- * Calculate actual audit days between startDate and endDate (Requirement 2.3)
- * Formula:
- * 1. Count calendar days from startDate to endDate inclusive
- * 2. Deduct weekends (Saturdays & Sundays)
- * 3. Deduct national holidays (from Thai_Holidays sheet Column A)
- * 4. Deduct non-audit days for this specific department (from Non_Audit_Days sheet filtered by department)
+ * Calculate actual audit days between startDate and endDate
  */
 function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holidaysList, nonAuditDaysList) {
   const start = parseDate(startDateStr);
@@ -103,7 +113,6 @@ function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holi
 
   if (!start || !end || start > end) return 0;
 
-  // Standardize holiday dates to set of time strings (midnight)
   const holidayTimeSet = new Set();
   if (Array.isArray(holidaysList)) {
     holidaysList.forEach(h => {
@@ -115,7 +124,6 @@ function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holi
     });
   }
 
-  // Filter non-audit days by department name (Column C in Non_Audit_Days)
   const nonAuditTimeSet = new Set();
   if (Array.isArray(nonAuditDaysList) && departmentName) {
     const deptClean = String(departmentName).trim().toLowerCase();

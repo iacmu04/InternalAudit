@@ -6,7 +6,7 @@ const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 
 const app = createApp({
   setup() {
-    // Current User & Auth State (Default to Admin user for quick demo)
+    // Current User & Auth State (Default to Admin user for demo)
     const currentUser = ref({
       email: "amornrath.f@gmail.com",
       name: "Pui",
@@ -23,11 +23,16 @@ const app = createApp({
     const holidaysList = ref([]);
     const nonAuditDaysList = ref([]);
 
-    // Filters
+    // Main Filters
     const selectedFiscalYear = ref("ALL");
     const selectedTeam = ref("ALL");
     const selectedPhase = ref("ALL");
     const searchQuery = ref("");
+
+    // Manager Modal Filters
+    const editSearchQuery = ref("");
+    const editSelectedYear = ref("ALL");
+    const editSelectedTeam = ref("ALL");
 
     // Modals & Drawers Visibility
     const showAuditModal = ref(false);
@@ -204,6 +209,26 @@ const app = createApp({
       return list;
     });
 
+    // Filtered Manager Modal Units
+    const filteredManagerUnits = computed(() => {
+      let list = rawAuditList.value;
+
+      if (editSelectedYear.value !== "ALL") {
+        list = list.filter(u => String(u["ปีงบประมาณ"]) === editSelectedYear.value);
+      }
+
+      if (editSelectedTeam.value !== "ALL") {
+        list = list.filter(u => String(u["ทีม"]) === editSelectedTeam.value || `ทีม ${u["ทีม"]}` === editSelectedTeam.value);
+      }
+
+      if (editSearchQuery.value.trim() !== "") {
+        const q = editSearchQuery.value.toLowerCase().trim();
+        list = list.filter(u => String(u["ส่วนงาน"] || "").toLowerCase().includes(q));
+      }
+
+      return list;
+    });
+
     const overallCompletionRate = computed(() => {
       if (filteredUnits.value.length === 0) return 0;
       const count = filteredUnits.value.filter(u => u.isCompleted).length;
@@ -237,7 +262,7 @@ const app = createApp({
       return filteredUnits.value.filter(u => u.latestPhase === phaseKey).length;
     };
 
-    // Chart Stats & Bottlenecks
+    // Chart Stats
     const phaseChartStats = computed(() => {
       return [
         { key: "1.1", name: "1.1 ก่อนเข้าตรวจ", color: "#5167D7", count: getPhaseCount("1.1") },
@@ -406,11 +431,11 @@ const app = createApp({
       isEditingDelay.value = true;
       editingDelayIndex.value = item._rowIndex;
       delayForm.value = {
-        department: item.Department || "",
-        startDate: formatISODate(item["Start Date"]),
-        endDate: formatISODate(item["End Date"]),
-        reason: item.Reason || "",
-        supervisorName: item["Supervisor Name"] || ""
+        department: item.Department || item.department || "",
+        startDate: formatISODate(item["Start Date"] || item.startDate),
+        endDate: formatISODate(item["End Date"] || item.endDate),
+        reason: item.Reason || item.reason || "",
+        supervisorName: item["Supervisor Name"] || item.supervisorName || ""
       };
       showApprovalDrawer.value = false;
       showDelayModal.value = true;
@@ -458,6 +483,9 @@ const app = createApp({
     };
 
     const openEditManagerModal = () => {
+      editSearchQuery.value = "";
+      editSelectedYear.value = "ALL";
+      editSelectedTeam.value = "ALL";
       showEditManagerModal.value = true;
     };
 
@@ -493,7 +521,7 @@ const app = createApp({
       });
     });
 
-    watch([filteredUnits, showApprovalDrawer, showAuditModal, showDelayModal, showConfigModal], () => {
+    watch([filteredUnits, showApprovalDrawer, showAuditModal, showDelayModal, showConfigModal, showEditManagerModal], () => {
       nextTick(() => {
         if (window.lucide) lucide.createIcons();
       });
@@ -514,7 +542,11 @@ const app = createApp({
       selectedTeam,
       selectedPhase,
       searchQuery,
+      editSearchQuery,
+      editSelectedYear,
+      editSelectedTeam,
       filteredUnits,
+      filteredManagerUnits,
       allAuditUnits,
       overallCompletionRate,
       completedUnitsCount,
@@ -555,7 +587,8 @@ const app = createApp({
       openApprovalDrawer,
       openEditManagerModal,
       openLoginModal,
-      selectUser
+      selectUser,
+      formatDateDMY
     };
   }
 });
