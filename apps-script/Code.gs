@@ -10,9 +10,16 @@ function getSpreadsheet() {
     const active = SpreadsheetApp.getActiveSpreadsheet();
     if (active) return active;
   } catch (e) {
-    // If not container bound, open by ID
+    // Fallback if standalone
   }
   return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+// Helper test function to run directly in Apps Script Editor for granting permissions
+function testRunAuthorization() {
+  const ss = getSpreadsheet();
+  Logger.log("Successfully connected to sheet: " + ss.getName());
+  return getAllData(ss);
 }
 
 function doGet(e) {
@@ -34,7 +41,7 @@ function doGet(e) {
     responseData = { 
       status: "error", 
       message: err.toString(),
-      hint: "หากพบข้อผิดพลาดสิทธิ์สเปรดชีต ให้กดเรียกใช้ (Run) ฟังก์ชัน getAllData ใน Apps Script Editor 1 ครั้งเพื่อกดยอมรับอนุญาตสิทธิ์ (Grant Access)"
+      hint: "หากพบข้อผิดพลาดสิทธิ์สเปรดชีต ให้เลือกฟังก์ชัน testRunAuthorization แล้วกด Run ใน Apps Script Editor เพื่ออนุมัติสิทธิ์ (Grant Access)"
     };
   }
 
@@ -82,7 +89,7 @@ function doPost(e) {
     responseData = { 
       status: "error", 
       message: err.toString(),
-      hint: "หากพบข้อผิดพลาดสิทธิ์สเปรดชีต ให้กดเรียกใช้ (Run) ฟังก์ชัน getAllData ใน Apps Script Editor 1 ครั้งเพื่อกดยอมรับอนุญาตสิทธิ์ (Grant Access)"
+      hint: "หากพบข้อผิดพลาดสิทธิ์สเปรดชีต ให้เลือกฟังก์ชัน testRunAuthorization แล้วกด Run ใน Apps Script Editor เพื่ออนุมัติสิทธิ์ (Grant Access)"
     };
   }
 
@@ -91,6 +98,7 @@ function doPost(e) {
 }
 
 function getAllData(ss) {
+  if (!ss) ss = getSpreadsheet();
   ensureSheets(ss);
   
   const mainAuditSheet = ss.getSheetByName("Main_Audit");
@@ -147,6 +155,7 @@ function formatDate(date) {
 }
 
 function checkUserPermission(ss, email) {
+  if (!ss) ss = getSpreadsheet();
   const users = readSheetData(ss.getSheetByName("Users"));
   const user = users.find(u => String(u["Email"] || u["Email amornrath.f@gmail.com"] || u.email || "").toLowerCase().trim() === String(email).toLowerCase().trim());
   
@@ -167,6 +176,7 @@ function checkUserPermission(ss, email) {
 }
 
 function saveAuditEntry(ss, data) {
+  if (!ss) ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Main_Audit");
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
   
@@ -181,6 +191,7 @@ function saveAuditEntry(ss, data) {
 }
 
 function updateAuditEntry(ss, rowIndex, data) {
+  if (!ss) ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Main_Audit");
   if (!rowIndex || rowIndex < 2) return { status: "error", message: "Invalid row index" };
 
@@ -193,6 +204,7 @@ function updateAuditEntry(ss, rowIndex, data) {
 }
 
 function addDepartmentToMaster(ss, deptName) {
+  if (!ss) ss = getSpreadsheet();
   if (!deptName) return { status: "ignored" };
   const masterSheet = ss.getSheetByName("Master_Lists");
   if (!masterSheet) return { status: "ignored" };
@@ -207,6 +219,7 @@ function addDepartmentToMaster(ss, deptName) {
 }
 
 function submitExtension(ss, data) {
+  if (!ss) ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Delay");
   const nowStr = formatDate(new Date());
   
@@ -230,6 +243,7 @@ function submitExtension(ss, data) {
 }
 
 function processApproval(ss, id, status, comment, userEmail, userRole) {
+  if (!ss) ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Delay");
   const values = sheet.getDataRange().getValues();
   const nowStr = formatDate(new Date());
@@ -279,6 +293,7 @@ function processApproval(ss, id, status, comment, userEmail, userRole) {
 }
 
 function cancelExtension(ss, rowIndex) {
+  if (!ss) ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Delay");
   if (!rowIndex || rowIndex < 2) return { status: "error", message: "Invalid row" };
 
@@ -287,6 +302,7 @@ function cancelExtension(ss, rowIndex) {
 }
 
 function resubmitExtension(ss, rowIndex, data) {
+  if (!ss) ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Delay");
   if (!rowIndex || rowIndex < 2) return { status: "error", message: "Invalid row" };
 
@@ -301,6 +317,7 @@ function resubmitExtension(ss, rowIndex, data) {
 }
 
 function ensureSheets(ss) {
+  if (!ss) ss = getSpreadsheet();
   const required = ["Main_Audit", "Delay", "Users", "Master_Lists", "Thai_Holidays", "Non_Audit_Days"];
   required.forEach(name => {
     if (!ss.getSheetByName(name)) {
