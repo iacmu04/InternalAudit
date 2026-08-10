@@ -16,6 +16,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Custom Styles -->
     <link rel="stylesheet" href="css/style.css">
+    <!-- Flatpickr CSS & JS for Date Picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
 </head>
 <body class="min-h-screen text-slate-800">
 
@@ -705,18 +709,15 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่มอบหมายงาน</label>
-                            <input type="date" v-model="auditForm['วันที่มอบหมายงาน']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่มอบหมายงาน']">{{ formatDateDMY(auditForm['วันที่มอบหมายงาน']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่มอบหมายงาน']" placeholder="วัน/เดือน/ปี (เช่น 27/10/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่แจ้งเข้าตรวจ</label>
-                            <input type="date" v-model="auditForm['วันที่แจ้งเข้าตรวจ']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่แจ้งเข้าตรวจ']">{{ formatDateDMY(auditForm['วันที่แจ้งเข้าตรวจ']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่แจ้งเข้าตรวจ']" placeholder="วัน/เดือน/ปี (เช่น 29/10/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่อนุมัติแผน</label>
-                            <input type="date" v-model="auditForm['วันที่อนุมัติแผน']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่อนุมัติแผน']">{{ formatDateDMY(auditForm['วันที่อนุมัติแผน']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่อนุมัติแผน']" placeholder="วัน/เดือน/ปี (เช่น 30/10/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                     </div>
                 </div>
@@ -729,18 +730,15 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่เริ่มตรวจสอบ</label>
-                            <input type="date" v-model="auditForm['วันที่เริ่มตรวจสอบ']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่เริ่มตรวจสอบ']">{{ formatDateDMY(auditForm['วันที่เริ่มตรวจสอบ']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่เริ่มตรวจสอบ']" placeholder="วัน/เดือน/ปี (เช่น 31/10/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่สิ้นสุดการตรวจสอบ</label>
-                            <input type="date" v-model="auditForm['วันที่สิ้นสุดการตรวจสอบ']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่สิ้นสุดการตรวจสอบ']">{{ formatDateDMY(auditForm['วันที่สิ้นสุดการตรวจสอบ']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่สิ้นสุดการตรวจสอบ']" placeholder="วัน/เดือน/ปี (เช่น 10/11/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่ปิดตรวจ</label>
-                            <input type="date" v-model="auditForm['วันที่ปิดตรวจ']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่ปิดตรวจ']">{{ formatDateDMY(auditForm['วันที่ปิดตรวจ']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่ปิดตรวจ']" placeholder="วัน/เดือน/ปี (เช่น 15/11/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                     </div>
                 </div>
@@ -753,18 +751,15 @@
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่เสนออธิการบดี</label>
-                            <input type="date" v-model="auditForm['วันที่เสนออธิการบดี_รายงาน']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่เสนออธิการบดี_รายงาน']">{{ formatDateDMY(auditForm['วันที่เสนออธิการบดี_รายงาน']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่เสนออธิการบดี_รายงาน']" placeholder="วัน/เดือน/ปี (เช่น 01/12/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่แจ้งหน่วยรับตรวจ</label>
-                            <input type="date" v-model="auditForm['วันที่แจ้งหน่วยรับตรวจ_รายงาน']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่แจ้งหน่วยรับตรวจ_รายงาน']">{{ formatDateDMY(auditForm['วันที่แจ้งหน่วยรับตรวจ_รายงาน']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่แจ้งหน่วยรับตรวจ_รายงาน']" placeholder="วัน/เดือน/ปี (เช่น 09/12/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่เสนอ คตส.</label>
-                            <input type="date" v-model="auditForm['วันที่เสนอ_คตส']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่เสนอ_คตส']">{{ formatDateDMY(auditForm['วันที่เสนอ_คตส']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่เสนอ_คตส']" placeholder="วัน/เดือน/ปี (เช่น 29/12/2569)" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">ครั้งที่ประชุม คตส.</label>
@@ -784,18 +779,15 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่หน่วยรับตรวจชี้แจง</label>
-                            <input type="date" v-model="auditForm['วันที่หน่วยรับตรวจชี้แจง']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่หน่วยรับตรวจชี้แจง']">{{ formatDateDMY(auditForm['วันที่หน่วยรับตรวจชี้แจง']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่หน่วยรับตรวจชี้แจง']" placeholder="วัน/เดือน/ปี" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-700 block mb-1 font-bold">วันที่เสนออธิการบดี (ชี้แจง)</label>
-                            <input type="date" v-model="auditForm['วันที่เสนออธิการบดี_ชี้แจง']" class="w-full p-2.5 border rounded-xl bg-white font-semibold">
-                            <span class="text-[10px] text-slate-500 mt-0.5 block font-medium" v-if="auditForm['วันที่เสนออธิการบดี_ชี้แจง']">{{ formatDateDMY(auditForm['วันที่เสนออธิการบดี_ชี้แจง']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่เสนออธิการบดี_ชี้แจง']" placeholder="วัน/เดือน/ปี" class="flatpickr-date w-full p-2.5 border rounded-xl bg-white font-semibold text-xs">
                         </div>
                         <div>
                             <label class="text-slate-900 block mb-1 font-extrabold text-emerald-800">วันที่เสร็จสมบูรณ์</label>
-                            <input type="date" v-model="auditForm['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์']" class="w-full p-2.5 border border-emerald-400 rounded-xl bg-emerald-50 font-bold text-emerald-900">
-                            <span class="text-[10px] text-emerald-700 mt-0.5 block font-bold" v-if="auditForm['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์']">{{ formatDateDMY(auditForm['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์']) }}</span>
+                            <input type="text" v-model="auditForm['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์']" placeholder="วัน/เดือน/ปี" class="flatpickr-date w-full p-2.5 border border-emerald-400 rounded-xl bg-emerald-50 font-bold text-emerald-900 text-xs">
                         </div>
                     </div>
                 </div>
@@ -834,7 +826,7 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                 <div>
                                     <label class="text-[11px] text-slate-700 font-bold block mb-1">วันที่ไม่ได้เข้าตรวจ</label>
-                                    <input type="date" v-model="entry.date" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-semibold text-xs">
+                                    <input type="text" v-model="entry.date" placeholder="วัน/เดือน/ปี (เช่น 11/02/2569)" class="flatpickr-date w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-semibold text-xs">
                                 </div>
 
                                 <div>

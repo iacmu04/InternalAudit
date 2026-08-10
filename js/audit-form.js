@@ -28,7 +28,7 @@ function populateAuditFormFromRow(row, existingNonAuditList = []) {
   const form = createInitialAuditFormState();
   Object.keys(form).forEach(key => {
     if (key !== "nonAuditDays" && row[key]) {
-      form[key] = formatISODate(row[key]);
+      form[key] = formatDateDMY(row[key]);
     }
   });
   form["ส่วนงาน"] = row["ส่วนงาน"] || "";
@@ -43,8 +43,8 @@ function populateAuditFormFromRow(row, existingNonAuditList = []) {
       const itemDept = String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase();
       return itemDept === deptClean;
     }).map(item => ({
-      date: formatISODate(item["วันที่"] || item.date),
-      reason: item["ประเภท"] || item["สาเหตุ/หมายเหตุ"] || item.reason || "ติดประชุมมหาวิทยาลัย",
+      date: formatDateDMY(item["วันที่"] || item.date),
+      reason: item["ประเภท"] || item["สาเหตุ/หมายเหตุ"] || item.reason || "",
       details: item["รายละเอียด"] || item.details || ""
     }));
   }

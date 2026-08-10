@@ -122,13 +122,26 @@ const app = createApp({
 
     const teamList = computed(() => teamOptions.value);
 
-    // Master_Lists Column D Dropdown for Non-Audit Days Reasons
+    // Master_Lists Column D & Non_Audit_Days Dropdown for Reasons
     const nonAuditReasonOptions = computed(() => {
       const set = new Set();
+
+      // 1. From Master_Lists sheet (Column D)
       masterLists.value.forEach(item => {
         const val = item["ประเภท_เหตุผล_ไม่เข้าตรวจ"] || item["ประเภท/เหตุผล"] || item["เหตุผล_ไม่เข้าตรวจ"] || item["คอลัมน์ D"];
         if (val && String(val).trim() !== "") set.add(String(val).trim());
       });
+
+      // 2. From Non_Audit_Days sheet
+      nonAuditDaysList.value.forEach(item => {
+        const val = item["ประเภท"] || item["ประเภท/เหตุผล"] || item["สาเหตุ/หมายเหตุ"];
+        if (val && String(val).trim() !== "") set.add(String(val).trim());
+      });
+
+      // 3. Fallback defaults if no custom reasons defined in sheet yet
+      if (set.size === 0) {
+        ["ติดประชุมมหาวิทยาลัย", "อบรม/สัมมนา", "วันหยุดนักขัตฤกษ์", "ติดภารกิจอื่น"].forEach(r => set.add(r));
+      }
 
       return Array.from(set);
     });
@@ -339,6 +352,15 @@ const app = createApp({
         reason: nonAuditReasonOptions.value[0] || "ติดประชุมมหาวิทยาลัย",
         details: ""
       });
+      nextTick(() => {
+        if (window.flatpickr) {
+          flatpickr(".flatpickr-date", {
+            dateFormat: "d/m/Y",
+            allowInput: true,
+            locale: "th"
+          });
+        }
+      });
     };
 
     const removeNonAuditDateRow = (index) => {
@@ -397,6 +419,15 @@ const app = createApp({
       }
       newDepartmentInput.value = "";
       showAuditModal.value = true;
+      nextTick(() => {
+        if (window.flatpickr) {
+          flatpickr(".flatpickr-date", {
+            dateFormat: "d/m/Y",
+            allowInput: true,
+            locale: "th"
+          });
+        }
+      });
     };
 
     const submitAuditForm = async () => {
@@ -415,11 +446,20 @@ const app = createApp({
         return;
       }
 
+      // Normalize date values to ISO format before posting
+      const formDataToSend = { ...auditForm.value };
+      Object.keys(formDataToSend).forEach(key => {
+        if (key !== "nonAuditDays" && formDataToSend[key] && key.startsWith("วันที่")) {
+          const d = parseDate(formDataToSend[key]);
+          if (d) formDataToSend[key] = formatISODate(d);
+        }
+      });
+
       let res;
       if (editingRowIndex.value) {
-        res = await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: auditForm.value });
+        res = await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: formDataToSend });
       } else {
-        res = await API.postAction("saveAuditEntry", { data: auditForm.value });
+        res = await API.postAction("saveAuditEntry", { data: formDataToSend });
       }
 
       if (!handleApiResponse(res)) return;
@@ -575,17 +615,11 @@ const app = createApp({
     };
 
     const warningDeptsList = computed(() => {
-      return filteredUnits.value.filter(u => {
-        const dateJ = u.raw['วันที่ปิดตรวจ'];
-        const dateN = u.raw['วันที่เสนอ_คตส'];
-        if (!dateJ || dateN) return false;
-        
-        const daysSinceClose = dateDiffInDays(dateJ, new Date());
-        return daysSinceClose !== null && daysSinceClose >= 50;
-      }).map(u => ({
+      const units = dashboardResult.value.units || [];
+      return units.filter(u => u.isWarning || (u.ctsDuration !== null && u.ctsDuration >= 50)).map(u => ({
         name: u.name,
         team: u.team,
-        daysSinceClose: dateDiffInDays(u.raw['วันที่ปิดตรวจ'], new Date())
+        daysSinceClose: u.ctsDuration !== null ? u.ctsDuration : (dateDiffInDays(u.raw['วันที่ปิดตรวจ'], new Date()) || 50)
       }));
     });
 
