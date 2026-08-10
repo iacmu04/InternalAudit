@@ -262,12 +262,12 @@ const app = createApp({
       return filteredUnits.value.filter(u => u.latestPhase === phaseKey).length;
     };
 
-    // Chart Stats
+    // Chart Stats (#C1BFEC for Phase 1.3)
     const phaseChartStats = computed(() => {
       return [
         { key: "1.1", name: "1.1 ก่อนเข้าตรวจ", color: "#5167D7", count: getPhaseCount("1.1") },
         { key: "1.2", name: "1.2 ระหว่างการตรวจสอบ", color: "#B086DF", count: getPhaseCount("1.2") },
-        { key: "1.3", name: "1.3 รายงานผลการตรวจสอบ", color: "#4F4B78", count: getPhaseCount("1.3") },
+        { key: "1.3", name: "1.3 รายงานผลการตรวจสอบ", color: "#C1BFEC", count: getPhaseCount("1.3") },
         { key: "1.4", name: "1.4 ชี้แจงผลการดำเนินงาน", color: "#839B77", count: getPhaseCount("1.4") }
       ];
     });

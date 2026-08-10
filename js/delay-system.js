@@ -5,8 +5,10 @@
 function getDelayStatus(item) {
   if (!item) return "";
   for (let key in item) {
-    if (key.toLowerCase().trim() === "status" || key.includes("สถานะ")) {
-      return String(item[key]).trim();
+    const k = key.toLowerCase().trim();
+    if (k === "status" || k.includes("สถานะ")) {
+      const val = String(item[key]).trim();
+      if (val) return val;
     }
   }
   return String(item.Status || item.status || "").trim();
@@ -43,10 +45,12 @@ function countPendingRequests(delayList) {
   if (Array.isArray(delayList)) {
     delayList.forEach(item => {
       const status = getDelayStatus(item);
-      if (status.includes("รอพิจารณา")) {
+      if (status.includes("รอพิจารณา") || status.includes("หัวหน้า")) {
         supervisorCount++;
-      } else if (status.includes("รออนุมัติ")) {
+      } else if (status.includes("รออนุมัติ") || status.includes("ผู้อำนวยการ") || status.includes("ผอ.")) {
         directorCount++;
+      } else if (!status || status === "รอพิจารณา") {
+        supervisorCount++;
       }
     });
   }

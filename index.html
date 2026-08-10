@@ -105,7 +105,7 @@
             <div class="bg-white/95 px-4 py-2 rounded-xl border border-purple-200 shadow-2xs flex items-center gap-2.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-purple-500 dot-pulse"></span>
                 <div class="text-xs">
-                    <span class="text-slate-600 font-medium">รอพิจารณา (ค้างที่หัวหน้างาน):</span>
+                    <span class="text-slate-600 font-medium">รอพิจารณาโดยหัวหน้าทีม:</span>
                     <strong class="text-purple-700 font-black text-base ml-1.5">{{ pendingSupervisorCount }}</strong>
                     <span class="text-[10px] text-slate-400 ml-0.5">รายการ</span>
                 </div>
@@ -115,7 +115,7 @@
             <div class="bg-white/95 px-4 py-2 rounded-xl border border-indigo-200 shadow-2xs flex items-center gap-2.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
                 <div class="text-xs">
-                    <span class="text-slate-600 font-medium">รออนุมัติ (ค้างที่ผู้อำนวยการ):</span>
+                    <span class="text-slate-600 font-medium">รออนุมัติโดย ผอ.:</span>
                     <strong class="text-indigo-700 font-black text-base ml-1.5">{{ pendingDirectorCount }}</strong>
                     <span class="text-[10px] text-slate-400 ml-0.5">รายการ</span>
                 </div>
@@ -245,10 +245,10 @@
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-                <span class="inline-block w-3 h-3 rounded-full" style="background-color: #5167D7;"></span> 1.1 ก่อนเข้าตรวจ
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #B086DF;"></span> 1.2 ระหว่างตรวจ
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #4F4B78;"></span> 1.3 รายงานผล
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #839B77;"></span> 1.4 ชี้แจงผล
+                <span class="inline-block w-3 h-3 rounded-full" style="background-color: #5167D7;"></span> 1.1 ก่อนเข้าตรวจ (#5167D7)
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #B086DF;"></span> 1.2 ระหว่างตรวจ (#B086DF)
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #C1BFEC;"></span> 1.3 รายงานผล (#C1BFEC)
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #839B77;"></span> 1.4 ชี้แจงผล (#839B77)
             </div>
         </div>
 
@@ -318,14 +318,14 @@
                 </div>
             </div>
 
-            <!-- Block 1.3: รายงานผลการตรวจสอบ (#4F4B78) -->
+            <!-- Block 1.3: รายงานผลการตรวจสอบ (#C1BFEC) -->
             <div class="w-full phase-box-1-3 rounded-2xl overflow-hidden">
                 <div class="phase-header-1-3 p-3.5 px-5 flex items-center justify-between">
                     <div class="font-extrabold text-sm flex items-center gap-2">
                         <i data-lucide="file-check-2" class="w-4.5 h-4.5"></i>
                         1.3 รายงานผลการตรวจสอบ
                     </div>
-                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-purple-950 shadow-2xs">
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-indigo-950 shadow-2xs">
                         {{ getPhaseCount('1.3') }} ส่วนงาน
                     </span>
                 </div>
@@ -342,7 +342,7 @@
                                 <div class="font-bold text-slate-900 line-clamp-1">{{ u.name }}</div>
                                 <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center font-medium">
                                     <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-bold" style="color: #4F4B78;">({{ u.latestDate }})</span>
+                                    <span class="font-bold" style="color: #2d266e;">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -693,8 +693,8 @@
 
                 <!-- 1.3 รายงานผลการตรวจสอบ -->
                 <div class="phase-box-1-3 p-4 rounded-2xl space-y-2">
-                    <div class="font-black text-purple-950 flex items-center gap-1.5">
-                        <span class="w-3 h-3 rounded-full shadow-2xs" style="background-color: #4F4B78;"></span> 1.3 ขั้นตอนรายงานผลการตรวจสอบ
+                    <div class="font-black text-indigo-950 flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full shadow-2xs" style="background-color: #C1BFEC;"></span> 1.3 ขั้นตอนรายงานผลการตรวจสอบ
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                         <div>
@@ -825,12 +825,12 @@
             <!-- Total Status Summary Bar -->
             <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs flex justify-around text-center shadow-2xs">
                 <div>
-                    <div class="text-slate-500 font-bold">รอพิจารณา (หัวหน้า)</div>
+                    <div class="text-slate-500 font-bold">รอพิจารณาโดยหัวหน้าทีม</div>
                     <div class="text-xl font-black text-purple-600 mt-0.5">{{ pendingSupervisorCount }}</div>
                 </div>
                 <div class="border-r border-slate-200"></div>
                 <div>
-                    <div class="text-slate-500 font-bold">รออนุมัติ (ผอ.)</div>
+                    <div class="text-slate-500 font-bold">รออนุมัติโดย ผอ.</div>
                     <div class="text-xl font-black text-indigo-600 mt-0.5">{{ pendingDirectorCount }}</div>
                 </div>
             </div>
@@ -844,10 +844,17 @@
                 <div v-for="item in accessibleDelayList" :key="item._rowIndex" class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2.5">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="font-black text-slate-900 text-sm">{{ item.Department || item.department || item['ส่วนงาน'] }}</span>
-                            <div class="text-[11px] text-slate-500 font-semibold mt-0.5">ผู้ขอ: {{ item.Requestor || item.requestor || item.Email || item.email }}</div>
+                            <div class="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                                <span class="text-slate-500 font-medium">ส่วนงาน:</span>
+                                <span>{{ item.Department || item.department || item['ส่วนงาน'] }}</span>
+                            </div>
+                            <div class="text-xs text-slate-600 font-semibold mt-1 flex items-center gap-1">
+                                <span class="text-slate-500 font-medium">ผู้ขอ:</span>
+                                <span class="font-bold text-slate-800">{{ item.Requestor || item.requestor || 'ไม่ระบุ' }}</span>
+                                <span class="text-slate-400 font-normal">({{ item.Email || item.email }})</span>
+                            </div>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-[10px] font-black"
+                        <span class="px-3 py-1 rounded-full text-[10px] font-black shrink-0"
                               :class="{
                                 'bg-purple-100 text-purple-900 border border-purple-300': (item.Status || item.status || '').includes('รอพิจารณา'),
                                 'bg-indigo-100 text-indigo-900 border border-indigo-300': (item.Status || item.status || '').includes('รออนุมัติ'),
@@ -859,10 +866,11 @@
                         </span>
                     </div>
 
-                    <div class="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 font-semibold">
+                    <div class="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 font-semibold space-y-1">
                         <div><strong>ช่วงวันที่ขอขยาย:</strong> {{ formatDateDMY(item['Start Date'] || item.startDate) }} ถึง {{ formatDateDMY(item['End Date'] || item.endDate) }}</div>
-                        <div class="mt-1"><strong>เหตุผล:</strong> {{ item.Reason || item.reason }}</div>
-                        <div v-if="item.Remarks" class="mt-1 text-purple-800 font-black"><strong>ข้อความตีกลับ:</strong> {{ item.Remarks }}</div>
+                        <div><strong>เหตุผล:</strong> {{ item.Reason || item.reason }}</div>
+                        <div v-if="item['Supervisor Name'] || item.supervisorName" class="text-slate-500 text-[11px]"><strong>หัวหน้างานรับผิดชอบ:</strong> {{ item['Supervisor Name'] || item.supervisorName }}</div>
+                        <div v-if="item.Remarks" class="text-purple-800 font-black pt-1 border-t border-slate-100"><strong>ข้อความตีกลับ:</strong> {{ item.Remarks }}</div>
                     </div>
 
                     <div class="flex justify-end gap-2 pt-1">
@@ -932,10 +940,9 @@
         </div>
     </div>
 
-    <!-- Modal 5: Edit Data Manager Modal (Enhanced with Search/Filter & Close Buttons) -->
+    <!-- Modal 5: Edit Data Manager Modal -->
     <div v-if="showEditManagerModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
         <div class="bg-white rounded-2xl max-w-6xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 text-xs">
-            <!-- Modal Header with Explicit X Close Button -->
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
                 <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
                     <i data-lucide="edit-3" class="w-5 h-5 text-indigo-600"></i>
@@ -946,7 +953,6 @@
                 </button>
             </div>
 
-            <!-- Modal Search & Filter Controls -->
             <div class="bg-slate-50/90 p-3.5 rounded-xl border border-slate-200 flex flex-wrap items-center gap-3">
                 <div class="flex items-center gap-1 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     <i data-lucide="filter" class="w-4 h-4 text-indigo-600"></i>
@@ -982,7 +988,6 @@
                 <span class="text-slate-500 font-bold ml-auto">พบ {{ filteredManagerUnits.length }} รายการ</span>
             </div>
 
-            <!-- Table with Thai DMY Dates -->
             <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-[50vh]">
                 <table class="w-full text-left border-collapse text-[11px]">
                     <thead class="bg-slate-100 font-black text-slate-800 sticky top-0 border-b border-slate-200">
@@ -1023,7 +1028,6 @@
                 </table>
             </div>
 
-            <!-- Modal Footer with Close Button -->
             <div class="flex justify-end pt-3 border-t border-slate-100">
                 <button type="button" @click="showEditManagerModal = false" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl shadow-xs transition-all">
                     ปิดหน้าต่าง
