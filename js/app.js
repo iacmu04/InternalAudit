@@ -116,12 +116,40 @@ const app = createApp({
 
     const teamList = computed(() => teamOptions.value);
 
+    // CTS Cycle Options strictly from Master_Lists Column C
     const ctsCycleOptions = computed(() => {
       const set = new Set();
       masterLists.value.forEach(item => {
-        const val = item["รอบประชุม_คตส"] || item["ครั้งที่ประชุม_คตส"] || item["ครั้งที่ประชุม คตส."];
-        if (val && String(val).trim() !== "") set.add(String(val).trim());
+        let val = item["รอบประชุม_คตส"] || item["ครั้งที่ประชุม_คตส"] || item["ครั้งที่ประชุม คตส."] || item["คอลัมน์ C"];
+        if (val && String(val).trim() !== "") {
+          let str = String(val).trim();
+          if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+            const parts = str.split("-");
+            const monthNum = parseInt(parts[1], 10);
+            const yearNum = parts[0];
+            str = `${monthNum}/${yearNum}`;
+          } else if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
+            const d = new Date(str);
+            str = `${d.getMonth() + 1}/${d.getFullYear()}`;
+          }
+          set.add(str);
+        }
       });
+      
+      rawAuditList.value.forEach(item => {
+        let val = item["ครั้งที่ประชุม_คตส"] || item["รอบประชุม_คตส"];
+        if (val && String(val).trim() !== "") {
+          let str = String(val).trim();
+          if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+            const parts = str.split("-");
+            const monthNum = parseInt(parts[1], 10);
+            const yearNum = parts[0];
+            str = `${monthNum}/${yearNum}`;
+          }
+          set.add(str);
+        }
+      });
+
       if (set.size === 0) ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569"].forEach(c => set.add(c));
       return Array.from(set).sort();
     });
@@ -214,7 +242,7 @@ const app = createApp({
       return [
         { key: "1.1", name: "1.1 ก่อนเข้าตรวจ", color: "#5167D7", count: getPhaseCount("1.1") },
         { key: "1.2", name: "1.2 ระหว่างการตรวจสอบ", color: "#B086DF", count: getPhaseCount("1.2") },
-        { key: "1.3", name: "1.3 รายงานผลการตรวจสอบ", color: "#E2DCF5", count: getPhaseCount("1.3") },
+        { key: "1.3", name: "1.3 รายงานผลการตรวจสอบ", color: "#4F4B78", count: getPhaseCount("1.3") },
         { key: "1.4", name: "1.4 ชี้แจงผลการดำเนินงาน", color: "#839B77", count: getPhaseCount("1.4") }
       ];
     });
@@ -241,7 +269,7 @@ const app = createApp({
         teamName: t.teamName,
         count: t.count,
         avgAuditDays: t.count > 0 ? t.sumAuditDays / t.count : 0,
-        avgCtsDays: t.ctsCount > 0 ? t.sumCtsDays / t.ctsCount : 0
+        avgCtsDays: t.ctsCount > 0 ? t.sumCtsDays / t.count : 0
       })).sort((a,b) => a.teamName.localeCompare(b.teamName));
     });
 
@@ -268,7 +296,7 @@ const app = createApp({
       API.setApiUrl(apiUrlInput.value);
       showConfigModal.value = false;
       await loadData();
-      alert("เชื่อมต่อ Google Apps Script เรียบร้อยแล้ว! ข้อมูลใหม่จะถูกบันทึกลงใน Google Sheet ทันที");
+      alert("เชื่อมต่อ Google Apps Script เรียบร้อยแล้ว!");
     };
 
     const clearConfigUrl = async () => {
