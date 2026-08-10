@@ -1,0 +1,141 @@
+/**
+ * API Bridge for Google Apps Script Backend + Live Google Sheet CSV Fetcher
+ * Spreadsheet ID: 1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw
+ */
+
+let APPS_SCRIPT_URL = ""; 
+const SPREADSHEET_ID = "1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw";
+
+function parseCSV(csvText) {
+  if (!csvText) return [];
+  const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== "");
+  if (lines.length < 1) return [];
+
+  function parseRow(line) {
+    const row = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        row.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    row.push(current.trim());
+    return row;
+  }
+
+  const headers = parseRow(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseRow(lines[i]);
+    const obj = { _rowIndex: i + 1 };
+    let hasVal = false;
+    headers.forEach((h, idx) => {
+      const val = values[idx] !== undefined ? values[idx] : "";
+      obj[h] = val;
+      if (val !== "") hasVal = true;
+    });
+    if (hasVal) rows.push(obj);
+  }
+  return rows;
+}
+
+async function fetchLiveSheetCSV(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const text = await res.text();
+    return parseCSV(text);
+  } catch (err) {
+    console.warn(`Failed to fetch live sheet ${sheetName}:`, err);
+    return [];
+  }
+}
+
+class API {
+  static setApiUrl(url) {
+    APPS_SCRIPT_URL = url;
+  }
+
+  static async fetchInitialData() {
+    if (APPS_SCRIPT_URL) {
+      try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=getInitialData`);
+        const json = await res.json();
+        if (json.status === "success") return json;
+      } catch (err) {
+        console.warn("Backend API fetch failed, falling back to direct Google Sheet fetching:", err);
+      }
+    }
+
+    console.log("Fetching live data directly from Google Sheets...");
+    const [mainAudit, masterListsRaw, usersRaw, holidaysRaw, nonAuditRaw, delayRaw] = await Promise.all([
+      fetchLiveSheetCSV("Main_Audit"),
+      fetchLiveSheetCSV("Master_Lists"),
+      fetchLiveSheetCSV("Users"),
+      fetchLiveSheetCSV("Thai_Holidays"),
+      fetchLiveSheetCSV("Non_Audit_Days"),
+      fetchLiveSheetCSV("Delay")
+    ]);
+
+    // Standardize masterLists keys
+    const masterLists = masterListsRaw.map(r => ({
+      "ส่วนงาน": r["รายชื่อส่วนงาน"] || r["ส่วนงาน"] || "",
+      "ทีม": r["รายชื่อทีม"] || r["ทีม"] || "",
+      "ครั้งที่ประชุม_คตส": r["รอบประชุม_คตส"] || r["ครั้งที่ประชุม_คตส"] || r["ครั้งที่ประชุม คตส."] || ""
+    }));
+
+    // Standardize users keys
+    const users = usersRaw.map(r => {
+      const keys = Object.keys(r);
+      return {
+        "Email": r["Email"] || r[keys.find(k => k.toLowerCase().includes("email"))] || r[keys[0]] || "",
+        "Name": r["Name"] || r[keys.find(k => k.toLowerCase().includes("name"))] || r[keys[1]] || "",
+        "Role": r["Role"] || r[keys.find(k => k.toLowerCase().includes("role"))] || r[keys[2]] || "User",
+        "Team": r["Team"] || r[keys.find(k => k.toLowerCase().includes("team"))] || r[keys[3]] || "",
+        "Authorize": r["Authorize"] || r[keys.find(k => k.toLowerCase().includes("authorize"))] || r[keys[4]] || ""
+      };
+    });
+
+    return {
+      status: "success",
+      mainAudit: mainAudit,
+      masterLists: masterLists,
+      users: users,
+      holidays: holidaysRaw,
+      nonAuditDays: nonAuditRaw,
+      delay: delayRaw
+    };
+  }
+
+  static async postAction(action, payload) {
+    if (!APPS_SCRIPT_URL) {
+      console.warn(`No APPS_SCRIPT_URL configured. Action ${action} performed locally.`, payload);
+      return { status: "success", message: "ดำเนินการเรียบร้อยแล้ว (โปรดเชื่อมต่อ Google Apps Script URL เพื่อเขียนลง Google Sheet ถาวร)" };
+    }
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, ...payload })
+      });
+      return await res.json();
+    } catch (err) {
+      console.error("POST action error:", err);
+      return { status: "error", message: err.toString() };
+    }
+  }
+}

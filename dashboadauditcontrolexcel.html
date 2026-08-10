@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบติดตามและแดชบอร์ดทะเบียนคุมออกตรวจ ประจำปีงบประมาณ 2569</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS for Excel Import/Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Chart.js for Status Distribution Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Inter & Sarabun for Thai UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#035485',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+<div id="app" class="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+
+    <!-- Header Bar -->
+    <header class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="p-3 bg-brand-500 text-white rounded-xl shadow-md shadow-brand-500/20">
+                <i data-lucide="shield-check" class="w-7 h-7"></i>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-bold text-slate-800 leading-tight">
+                    แดชบอร์ดทะเบียนคุมออกตรวจ ประจำปีงบประมาณ 2569
+                </h1>
+                <p class="text-xs md:text-sm text-slate-500 mt-0.5">
+                    สำนักงานการตรวจสอบภายใน มหาวิทยาลัยเชียงใหม่ | ติดตามสถานะและประสิทธิภาพการตรวจสอบ
+                </p>
+            </div>
+        </div>
+
+        <!-- Action Bar & Filter -->
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <!-- Import/Export Excel Buttons -->
+            <input type="file" ref="fileInput" @change="importExcel" accept=".xlsx, .xls" class="hidden">
+            
+            <button @click="$refs.fileInput.click()" class="flex items-center gap-1.5 px-3 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-xs transition-all">
+                <i data-lucide="file-up" class="w-4 h-4"></i>
+                <span>นำเข้า Excel</span>
+            </button>
+
+            <button @click="exportExcel" class="flex items-center gap-1.5 px-3 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg shadow-xs transition-all">
+                <i data-lucide="file-down" class="w-4 h-4"></i>
+                <span>ส่งออก Excel</span>
+            </button>
+
+            <button @click="openDataModal" class="flex items-center gap-1.5 px-3 py-2 text-sm bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg shadow-xs transition-all">
+                <i data-lucide="database" class="w-4 h-4"></i>
+                <span>จัดการข้อมูล</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Comprehensive Filter Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">
+            <i data-lucide="filter" class="w-4 h-4 text-brand-600"></i>
+            ตัวกรองข้อมูล:
+        </div>
+
+        <!-- Filter: Team -->
+        <div class="flex items-center gap-1.5">
+            <label class="text-xs text-slate-600 font-medium">ทีม:</label>
+            <select v-model="selectedTeam" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-slate-700">
+                <option value="ALL">ทุกทีม</option>
+                <option v-for="team in teamList" :key="team" :value="team">{{ team }}</option>
+            </select>
+        </div>
+
+        <!-- Filter: Main Phase -->
+        <div class="flex items-center gap-1.5">
+            <label class="text-xs text-slate-600 font-medium">สถานะหลัก:</label>
+            <select v-model="selectedPhase" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-slate-700">
+                <option value="ALL">ทุกสถานะหลัก</option>
+                <option value="1.1">1.1 ก่อนเข้าตรวจ</option>
+                <option value="1.2">1.2 ระหว่างการตรวจสอบ</option>
+                <option value="1.3">1.3 รายงานผลการตรวจสอบ</option>
+                <option value="1.4">1.4 ชี้แจงผลการดำเนินงาน</option>
+                <option value="COMPLETED">เสร็จสมบูรณ์แล้ว</option>
+            </select>
+        </div>
+
+        <!-- Filter: คตส. Meeting Cycle -->
+        <div class="flex items-center gap-1.5">
+            <label class="text-xs text-slate-600 font-medium">รอบการประชุม คตส.:</label>
+            <select v-model="selectedCtsCycle" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-slate-700">
+                <option value="ALL">ทุกรอบการประชุม</option>
+                <option v-for="cycle in ctsCycleList" :key="cycle" :value="cycle">{{ cycle.replace('-', '/') }}</option>
+            </select>
+        </div>
+
+        <!-- Filter: Fiscal Year -->
+        <div class="flex items-center gap-1.5">
+            <label class="text-xs text-slate-600 font-medium">ปีงบประมาณ:</label>
+            <select v-model="selectedFiscalYear" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-slate-700">
+                <option value="ALL">ทุกปีงบประมาณ</option>
+                <option value="2569">2569 (ต.ค. 68 - ก.ย. 69)</option>
+                <option value="2570">2570 (ต.ค. 69 - ก.ย. 70)</option>
+            </select>
+        </div>
+
+        <!-- Filter: Month -->
+        <div class="flex items-center gap-1.5">
+            <label class="text-xs text-slate-600 font-medium">เดือน:</label>
+            <select v-model="selectedMonth" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 text-slate-700">
+                <option value="ALL">ทุกเดือน</option>
+                <option v-for="(mName, idx) in thaiMonths" :key="idx" :value="idx + 1">{{ mName }}</option>
+            </select>
+        </div>
+
+        <!-- Filter: Search Query (Placed right after Month filter) -->
+        <div class="relative flex-1 min-w-[200px] md:min-w-[240px]">
+            <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" v-model="searchQuery" placeholder="ค้นหาส่วนงาน..." 
+                   class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all">
+        </div>
+
+        <!-- Clear Filters button -->
+        <button v-if="hasActiveFilters" @click="resetFilters" class="ml-auto text-xs text-brand-600 hover:text-brand-800 font-medium flex items-center gap-1 py-1 px-2 hover:bg-brand-50 rounded-md">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> ล้างตัวกรอง
+        </button>
+    </div>
+
+    <!-- Section: Graph Showing Status Distribution across 4 Main Phases (Full Width Screen) -->
+    <section class="w-full bg-white rounded-2xl p-5 md:p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+                <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-brand-600"></i>
+                    กราฟแสดงจำนวนส่วนงานในแต่ละสถานะหลัก (วิเคราะห์ปริมาณงานค้างสะสม)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    แสดงสัดส่วนและปริมาณงานใน 4 ขั้นตอน เพื่อระบุจุดที่มีงานสะสมมากที่สุด (Bottlenecks)
+                </p>
+            </div>
+            <div v-if="bottleneckPhase" class="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-800 shrink-0">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+                <span>สถานะที่มีงานค้างมากที่สุด: <strong>{{ bottleneckPhase.name }} ({{ bottleneckPhase.count }} ส่วนงาน)</strong></span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center w-full">
+            <!-- Canvas Container for Chart.js -->
+            <div class="lg:col-span-3 relative h-72 w-full">
+                <canvas id="phaseStatusChart"></canvas>
+            </div>
+
+            <!-- Stage Breakdown Stats Card -->
+            <div class="lg:col-span-1 space-y-2.5 bg-slate-50 p-4 rounded-xl border border-slate-200/70 w-full">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">สรุปจำนวนตามขั้นตอนหลัก</h3>
+                
+                <div v-for="st in phaseChartStats" :key="st.key" class="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center shadow-2xs">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: st.color }"></span>
+                        <span class="text-xs font-semibold text-slate-700">{{ st.name }}</span>
+                    </div>
+                    <div class="flex items-baseline gap-1 shrink-0">
+                        <span class="text-sm font-extrabold text-slate-800">{{ st.count }}</span>
+                        <span class="text-[10px] text-slate-400">ส่วนงาน ({{ totalUnits > 0 ? ((st.count/totalUnits)*100).toFixed(0) : 0 }}%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 1: สถานะการตรวจสอบล่าสุด (Full Width Block placed under the Graph) -->
+    <section class="w-full bg-white rounded-2xl p-5 md:p-6 border border-slate-200/80 shadow-sm space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="layers" class="w-5 h-5 text-brand-600"></i>
+                    1. สถานะการตรวจสอบล่าสุด (จัดกลุ่มตามขั้นตอนย่อย)
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    จัดกลุ่มแยก 1 แถวเต็มต่อขั้นตอนหลัก และกระจายขั้นตอนย่อยในรูปแบบคอลัมน์จากซ้ายไปขวา (กว้างเท่าๆ กัน)
+                </p>
+            </div>
+            <div class="flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 shrink-0">
+                <span class="inline-block w-3 h-3 rounded-full" style="background-color: #83A370;"></span> เสร็จสิ้นสมบูรณ์ (AL)
+                <span class="inline-block w-3 h-3 rounded-full ml-2" style="background-color: #536BD6;"></span> อยู่ระหว่างดำเนินการ
+            </div>
+        </div>
+
+        <!-- Phase Blocks 1.1 to 1.4 as Full Width Rows -->
+        <div class="space-y-6 w-full">
+
+            <!-- Block 1.1: ก่อนเข้าตรวจ (Color: #536BD6) -->
+            <div class="w-full bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 space-y-3">
+                <div class="flex items-center justify-between border-b border-indigo-200/70 pb-2.5">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: #536BD6;"></span>
+                        1.1 ก่อนเข้าตรวจ
+                    </h3>
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-indigo-200" style="background-color: #EBF0FF; color: #3B4FB8;">
+                        รวม {{ getPhaseCount('1.1') }} ส่วนงาน
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div v-for="sub in phaseStructure['1.1']" :key="sub.code" class="w-full bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
+                        <div class="text-xs font-bold text-slate-700 mb-2 flex justify-between items-center pb-1.5 border-b border-slate-100">
+                            <span>{{ sub.title }} <span class="text-[10px] font-normal text-slate-400">({{ sub.col }})</span></span>
+                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="color: #3B4FB8; background-color: #EBF0FF;">{{ getUnitsByStatus(sub.col).length }}</span>
+                        </div>
+                        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                            <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
+                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" 
+                                 class="p-2 text-xs rounded-lg border transition-all hover:shadow-xs bg-slate-50 border-slate-200 text-slate-800">
+                                <div class="font-semibold line-clamp-1 text-slate-800">{{ u.name }}</div>
+                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center">
+                                    <span class="font-medium bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{{ u.team }}</span>
+                                    <span class="font-semibold" style="color: #536BD6;">({{ u.latestDate }})</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Block 1.2: ระหว่างการตรวจสอบ (Color: #B380DD) -->
+            <div class="w-full bg-purple-50/50 p-4 rounded-xl border border-purple-100 space-y-3">
+                <div class="flex items-center justify-between border-b border-purple-200/70 pb-2.5">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: #B380DD;"></span>
+                        1.2 ระหว่างการตรวจสอบ
+                    </h3>
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-purple-200" style="background-color: #F6ECFE; color: #8048B3;">
+                        รวม {{ getPhaseCount('1.2') }} ส่วนงาน
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div v-for="sub in phaseStructure['1.2']" :key="sub.code" class="w-full bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
+                        <div class="text-xs font-bold text-slate-700 mb-2 flex justify-between items-center pb-1.5 border-b border-slate-100">
+                            <span>{{ sub.title }} <span class="text-[10px] font-normal text-slate-400">({{ sub.col }})</span></span>
+                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="color: #8048B3; background-color: #F6ECFE;">{{ getUnitsByStatus(sub.col).length }}</span>
+                        </div>
+                        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                            <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
+                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" 
+                                 class="p-2 text-xs rounded-lg border transition-all hover:shadow-xs bg-slate-50 border-slate-200 text-slate-800">
+                                <div class="font-semibold line-clamp-1 text-slate-800">{{ u.name }}</div>
+                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center">
+                                    <span class="font-medium bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{{ u.team }}</span>
+                                    <span class="font-semibold" style="color: #9258C5;">({{ u.latestDate }})</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Block 1.3: รายงานผลการตรวจสอบ (Color: #C1BFEC) -->
+            <div class="w-full bg-indigo-50/30 p-4 rounded-xl border border-indigo-100 space-y-3">
+                <div class="flex items-center justify-between border-b border-indigo-200/50 pb-2.5">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: #C1BFEC;"></span>
+                        1.3 รายงานผลการตรวจสอบ
+                    </h3>
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-indigo-200/80" style="background-color: #EEEDFA; color: #5B57A6;">
+                        รวม {{ getPhaseCount('1.3') }} ส่วนงาน
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div v-for="sub in phaseStructure['1.3']" :key="sub.code" class="w-full bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
+                        <div class="text-xs font-bold text-slate-700 mb-2 flex justify-between items-center pb-1.5 border-b border-slate-100">
+                            <span>{{ sub.title }} <span class="text-[10px] font-normal text-slate-400">({{ sub.col }})</span></span>
+                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="color: #5B57A6; background-color: #EEEDFA;">{{ getUnitsByStatus(sub.col).length }}</span>
+                        </div>
+                        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                            <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
+                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" 
+                                 class="p-2 text-xs rounded-lg border transition-all hover:shadow-xs bg-slate-50 border-slate-200 text-slate-800">
+                                <div class="font-semibold line-clamp-1 text-slate-800">{{ u.name }}</div>
+                                <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center">
+                                    <span class="font-medium bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{{ u.team }}</span>
+                                    <span class="font-semibold" style="color: #6C68B7;">({{ u.latestDate }})</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Block 1.4: ชี้แจงผลการดำเนินงาน (Color: #83A370) -->
+            <div class="w-full bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 space-y-3">
+                <div class="flex items-center justify-between border-b border-emerald-200/70 pb-2.5">
+                    <h3 class="font-bold text-sm uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background-color: #83A370;"></span>
+                        1.4 ชี้แจงผลการดำเนินงาน
+                    </h3>
+                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-emerald-200" style="background-color: #EEF4EB; color: #436331;">
+                        รวม {{ getPhaseCount('1.4') }} ส่วนงาน
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div v-for="sub in phaseStructure['1.4']" :key="sub.code" class="w-full bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
+                        <div class="text-xs font-bold text-slate-800 mb-2 flex justify-between items-center pb-1.5 border-b border-slate-100">
+                            <span>{{ sub.title }} <span class="text-[10px] font-normal text-slate-400">({{ sub.col }})</span></span>
+                            <span class="text-xs font-extrabold px-2 py-0.5 rounded-md" style="color: #436331; background-color: #EEF4EB;">{{ getUnitsByStatus(sub.col).length }}</span>
+                        </div>
+                        <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                            <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
+                            <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" 
+                                 class="p-2 text-xs rounded-lg border transition-all shadow-2xs"
+                                 :class="u.isCompleted ? 'bg-emerald-100/90 border-emerald-300 text-emerald-950 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-800'">
+                                <div class="flex items-center justify-between gap-1">
+                                    <span class="line-clamp-1">{{ u.name }}</span>
+                                    <i v-if="u.isCompleted" data-lucide="check-circle" class="w-3.5 h-3.5 shrink-0" style="color: #83A370;"></i>
+                                </div>
+                                <div class="text-[10px] text-emerald-900 mt-1 flex justify-between items-center">
+                                    <span class="font-medium bg-emerald-200/60 px-1.5 py-0.5 rounded">{{ u.team }}</span>
+                                    <span class="font-bold" style="color: #436331;">({{ u.latestDate }})</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Section 3 & 4: ระยะเวลาเฉลี่ยรายทีม (Team Performance Summary) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Section 3: ระยะเวลาเฉลี่ยที่แต่ละทีมใช้ในการตรวจสอบ (2.3) -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="users" class="w-4 h-4 text-blue-600"></i>
+                    3. ระยะเวลาเฉลี่ยที่ใช้ในการตรวจสอบจริง (รายทีม)
+                </h3>
+                <span class="text-xs text-slate-400">คำนวณจากข้อ 2.3 &divide; จำนวนส่วนงาน</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div v-for="t in teamMetrics" :key="t.teamName" class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex justify-between items-center">
+                    <div>
+                        <div class="text-xs font-semibold text-slate-600">{{ t.teamName }}</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">รับผิดชอบ {{ t.count }} ส่วนงาน</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold text-blue-600">{{ t.avgAuditDays.toFixed(1) }} <span class="text-xs font-normal text-slate-500">วัน</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: ระยะเวลาเฉลี่ยที่แต่ละทีมใช้ในการเสนอรายงานต่อ คตส. (2.5) -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="award" class="w-4 h-4 text-indigo-600"></i>
+                    4. ระยะเวลาเฉลี่ยที่ใช้ในการเสนอรายงานต่อ คตส. (รายทีม)
+                </h3>
+                <span class="text-xs text-slate-400">คำนวณจากข้อ 2.5 &divide; จำนวนส่วนงาน</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div v-for="t in teamMetrics" :key="'cts-'+t.teamName" class="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex justify-between items-center">
+                    <div>
+                        <div class="text-xs font-semibold text-slate-600">{{ t.teamName }}</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">รับผิดชอบ {{ t.count }} ส่วนงาน</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold" :class="t.avgCtsDays > 60 ? 'text-red-600' : 'text-indigo-600'">
+                            {{ t.avgCtsDays.toFixed(1) }} <span class="text-xs font-normal text-slate-500">วัน</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: ตารางแสดงรายละเอียดการตรวจสอบแต่ละส่วนงาน -->
+    <section class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50/50">
+            <div>
+                <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="table" class="w-5 h-5 text-brand-600"></i>
+                    2. ตารางแสดงรายละเอียดการตรวจสอบแต่ละส่วนงาน
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    แสดงรายละเอียดคำนวณวันตรวจสอบจริง, วันเสนออธิการบดี, และวันเสนอ คตส. พร้อมระบุครั้งที่ประชุม คตส.
+                </p>
+            </div>
+            <span class="text-xs font-medium text-slate-500">
+                แสดงผล {{ filteredUnits.length }} รายการ
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-100/80 text-slate-700 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                        <th class="py-3 px-4 w-12 text-center">#</th>
+                        <th class="py-3 px-4 min-w-[220px]">2.1 ชื่อส่วนงาน (คอลัมน์ B)</th>
+                        <th class="py-3 px-4 min-w-[280px]">2.2 สถานะล่าสุด</th>
+                        <th class="py-3 px-4 text-center min-w-[140px]">
+                            2.3 วันตรวจจริง
+                            <span class="block text-[10px] font-normal text-slate-500">(K-J หักวันหยุด/ไม่ตรวจ)</span>
+                        </th>
+                        <th class="py-3 px-4 text-center min-w-[140px]">
+                            2.4 ปิดตรวจ &rarr; อธิการบดี
+                            <span class="block text-[10px] font-normal text-slate-500">(AE - AB)</span>
+                        </th>
+                        <!-- Updated 2.5 Header & Cell structure -->
+                        <th class="py-3 px-4 text-center min-w-[160px]">
+                            2.5 ปิดตรวจ &rarr; คตส.
+                            <span class="block text-[10px] font-normal text-slate-500">(ครั้งที่ประชุม AH / วัน AG-AB)</span>
+                        </th>
+                        <th class="py-3 px-4 text-center w-28">2.6 สถานะเตือน</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    <tr v-if="filteredUnits.length === 0">
+                        <td colspan="7" class="py-8 text-center text-slate-400">ไม่พบข้อมูลส่วนงานตามเงื่อนไขที่ค้นหา</td>
+                    </tr>
+                    <tr v-for="(u, index) in filteredUnits" :key="u.id" 
+                        class="hover:bg-slate-50/80 transition-colors"
+                        :class="{'bg-red-50/40': u.isWarning}">
+                        <!-- Index -->
+                        <td class="py-3 px-4 text-center font-medium text-slate-400">{{ index + 1 }}</td>
+                        
+                        <!-- 2.1 Name -->
+                        <td class="py-3 px-4 font-semibold text-slate-800">
+                            <div class="flex items-center gap-1.5">
+                                <span>{{ u.name }}</span>
+                                <span v-if="u.isWarning" class="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping" title="ใกล้ครบ/เกินกำหนดเสนอ คตส."></span>
+                            </div>
+                            <span class="block text-[10px] font-normal text-slate-400 mt-0.5">{{ u.team }}</span>
+                        </td>
+
+                        <!-- 2.2 Status -->
+                        <td class="py-3 px-4">
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium"
+                                 :class="u.isCompleted ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-100 text-slate-700 border border-slate-200'">
+                                <i v-if="u.isCompleted" data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>{{ u.statusFormatted }}</span>
+                            </div>
+                        </td>
+
+                        <!-- 2.3 Actual Audit Days -->
+                        <td class="py-3 px-4 text-center">
+                            <span class="font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md">
+                                {{ u.actualAuditDays }} วัน
+                            </span>
+                            <span class="block text-[10px] text-slate-400 mt-1" v-if="u.interruptedDays > 0 || u.holidayDays > 0">
+                                (หักหยุด {{ u.weekendDays + u.holidayDays }}d / ไม่เข้าตรวจ {{ u.interruptedDays }}d)
+                            </span>
+                        </td>
+
+                        <!-- 2.4 AB to AE Duration -->
+                        <td class="py-3 px-4 text-center">
+                            <span v-if="u.aeDuration !== null" class="font-medium text-slate-700">
+                                {{ u.aeDuration }} วัน
+                            </span>
+                            <span v-else class="text-slate-300">-</span>
+                        </td>
+
+                        <!-- 2.5 AB to AG (CTS Duration & Meeting Cycle) -->
+                        <td class="py-3 px-4 text-center">
+                            <div class="space-y-1">
+                                <!-- Line 1: Meeting Cycle from Col AH -->
+                                <div class="text-xs font-bold text-slate-700">
+                                    <span v-if="u.colAH" class="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-800">
+                                        ครั้งที่ {{ u.colAH.replace('-', '/') }}
+                                    </span>
+                                    <span v-else class="text-slate-300">-</span>
+                                </div>
+                                <!-- Line 2: Duration in days -->
+                                <div>
+                                    <span v-if="u.ctsDuration !== null" 
+                                          class="inline-block text-xs font-bold px-2 py-0.5 rounded"
+                                          :class="u.ctsDuration > 60 ? 'bg-red-600 text-white shadow-xs' : 'bg-indigo-50 text-indigo-700'">
+                                        {{ u.ctsDuration }} วัน
+                                    </span>
+                                    <span v-else class="text-slate-300">-</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 2.6 Warning Indicator -->
+                        <td class="py-3 px-4 text-center">
+                            <span v-if="u.ctsDuration !== null && u.ctsDuration > 60" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
+                                <i data-lucide="x-circle" class="w-3 h-3 text-red-600"></i> เกิน 60 วัน
+                            </span>
+                            <span v-else-if="u.isWarning" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-700 border border-red-300 animate-pulse">
+                                <i data-lucide="alert-triangle" class="w-3 h-3 text-red-600"></i> เตือน &ge; 50 วัน
+                            </span>
+                            <span v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700">
+                                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i> ปกติ
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Modal Data Management -->
+            <!-- Modal Content (Tab & Table) -->
+            <div class="p-4 overflow-y-auto flex-1 space-y-4 text-xs">
+                <!-- Holidays Config (Column AP4) -->
+                <div class="bg-amber-50 p-3 rounded-xl border border-amber-200/80">
+                    <h4 class="font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                        <i data-lucide="calendar" class="w-4 h-4 text-amber-600"></i>
+                        การกำหนดวันหยุดนักขัตฤกษ์ (สะท้อนคอลัมน์ AP4 เป็นต้นไป)
+                    </h4>
+                    <p class="text-amber-800 text-[11px] mb-2">
+                        ใส่วันหยุดนักขัตฤกษ์ (คั่นด้วยเครื่องหมายจุลภาค , รูปแบบ YYYY-MM-DD):
+                    </p>
+                    <input type="text" v-model="publicHolidaysRaw" @change="updateHolidays"
+                           class="w-full p-2 bg-white border border-amber-300 rounded-lg text-slate-800 font-mono text-xs">
+                </div>
+
+                <!-- Raw Data Table Editor -->
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse text-[11px]">
+                        <thead class="bg-slate-100 font-bold text-slate-700">
+                            <tr>
+                                <th class="p-2 border-b min-w-[160px]">คอลัมน์ B: ส่วนงาน</th>
+                                <th class="p-2 border-b w-24">ทีม</th>
+                                <th class="p-2 border-b w-28">Col J: เริ่มตรวจ</th>
+                                <th class="p-2 border-b w-28">Col K: สิ้นสุดตรวจ</th>
+                                <th class="p-2 border-b w-24">ไม่เข้าตรวจ (วัน)</th>
+                                <th class="p-2 border-b w-28">Col AB: ปิดตรวจ</th>
+                                <th class="p-2 border-b w-28">Col AE: เสนออธิการ</th>
+                                <th class="p-2 border-b w-28">Col AG: เสนอ คตส.</th>
+                                <th class="p-2 border-b w-28">Col AL: แจ้งผล (เสร็จ)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="u in rawUnits" :key="u.id">
+                                <td class="p-1.5"><input v-model="u.name" class="w-full p-1 border rounded"></td>
+                                <td class="p-1.5"><input v-model="u.team" class="w-full p-1 border rounded"></td>
+                                <td class="p-1.5"><input type="date" v-model="u.colJ" class="w-full p-1 border rounded"></td>
+                                <td class="p-1.5"><input type="date" v-model="u.colK" class="w-full p-1 border rounded"></td>
+                                <td class="p-1.5"><input type="number" v-model.number="u.interruptedCount" class="w-full p-1 border rounded text-center"></td>
+                                <td class="p-1.5"><input type="date" v-model="u.colAB" class="w-full p-1 border rounded"></td>
+                                <td class="p-1.5"><input type="date" v-model="u.colAE" class="w-full p-1 border rounded"></td>
+                                <td class="p-1.5"><input type="date" v-model="u.colAG" class="w-full p-1 border rounded"></td>
+                                <td class="p-1.5"><input type="text" v-model="u.colAH" placeholder="1-2569" class="w-full p-1 border rounded text-center"></td>
+                                <td class="p-1.5"><input type="date" v-model="u.colAL" class="w-full p-1 border rounded bg-emerald-50"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+                <button @click="addNewRow" class="px-3 py-1.5 text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg flex items-center gap-1">
+                    <i data-lucide="plus" class="w-4 h-4"></i> เพิ่มส่วนงาน
+                </button>
+                <button @click="isModalOpen = false" class="px-4 py-2 text-xs bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-lg shadow-sm">
+                    บันทึกและประมวลผล
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+
+createApp({
+    setup() {
+        // Modal & Search & Advanced Filters
+        const isModalOpen = ref(false);
+        const searchQuery = ref('');
+        const selectedTeam = ref('ALL');
+        const selectedPhase = ref('ALL');
+        const selectedCtsCycle = ref('ALL');
+        const selectedFiscalYear = ref('ALL');
+        const selectedMonth = ref('ALL');
+
+        const fileInput = ref(null);
+        let chartInstance = null;
+
+        const thaiMonths = [
+            'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+            'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+        ];
+
+        // Public Holidays List (Representing Column AP4 downwards)
+        const publicHolidaysRaw = ref('2026-03-03, 2026-04-06, 2026-04-13, 2026-04-14, 2026-04-15, 2026-05-04, 2026-06-01, 2026-07-28, 2026-07-30');
+        const publicHolidaysList = ref([]);
+
+        const updateHolidays = () => {
+            publicHolidaysList.value = publicHolidaysRaw.value
+                .split(',')
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+        };
+
+        // Phase Structure Definitions
+        const phaseStructure = {
+            '1.1': [
+                { code: 'G', col: 'Col G', title: 'มอบหมายงาน' },
+                { code: 'H', col: 'Col H', title: 'แจ้งเข้าตรวจ' },
+                { code: 'I', col: 'Col I', title: 'อนุมัติแผน' }
+            ],
+            '1.2': [
+                { code: 'J', col: 'Col J', title: 'เปิดตรวจ/เริ่มตรวจสอบ' },
+                { code: 'K', col: 'Col K', title: 'สิ้นสุดตรวจสอบ' },
+                { code: 'AB', col: 'Col AB', title: 'ประชุมปิดตรวจ' }
+            ],
+            '1.3': [
+                { code: 'AD', col: 'Col AD', title: 'เสนออธิการบดี' },
+                { code: 'AF', col: 'Col AF', title: 'แจ้งหน่วยรับตรวจ' },
+                { code: 'AG', col: 'Col AG', title: 'เสนอคณะกรรมการตรวจสอบ' }
+            ],
+            '1.4': [
+                { code: 'AJ', col: 'Col AJ', title: 'หน่วยรับตรวจชี้แจง' },
+                { code: 'AK', col: 'Col AK', title: 'เสนออธิการบดี' },
+                { code: 'AL', col: 'Col AL', title: 'แจ้งหน่วยรับตรวจ (เสร็จสมบูรณ์)' }
+            ]
+        };
+
+        // Raw Audit Data including Column AH (ครั้งที่ประชุม คตส.)
+        const rawUnits = ref([
+            {
+                id: 1, name: 'ศูนย์บริการวิชาการและถ่ายทอดเทคโนโลยีการเกษตร คณะเกษตรศาสตร์', team: 'ทีม 1',
+                colG: '2025-10-15', colH: '2025-10-24', colI: '2025-11-04',
+                colJ: '2025-11-10', colK: '2025-11-19', interruptedCount: 1,
+                colAB: '2026-01-09', colAD: '2026-01-14', colAE: '2026-02-09', colAF: '2026-02-12', colAG: '2026-02-16', colAH: '1-2569',
+                colAJ: '2026-02-20', colAK: '2026-03-03', colAL: '2026-03-10'
+            },
+            {
+                id: 2, name: 'สถาบันนโยบายสาธารณะ', team: 'ทีม 1',
+                colG: '2025-10-15', colH: '2025-10-28', colI: '2025-11-14',
+                colJ: '2025-11-24', colK: '2025-12-04', interruptedCount: 1,
+                colAB: '2026-01-13', colAD: '2026-01-26', colAE: '2026-02-09', colAF: '2026-02-17', colAG: '2026-02-21', colAH: '1-2569',
+                colAJ: '2026-02-24', colAK: '2026-03-05', colAL: '2026-03-12'
+            },
+            {
+                id: 3, name: 'สถาบันภาษา', team: 'ทีม 1',
+                colG: '2025-11-28', colH: '2025-12-08', colI: '2025-12-11',
+                colJ: '2025-12-15', colK: '2025-12-23', interruptedCount: 1,
+                colAB: '2026-02-02', colAD: '2026-02-16', colAE: '2026-04-21', colAF: '2026-03-10', colAG: '2026-03-16', colAH: '2-2569',
+                colAJ: '2026-03-18', colAK: '2026-04-01', colAL: null
+            },
+            {
+                id: 4, name: 'ศูนย์วิจัยข้าวล้านนา', team: 'ทีม 1',
+                colG: '2025-11-28', colH: '2025-12-08', colI: '2025-12-12',
+                colJ: '2025-12-18', colK: '2025-12-26', interruptedCount: 1,
+                colAB: '2026-02-04', colAD: '2026-02-11', colAE: '2026-04-21', colAF: '2026-03-09', colAG: '2026-03-10', colAH: '2-2569',
+                colAJ: '2026-03-13', colAK: null, colAL: null
+            },
+            {
+                id: 5, name: 'ศูนย์นวัตกรรมและการจัดการความรู้ วิทยาลัยศิลปะ สื่อ และเทคโนโลยี', team: 'ทีม 1',
+                colG: '2025-12-30', colH: '2026-01-09', colI: '2026-01-14',
+                colJ: '2026-01-23', colK: '2026-02-05', interruptedCount: 2,
+                colAB: '2026-03-19', colAD: '2026-03-24', colAE: '2026-04-21', colAF: '2026-04-28', colAG: '2026-05-01', colAH: '2-2569',
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 6, name: 'วิทยาลัยการศึกษาตลอดชีวิต', team: 'ทีม 1',
+                colG: '2025-12-30', colH: '2026-01-09', colI: '2026-01-14',
+                colJ: '2026-01-19', colK: '2026-02-03', interruptedCount: 3,
+                colAB: '2026-03-05', colAD: '2026-03-26', colAE: '2026-04-21', colAF: '2026-04-24', colAG: '2026-05-01', colAH: '2-2569',
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 7, name: 'ศูนย์แก้ไขความพิการฯ', team: 'ทีม 2',
+                colG: '2026-02-02', colH: '2026-02-13', colI: '2026-02-16',
+                colJ: '2026-02-23', colK: '2026-03-06', interruptedCount: 2,
+                colAB: '2026-04-17', colAD: '2026-05-05', colAE: '2026-06-24', colAF: '2026-06-04', colAG: '2026-06-12', colAH: '3-2569',
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 8, name: 'สถาบันวิศวกรรมชีวทางการแพทย์', team: 'ทีม 2',
+                colG: '2026-02-02', colH: '2026-02-11', colI: '2026-02-18',
+                colJ: '2026-02-23', colK: '2026-03-10', interruptedCount: 3,
+                colAB: '2026-05-07', colAD: '2026-05-08', colAE: '2026-06-24', colAF: '2026-06-08', colAG: '2026-06-18', colAH: '3-2569',
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 9, name: 'ศูนย์บริการเทคนิคการแพทย์คลินิก คณะเทคนิคการแพทย์', team: 'ทีม 2',
+                colG: '2026-03-03', colH: '2026-03-09', colI: '2026-03-19',
+                colJ: '2026-03-23', colK: '2026-04-16', interruptedCount: 7,
+                colAB: '2026-05-28', colAD: '2026-06-08', colAE: '2026-06-24', colAF: '2026-06-25', colAG: '2026-07-07', colAH: '3-2569',
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 10, name: 'ศูนย์นวัตกรรมอาหารและบรรจุภัณฑ์', team: 'ทีม 2',
+                colG: '2026-03-02', colH: '2026-03-11', colI: '2026-03-17',
+                colJ: '2026-03-23', colK: '2026-04-07', interruptedCount: 5,
+                colAB: '2026-05-21', colAD: '2026-05-28', colAE: '2026-06-24', colAF: '2026-06-22', colAG: '2026-06-23', colAH: '3-2569',
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 11, name: 'อุทยานวิทยาศาสตร์และเทคโนโลยี', team: 'ทีม 3',
+                colG: '2026-04-02', colH: '2026-04-16', colI: '2026-04-20',
+                colJ: '2026-04-23', colK: '2026-05-08', interruptedCount: 2,
+                colAB: '2026-06-23', colAD: '2026-07-01', colAE: null, colAF: '2026-07-27', colAG: '2026-08-03', colAH: '4-2569',
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 12, name: 'ศูนย์นวัตกรรมการจัดการ คณะบริหารธุรกิจ', team: 'ทีม 3',
+                colG: '2026-04-02', colH: '2026-04-09', colI: '2026-04-10',
+                colJ: '2026-04-23', colK: '2026-05-01', interruptedCount: 0,
+                colAB: '2026-06-10', colAD: '2026-06-22', colAE: '2026-06-24', colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 13, name: 'ศูนย์วิจัยและบริการวิชาการนานาชาติ วิทยาลัยนานาชาตินวัตกรรมดิจิทัล', team: 'ทีม 3',
+                colG: '2026-05-06', colH: '2026-05-07', colI: '2026-05-11',
+                colJ: '2026-05-25', colK: '2026-05-28', interruptedCount: 0,
+                colAB: '2026-07-10', colAD: '2026-07-20', colAE: null, colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 14, name: 'ศูนย์บริการวิทยาศาสตร์และเทคโนโลยี คณะวิทยาศาสตร์', team: 'ทีม 3',
+                colG: '2026-05-06', colH: '2026-05-13', colI: '2026-05-18',
+                colJ: '2026-05-25', colK: '2026-06-08', interruptedCount: 2,
+                colAB: '2026-07-24', colAD: null, colAE: null, colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 15, name: 'ศูนย์ปฏิบัติการเภสัชชุมชน คณะเภสัชศาสตร์', team: 'ทีม 3',
+                colG: '2026-05-29', colH: '2026-06-02', colI: '2026-06-05',
+                colJ: '2026-06-15', colK: '2026-06-26', interruptedCount: 0,
+                colAB: '2026-08-07', colAD: null, colAE: null, colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 16, name: 'ศูนย์บริการพยาบาล คณะพยาบาลศาสตร์', team: 'ทีม 2',
+                colG: '2026-06-12', colH: '2026-06-16', colI: '2026-06-18',
+                colJ: '2026-06-25', colK: '2026-07-07', interruptedCount: 2,
+                colAB: null, colAD: null, colAE: null, colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 17, name: 'หอพักพยาบาล คณะพยาบาลศาสตร์', team: 'ทีม 2',
+                colG: '2026-06-12', colH: '2026-06-16', colI: '2026-06-18',
+                colJ: '2026-06-25', colK: '2026-07-07', interruptedCount: 2,
+                colAB: null, colAD: null, colAE: null, colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 18, name: 'สถาบันวิจัยและพัฒนาพลังงานนครพิงค์', team: 'ทีม 1',
+                colG: '2026-07-03', colH: '2026-07-07', colI: '2026-07-14',
+                colJ: '2026-07-20', colK: '2026-07-31', interruptedCount: 3,
+                colAB: null, colAD: null, colAE: null, colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 19, name: 'ศูนย์ความเป็นเลิศทางแพทย์ คณะแพทยศาสตร์', team: 'ทีม 2',
+                colG: '2026-07-03', colH: '2026-07-07', colI: '2026-07-13',
+                colJ: '2026-07-23', colK: '2026-08-04', interruptedCount: 2,
+                colAB: null, colAD: null, colAE: null, colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            },
+            {
+                id: 20, name: 'ศูนย์ศรีพัฒน์ คณะแพทยศาสตร์', team: 'ทีม 1',
+                colG: null, colH: null, colI: null,
+                colJ: null, colK: null, interruptedCount: 0,
+                colAB: null, colAD: null, colAE: null, colAF: null, colAG: null, colAH: null,
+                colAJ: null, colAK: null, colAL: null
+            }
+        ]);
+
+        // Computed Lists for Dropdown Filters
+        const teamList = computed(() => {
+            const set = new Set(rawUnits.value.map(u => u.team).filter(Boolean));
+            return Array.from(set).sort();
+        });
+
+        const ctsCycleList = computed(() => {
+            const set = new Set(rawUnits.value.map(u => u.colAH).filter(Boolean));
+            return Array.from(set).sort();
+        });
+
+        const hasActiveFilters = computed(() => {
+            return searchQuery.value !== '' ||
+                   selectedTeam.value !== 'ALL' ||
+                   selectedPhase.value !== 'ALL' ||
+                   selectedCtsCycle.value !== 'ALL' ||
+                   selectedFiscalYear.value !== 'ALL' ||
+                   selectedMonth.value !== 'ALL';
+        });
+
+        const resetFilters = () => {
+            searchQuery.value = '';
+            selectedTeam.value = 'ALL';
+            selectedPhase.value = 'ALL';
+            selectedCtsCycle.value = 'ALL';
+            selectedFiscalYear.value = 'ALL';
+            selectedMonth.value = 'ALL';
+        };
+
+        // Date & Thai Formatting Helpers
+        const formatThaiDate = (dateStr) => {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            const yearThai = d.getFullYear() + 543;
+            return `${d.getDate()} ${months[d.getMonth()]} ${yearThai}`;
+        };
+
+        const countDaysBetween = (d1Str, d2Str) => {
+            if (!d1Str || !d2Str) return null;
+            const d1 = new Date(d1Str);
+            const d2 = new Date(d2Str);
+            const diffTime = d2 - d1;
+            if (diffTime < 0) return 0;
+            return Math.round(diffTime / (1000 * 60 * 60 * 24));
+        };
+
+        const calculateActualAuditDays = (u) => {
+            if (!u.colJ || !u.colK) return 0;
+            const start = new Date(u.colJ);
+            const end = new Date(u.colK);
+            if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) return 0;
+
+            let totalCalendarDays = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+            let weekendCount = 0;
+            let holidayCount = 0;
+
+            let cur = new Date(start);
+            while (cur <= end) {
+                const dayOfWeek = cur.getDay();
+                const isoStr = cur.toISOString().split('T')[0];
+
+                if (dayOfWeek === 0 || dayOfWeek === 6) {
+                    weekendCount++;
+                } else if (publicHolidaysList.value.includes(isoStr)) {
+                    holidayCount++;
+                }
+                cur.setDate(cur.getDate() + 1);
+            }
+
+            const interrupted = u.interruptedCount || 0;
+            let netDays = totalCalendarDays - weekendCount - holidayCount - interrupted;
+            return Math.max(0, netDays);
+        };
+
+        const getUnitStatusDetails = (u) => {
+            const priorityList = [
+                { col: 'Col AL', key: 'colAL', phaseKey: '1.4', phase: 'ชี้แจงผลการดำเนินงาน', label: 'แจ้งหน่วยรับตรวจ (เสร็จสมบูรณ์)', isCompleted: true },
+                { col: 'Col AK', key: 'colAK', phaseKey: '1.4', phase: 'ชี้แจงผลการดำเนินงาน', label: 'เสนออธิการบดี', isCompleted: false },
+                { col: 'Col AJ', key: 'colAJ', phaseKey: '1.4', phase: 'ชี้แจงผลการดำเนินงาน', label: 'หน่วยรับตรวจชี้แจง', isCompleted: false },
+                { col: 'Col AG', key: 'colAG', phaseKey: '1.3', phase: 'รายงานผลการตรวจสอบ', label: 'เสนอคณะกรรมการตรวจสอบ', isCompleted: false },
+                { col: 'Col AF', key: 'colAF', phaseKey: '1.3', phase: 'รายงานผลการตรวจสอบ', label: 'แจ้งหน่วยรับตรวจ', isCompleted: false },
+                { col: 'Col AD', key: 'colAD', phaseKey: '1.3', phase: 'รายงานผลการตรวจสอบ', label: 'เสนออธิการบดี', isCompleted: false },
+                { col: 'Col AB', key: 'colAB', phaseKey: '1.2', phase: 'ระหว่างการตรวจสอบ', label: 'ประชุมปิดตรวจ', isCompleted: false },
+                { col: 'Col K',  key: 'colK',  phaseKey: '1.2', phase: 'ระหว่างการตรวจสอบ', label: 'สิ้นสุดตรวจสอบ', isCompleted: false },
+                { col: 'Col J',  key: 'colJ',  phaseKey: '1.2', phase: 'ระหว่างการตรวจสอบ', label: 'เปิดตรวจ/เริ่มตรวจสอบ', isCompleted: false },
+                { col: 'Col I',  key: 'colI',  phaseKey: '1.1', phase: 'ก่อนเข้าตรวจ', label: 'อนุมัติแผน', isCompleted: false },
+                { col: 'Col H',  key: 'colH',  phaseKey: '1.1', phase: 'ก่อนเข้าตรวจ', label: 'แจ้งเข้าตรวจ', isCompleted: false },
+                { col: 'Col G',  key: 'colG',  phaseKey: '1.1', phase: 'ก่อนเข้าตรวจ', label: 'มอบหมายงาน', isCompleted: false }
+            ];
+
+            for (const item of priorityList) {
+                if (u[item.key]) {
+                    return {
+                        colCode: item.col,
+                        colKey: item.key,
+                        phaseKey: item.phaseKey,
+                        phaseTitle: item.phase,
+                        statusTitle: item.label,
+                        rawDate: u[item.key],
+                        formattedDate: formatThaiDate(u[item.key]),
+                        isCompleted: item.isCompleted,
+                        fullStatusText: `${item.phase}:${item.label} (${formatThaiDate(u[item.key])})`
+                    };
+                }
+            }
+
+            return {
+                colCode: 'None',
+                colKey: null,
+                phaseKey: '1.1',
+                phaseTitle: 'ยังไม่ได้เริ่ม',
+                statusTitle: 'ยังไม่ได้เริ่ม',
+                rawDate: null,
+                formattedDate: '-',
+                isCompleted: false,
+                fullStatusText: 'ยังไม่ได้เริ่มดำเนินการ'
+            };
+        };
+
+        // Processed Units Calculation
+        const processedUnits = computed(() => {
+            return rawUnits.value.map(u => {
+                const statusInfo = getUnitStatusDetails(u);
+                const actualAuditDays = calculateActualAuditDays(u);
+                const aeDuration = countDaysBetween(u.colAB, u.colAE);
+                const ctsDuration = countDaysBetween(u.colAB, u.colAG);
+
+                let isWarning = false;
+                if (ctsDuration !== null) {
+                    if (ctsDuration >= 50) isWarning = true;
+                } else if (u.colAB) {
+                    const elapsedFromAB = countDaysBetween(u.colAB, new Date().toISOString().split('T')[0]);
+                    if (elapsedFromAB >= 50) isWarning = true;
+                }
+
+                let weekendDays = 0;
+                let holidayDays = 0;
+                if (u.colJ && u.colK) {
+                    let cur = new Date(u.colJ);
+                    const end = new Date(u.colK);
+                    while (cur <= end) {
+                        const dow = cur.getDay();
+                        const isoStr = cur.toISOString().split('T')[0];
+                        if (dow === 0 || dow === 6) weekendDays++;
+                        else if (publicHolidaysList.value.includes(isoStr)) holidayDays++;
+                        cur.setDate(cur.getDate() + 1);
+                    }
+                }
+
+                // Fiscal Year & Month calculation based on latest active date or colJ
+                const refDateStr = statusInfo.rawDate || u.colJ || u.colG;
+                let refYear = null;
+                let refMonth = null;
+                let fiscalYear = null;
+
+                if (refDateStr) {
+                    const d = new Date(refDateStr);
+                    if (!isNaN(d.getTime())) {
+                        refYear = d.getFullYear();
+                        refMonth = d.getMonth() + 1; // 1-12
+                        // Thai Fiscal Year: Oct 2025 to Sep 2026 is FY 2569
+                        if (refMonth >= 10) {
+                            fiscalYear = (refYear + 544).toString(); // e.g. Oct 2025 -> 2025+544 = 2569
+                        } else {
+                            fiscalYear = (refYear + 543).toString(); // e.g. Jan 2026 -> 2026+543 = 2569
+                        }
+                    }
+                }
+
+                return {
+                    ...u,
+                    statusFormatted: statusInfo.fullStatusText,
+                    statusColCode: statusInfo.colCode,
+                    phaseKey: statusInfo.phaseKey,
+                    latestDate: statusInfo.formattedDate,
+                    rawLatestDate: statusInfo.rawDate,
+                    isCompleted: statusInfo.isCompleted,
+                    phaseTitle: statusInfo.phaseTitle,
+                    actualAuditDays,
+                    aeDuration,
+                    ctsDuration,
+                    isWarning,
+                    weekendDays,
+                    holidayDays,
+                    interruptedDays: u.interruptedCount || 0,
+                    refMonth,
+                    fiscalYear
+                };
+            });
+        });
+
+        // Filtered Units based on Search and 5 Dropdowns
+        const filteredUnits = computed(() => {
+            return processedUnits.value.filter(u => {
+                const matchSearch = searchQuery.value === '' || u.name.toLowerCase().includes(searchQuery.value.toLowerCase());
+                const matchTeam = selectedTeam.value === 'ALL' || u.team === selectedTeam.value;
+                
+                let matchPhase = true;
+                if (selectedPhase.value === 'COMPLETED') {
+                    matchPhase = u.isCompleted;
+                } else if (selectedPhase.value !== 'ALL') {
+                    matchPhase = u.phaseKey === selectedPhase.value;
+                }
+
+                const matchCts = selectedCtsCycle.value === 'ALL' || u.colAH === selectedCtsCycle.value;
+                const matchFY = selectedFiscalYear.value === 'ALL' || u.fiscalYear === selectedFiscalYear.value;
+                const matchMonth = selectedMonth.value === 'ALL' || u.refMonth === Number(selectedMonth.value);
+
+                return matchSearch && matchTeam && matchPhase && matchCts && matchFY && matchMonth;
+            });
+        });
+
+        // Overall KPIs
+        const totalUnits = computed(() => processedUnits.value.length);
+        const completedCount = computed(() => processedUnits.value.filter(u => u.isCompleted).length);
+        const completionRate = computed(() => totalUnits.value > 0 ? (completedCount.value / totalUnits.value) * 100 : 0);
+
+        const overallAvgAuditDays = computed(() => {
+            const activeUnits = processedUnits.value.filter(u => u.actualAuditDays > 0);
+            if (activeUnits.length === 0) return 0;
+            const sum = activeUnits.reduce((acc, u) => acc + u.actualAuditDays, 0);
+            return sum / activeUnits.length;
+        });
+
+        const overallAvgCtsDays = computed(() => {
+            const activeUnits = processedUnits.value.filter(u => u.ctsDuration !== null);
+            if (activeUnits.length === 0) return 0;
+            const sum = activeUnits.reduce((acc, u) => acc + u.ctsDuration, 0);
+            return sum / activeUnits.length;
+        });
+
+        const warningUnits = computed(() => processedUnits.value.filter(u => u.isWarning));
+
+        const getUnitsByStatus = (colCode) => {
+            return filteredUnits.value.filter(u => u.statusColCode === colCode);
+        };
+
+        const getPhaseCount = (phaseKey) => {
+            const cols = phaseStructure[phaseKey].map(s => s.col);
+            return filteredUnits.value.filter(u => cols.includes(u.statusColCode)).length;
+        };
+
+        // Phase Stats for Chart
+        const phaseChartStats = computed(() => {
+            const c1 = filteredUnits.value.filter(u => u.phaseKey === '1.1' && !u.isCompleted).length;
+            const c2 = filteredUnits.value.filter(u => u.phaseKey === '1.2' && !u.isCompleted).length;
+            const c3 = filteredUnits.value.filter(u => u.phaseKey === '1.3' && !u.isCompleted).length;
+            const c4 = filteredUnits.value.filter(u => u.phaseKey === '1.4' || u.isCompleted).length;
+
+            return [
+                { key: '1.1', name: '1.1 ก่อนเข้าตรวจ', count: c1, color: '#536BD6' },
+                { key: '1.2', name: '1.2 ระหว่างการตรวจสอบ', count: c2, color: '#B380DD' },
+                { key: '1.3', name: '1.3 รายงานผลการตรวจสอบ', count: c3, color: '#C1BFEC' },
+                { key: '1.4', name: '1.4 ชี้แจงผลการดำเนินงาน', count: c4, color: '#83A370' }
+            ];
+        });
+
+        const bottleneckPhase = computed(() => {
+            if (filteredUnits.value.length === 0) return null;
+            const sorted = [...phaseChartStats.value].sort((a, b) => b.count - a.count);
+            return sorted[0];
+        });
+
+        // Render Chart.js
+        const renderChart = () => {
+            const ctx = document.getElementById('phaseStatusChart');
+            if (!ctx) return;
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: phaseChartStats.value.map(s => s.name),
+                    datasets: [{
+                        label: 'จำนวนส่วนงาน',
+                        data: phaseChartStats.value.map(s => s.count),
+                        backgroundColor: phaseChartStats.value.map(s => s.color),
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barThickness: 32
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `  ${ctx.raw} ส่วนงาน`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        };
+
+        watch(filteredUnits, () => {
+            nextTick(() => renderChart());
+        }, { deep: true });
+
+        // Team Metrics
+        const teamMetrics = computed(() => {
+            return teamList.value.map(tName => {
+                const teamUnits = processedUnits.value.filter(u => u.team === tName);
+                const count = teamUnits.length;
+                const sumAuditDays = teamUnits.reduce((acc, u) => acc + u.actualAuditDays, 0);
+                const avgAuditDays = count > 0 ? sumAuditDays / count : 0;
+                const sumCtsDays = teamUnits.reduce((acc, u) => acc + (u.ctsDuration || 0), 0);
+                const avgCtsDays = count > 0 ? sumCtsDays / count : 0;
+
+                return {
+                    teamName: tName,
+                    count,
+                    avgAuditDays,
+                    avgCtsDays
+                };
+            });
+        });
+
+        // Excel Export
+        const exportExcel = () => {
+            const exportData = processedUnits.value.map(u => ({
+                'ลำดับ': u.id,
+                'ชื่อส่วนงาน (Col B)': u.name,
+                'ทีม': u.team,
+                'สถานะล่าสุด': u.statusFormatted,
+                'วันตรวจจริง (วัน)': u.actualAuditDays,
+                'ปิดตรวจ->เสนออธิการ (วัน)': u.aeDuration ?? '-',
+                'ครั้งที่ประชุม คตส. (Col AH)': u.colAH ?? '-',
+                'ปิดตรวจ->เสนอ คตส. (วัน)': u.ctsDuration ?? '-',
+                'สถานะเตือน': u.ctsDuration > 60 ? 'เกิน 60 วัน' : (u.isWarning ? 'เตือน >= 50 วัน' : 'ปกติ')
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'ทะเบียนคุมออกตรวจ 2569');
+            XLSX.writeFile(wb, 'Audit_Dashboard_2569_Export.xlsx');
+        };
+
+        // Excel Import
+        const importExcel = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (jsonData.length < 2) return;
+
+                    // Parse uploaded rows starting after header
+                    const newUnits = [];
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || !row[1]) continue; // Needs unit name
+
+                        newUnits.push({
+                            id: i,
+                            name: String(row[1] || `ส่วนงานที่ ${i}`),
+                            team: String(row[2] || 'ทีม 1'),
+                            colG: row[3] || null,
+                            colH: row[4] || null,
+                            colI: row[5] || null,
+                            colJ: row[6] || null,
+                            colK: row[7] || null,
+                            interruptedCount: Number(row[8]) || 0,
+                            colAB: row[9] || null,
+                            colAD: row[10] || null,
+                            colAE: row[11] || null,
+                            colAF: row[12] || null,
+                            colAG: row[13] || null,
+                            colAH: row[14] ? String(row[14]) : null,
+                            colAJ: row[15] || null,
+                            colAK: row[16] || null,
+                            colAL: row[17] || null
+                        });
+                    }
+
+                    if (newUnits.length > 0) {
+                        rawUnits.value = newUnits;
+                        alert(`นำเข้าข้อมูลสำเร็จจำนวน ${newUnits.length} รายการ`);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('เกิดข้อผิดพลาดในการอ่านไฟล์ Excel โปรดตรวจสอบรูปแบบไฟล์');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        const openDataModal = () => {
+            isModalOpen.value = true;
+            nextTick(() => lucide.createIcons());
+        };
+
+        const addNewRow = () => {
+            const newId = rawUnits.value.length + 1;
+            rawUnits.value.push({
+                id: newId,
+                name: `ส่วนงานที่ ${newId}`,
+                team: 'ทีม 1',
+                colG: new Date().toISOString().split('T')[0],
+                colH: null, colI: null, colJ: null, colK: null, interruptedCount: 0,
+                colAB: null, colAD: null, colAE: null, colAF: null, colAG: null, colAH: '1-2569',
+                colAJ: null, colAK: null, colAL: null
+            });
+        };
+
+        onMounted(() => {
+            updateHolidays();
+            lucide.createIcons();
+            nextTick(() => renderChart());
+        });
+
+        return {
+            isModalOpen,
+            searchQuery,
+            selectedTeam,
+            selectedPhase,
+            selectedCtsCycle,
+            selectedFiscalYear,
+            selectedMonth,
+            thaiMonths,
+            teamList,
+            ctsCycleList,
+            hasActiveFilters,
+            resetFilters,
+            publicHolidaysRaw,
+            updateHolidays,
+            phaseStructure,
+            rawUnits,
+            processedUnits,
+            filteredUnits,
+            totalUnits,
+            completedCount,
+            completionRate,
+            overallAvgAuditDays,
+            overallAvgCtsDays,
+            warningUnits,
+            getUnitsByStatus,
+            getPhaseCount,
+            phaseChartStats,
+            bottleneckPhase,
+            teamMetrics,
+            exportExcel,
+            importExcel,
+            fileInput,
+            openDataModal,
+            addNewRow
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
