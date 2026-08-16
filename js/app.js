@@ -23,8 +23,8 @@ const app = createApp({
     const holidaysList = ref([]);
     const nonAuditDaysList = ref([]);
 
-    // Main Filters
-    const selectedFiscalYears = ref(["ALL"]);
+    // Main Filters — Default to 2570 as requested
+    const selectedFiscalYears = ref(["2570"]);
     const yearButtonList = ["2568", "2569", "2570", "2571", "2572"];
 
     const toggleYearButton = (yr) => {
@@ -110,6 +110,8 @@ const app = createApp({
     // Load initial data from API / Google Sheets
     const loadData = async () => {
       try {
+        console.log("🔄 loadData: Fetching initial data...");
+        console.log("🔄 loadData: API URL =", API.getApiUrl().substring(0, 80) + "...");
         const data = await API.fetchInitialData();
         if (data) {
           rawAuditList.value = data.mainAudit || [];
@@ -118,6 +120,15 @@ const app = createApp({
           masterLists.value = data.masterLists || [];
           holidaysList.value = data.holidays || [];
           nonAuditDaysList.value = data.nonAuditDays || [];
+
+          console.log("✅ loadData: mainAudit =", rawAuditList.value.length, "rows");
+          console.log("✅ loadData: masterLists =", masterLists.value.length, "rows");
+          console.log("✅ loadData: users =", userList.value.length, "rows");
+          console.log("✅ loadData: delay =", delayList.value.length, "rows");
+          if (masterLists.value.length > 0) {
+            const r0 = masterLists.value[0];
+            console.log("✅ loadData: masterLists[0] _col3 =", r0._col3, "| _col5 =", r0._col5);
+          }
 
           if (userList.value.length > 0 && !currentUser.value.email) {
             const adminUser = userList.value.find(u => (u.Role || "").toLowerCase() === "admin") || userList.value[0];
@@ -131,9 +142,11 @@ const app = createApp({
               };
             }
           }
+        } else {
+          console.error("❌ loadData: fetchInitialData returned null/undefined");
         }
       } catch (err) {
-        console.error("Error loading data:", err);
+        console.error("❌ Error loading data:", err);
       }
     };
 

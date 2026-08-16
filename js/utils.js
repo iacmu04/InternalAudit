@@ -203,7 +203,10 @@ function parseMasterListsSchema(rawRows) {
   const departmentsByYear = {};
   const yearSet = new Set(["2570", "2569"]);
 
+  console.log("📋 parseMasterListsSchema called with", rawRows ? rawRows.length : 0, "rows");
+
   if (!rawRows || !Array.isArray(rawRows) || rawRows.length === 0) {
+    console.warn("⚠️ Master_Lists is empty, using fallback defaults");
     return {
       teams: ["1", "2", "3", "4", "พิเศษ"],
       ctsCycles: ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569", "1/2570", "2/2570"],
@@ -213,25 +216,16 @@ function parseMasterListsSchema(rawRows) {
     };
   }
 
-  // Pre-process and normalize rows so every row has positional keys _col0, _col1, _col2, _col3, _col4...
-  const normalizedRows = rawRows.map(row => {
-    const norm = { ...row };
-    const keys = Object.keys(row).filter(k => !k.startsWith("_"));
-    keys.forEach((key, idx) => {
-      if (norm[`_col${idx}`] === undefined) {
-        norm[`_col${idx}`] = row[key];
-      }
-    });
-    return norm;
-  });
+  // Debug: Log first row structure
+  const firstRow = rawRows[0];
+  console.log("📋 First row keys:", Object.keys(firstRow));
+  console.log("📋 First row _col0:", firstRow._col0, "| _col1:", firstRow._col1, "| _col3:", firstRow._col3, "| _col5:", firstRow._col5);
+  console.log("📋 First row _headers:", firstRow._headers);
 
-  // Get headers if available
-  const sampleRow = normalizedRows[0] || {};
-  const headers = sampleRow._headers || Object.keys(sampleRow).filter(k => !k.startsWith("_"));
-
-  normalizedRows.forEach(row => {
+  // Iterate over raw rows directly — they should already have _col0.._colN from readSheetData or parseCSV
+  rawRows.forEach(row => {
     // 1. Col A (Index 0): Team Options
-    const colA = String(row._col0 !== undefined ? row._col0 : (row[headers[0]] || "")).trim();
+    const colA = String(row._col0 !== undefined ? row._col0 : "").trim();
     if (colA && !colA.startsWith("รายชื่อ") && colA !== "ทีม") {
       const cleanT = colA.replace(/^ทีม\s*/, "").trim();
       if (cleanT && cleanT.length <= 10 && !cleanT.match(/(คณะ|กอง|ศูนย์|สถาบัน|สำนักงาน|วิทยาลัย|ส่วนงาน|ภาควิชา)/i)) {
@@ -240,30 +234,24 @@ function parseMasterListsSchema(rawRows) {
     }
 
     // 2. Col B (Index 1): CTS Cycle Options
-    const colB = String(row._col1 !== undefined ? row._col1 : (row[headers[1]] || "")).trim();
+    const colB = String(row._col1 !== undefined ? row._col1 : "").trim();
     if (colB && !colB.startsWith("รอบ") && !colB.startsWith("ครั้ง")) {
       const cleanC = colB.replace(/^ครั้งที่\s*/, "").replace(/^รอบที่\s*/, "").trim();
-      // Strict validation: Must match CTS cycle pattern (e.g. 1/2569, 2/2569) and NOT be a department or date
-      if (cleanC && !cleanC.match(/(คณะ|กอง|ศูนย์|สถาบัน|สำนักงาน|วิทยาลัย|ส่วนงาน|ภาควิชา)/i) && !cleanC.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        if (cleanC.match(/^\d+\/\d{4}$/) || cleanC.match(/^\d+$/)) {
-          ctsSet.add(cleanC);
-        }
+      if (cleanC && cleanC.match(/^\d+\/\d{4}$/)) {
+        ctsSet.add(cleanC);
       }
     }
 
     // 3. Col C (Index 2): Non-Audit Day Reasons / Types
-    const colC = String(row._col2 !== undefined ? row._col2 : (row[headers[2]] || "")).trim();
-    if (colC && !colC.startsWith("ประเภท") && !colC.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      if (!colC.match(/(คณะ|กอง|ศูนย์|สถาบัน|สำนักงาน|วิทยาลัย)/i)) {
-        nonAuditTypeSet.add(colC);
-      }
+    const colC = String(row._col2 !== undefined ? row._col2 : "").trim();
+    if (colC && !colC.startsWith("ประเภท") && colC.length > 1 && !colC.match(/^\d/)) {
+      nonAuditTypeSet.add(colC);
     }
   });
 
   // Determine year pairs starting from Index 3 (Col D)
   // Col D (index 3) = Dept for 2569, Col E (index 4) = Team for 2569
   // Col F (index 5) = Dept for 2570, Col G (index 6) = Team for 2570
-  // Col H (index 7) = Dept for 2571, Col I (index 8) = Team for 2571
   const allColIndices = [
     { year: "2569", deptIdx: 3, teamIdx: 4 },
     { year: "2570", deptIdx: 5, teamIdx: 6 },
@@ -273,26 +261,21 @@ function parseMasterListsSchema(rawRows) {
 
   allColIndices.forEach(pair => {
     let yearStr = pair.year;
-    if (headers[pair.deptIdx]) {
-      const match = String(headers[pair.deptIdx]).match(/(\d{4})/);
-      if (match) yearStr = match[1];
-    }
+    let count = 0;
 
-    let hasData = false;
-    normalizedRows.forEach(row => {
-      const deptName = String(row[`_col${pair.deptIdx}`] !== undefined ? row[`_col${pair.deptIdx}`] : (row[headers[pair.deptIdx]] || "")).trim();
+    rawRows.forEach(row => {
+      const rawVal = row[`_col${pair.deptIdx}`];
+      const deptName = String(rawVal !== undefined ? rawVal : "").trim();
       
-      // Strict Dept Name Validation: Must not be date, pure year, header text, or pure number
+      // Dept Name Validation: Must be non-empty, not a year, not a date, not a pure number, and at least 3 chars
       if (deptName && 
+          deptName.length > 2 &&
           !deptName.match(/^\d{4}$/) && 
           !deptName.match(/^\d{4}-\d{2}-\d{2}$/) && 
-          !deptName.match(/^\d+$/) && 
-          !deptName.includes("ส่วนงาน") && 
-          deptName.length > 2) {
+          !deptName.match(/^\d+$/)) {
 
-        hasData = true;
-        const rawTeam = row[`_col${pair.teamIdx}`] !== undefined ? row[`_col${pair.teamIdx}`] : (row[headers[pair.teamIdx]] || "1");
-        const teamName = String(rawTeam).replace(/^ทีม\s*/, "").trim() || "1";
+        const rawTeam = row[`_col${pair.teamIdx}`];
+        const teamName = String(rawTeam !== undefined ? rawTeam : "1").replace(/^ทีม\s*/, "").trim() || "1";
 
         if (!departmentsByYear[yearStr]) {
           departmentsByYear[yearStr] = [];
@@ -303,12 +286,14 @@ function parseMasterListsSchema(rawRows) {
             team: teamName,
             year: yearStr
           });
+          count++;
         }
       }
     });
 
-    if (hasData) {
+    if (count > 0) {
       yearSet.add(yearStr);
+      console.log(`📋 Year ${yearStr}: Found ${count} departments from _col${pair.deptIdx}`);
     }
   });
 
@@ -316,11 +301,21 @@ function parseMasterListsSchema(rawRows) {
   const validTeams = Array.from(teamSet).filter(t => t && t !== "ทีม");
   const validCts = Array.from(ctsSet);
 
-  return {
+  const result = {
     teams: validTeams.length > 0 ? validTeams : ["1", "2", "3", "4", "พิเศษ"],
     ctsCycles: validCts.length > 0 ? validCts : ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569", "1/2570", "2/2570"],
     nonAuditTypes: nonAuditTypeSet.size > 0 ? Array.from(nonAuditTypeSet) : ["ติดประชุมมหาวิทยาลัย", "อบรม/สัมมนา", "วันหยุดนักขัตฤกษ์", "ติดภารกิจอื่น"],
     departmentsByYear: departmentsByYear,
     years: years
   };
+
+  console.log("📋 parseMasterListsSchema result:", { 
+    teams: result.teams.length, 
+    ctsCycles: result.ctsCycles.length, 
+    nonAuditTypes: result.nonAuditTypes.length,
+    deptYears: Object.keys(result.departmentsByYear).map(y => `${y}: ${result.departmentsByYear[y].length} depts`),
+    years: result.years 
+  });
+
+  return result;
 }

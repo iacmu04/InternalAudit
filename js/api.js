@@ -6,21 +6,24 @@
 const SPREADSHEET_ID = "1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw";
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbx-ZrpKcAGH8b9MZ9qJWXvN6Zc_gewDScPCn66QXhxJSFC8Pw9fn9TiPdoS4sXQFsKM/exec";
 
-function getStoredApiUrl() {
+// Auto-migration: Clear any stale/incorrect URLs from localStorage on startup
+// This ensures all users get the correct hardcoded DEFAULT_API_URL
+(function() {
   const stored = localStorage.getItem("APPS_SCRIPT_URL");
-  // Auto-cleanup: remove old/truncated URLs that don't match the current deployment
-  if (stored && (!stored.endsWith("/exec") || stored.length < 80 || stored.includes("AKfycbz_InternalAudit"))) {
+  if (stored && stored !== DEFAULT_API_URL) {
+    console.log("🔄 Cleared stale API URL from localStorage:", stored.substring(0, 60) + "...");
     localStorage.removeItem("APPS_SCRIPT_URL");
-    return DEFAULT_API_URL;
   }
-  return stored || DEFAULT_API_URL;
+})();
+
+function getStoredApiUrl() {
+  return DEFAULT_API_URL;
 }
 
 function setStoredApiUrl(url) {
+  // URL is now hardcoded - settings UI updates are informational only
   if (url && url.trim().endsWith("/exec") && url.trim().length >= 80) {
     localStorage.setItem("APPS_SCRIPT_URL", url.trim());
-  } else {
-    localStorage.removeItem("APPS_SCRIPT_URL");
   }
 }
 
