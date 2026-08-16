@@ -621,7 +621,21 @@ const app = createApp({
     };
 
     const exportPdfReportAction = () => {
-      generatePdfReport(masterLists.value, rawAuditList.value, delayList.value);
+      generatePdfReport({
+        masterLists: masterLists.value,
+        rawAuditList: rawAuditList.value,
+        delayList: delayList.value,
+        parsedSchema: parsedMasterListsSchema.value,
+        filteredUnits: filteredUnits.value,
+        unstartedUnitsList: unstartedUnitsList.value,
+        selectedFiscalYear: selectedFiscalYear.value,
+        selectedTeam: selectedTeam.value,
+        selectedPhase: selectedPhase.value,
+        selectedCtsCycle: selectedCtsCycle.value,
+        totalPlannedUnitsCount: totalPlannedUnitsCount.value,
+        completedUnitsCount: completedUnitsCount.value,
+        overallCompletionRate: overallCompletionRate.value
+      });
     };
 
     const editAndResubmitDelay = (item) => {
