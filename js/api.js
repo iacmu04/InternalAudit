@@ -7,11 +7,17 @@ const SPREADSHEET_ID = "1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw";
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbx-ZrpKcAGH8b9MZ9qJWXvN6Zc_gewDScPCn66QXhxJSFC8Pw9fn9TiPdoS4sXQFsKM/exec";
 
 function getStoredApiUrl() {
-  return localStorage.getItem("APPS_SCRIPT_URL") || DEFAULT_API_URL;
+  const stored = localStorage.getItem("APPS_SCRIPT_URL");
+  // Auto-cleanup: remove old/truncated URLs that don't match the current deployment
+  if (stored && (!stored.endsWith("/exec") || stored.length < 80 || stored.includes("AKfycbz_InternalAudit"))) {
+    localStorage.removeItem("APPS_SCRIPT_URL");
+    return DEFAULT_API_URL;
+  }
+  return stored || DEFAULT_API_URL;
 }
 
 function setStoredApiUrl(url) {
-  if (url) {
+  if (url && url.trim().endsWith("/exec") && url.trim().length >= 80) {
     localStorage.setItem("APPS_SCRIPT_URL", url.trim());
   } else {
     localStorage.removeItem("APPS_SCRIPT_URL");
