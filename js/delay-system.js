@@ -4,6 +4,16 @@
 
 function getDelayStatus(item) {
   if (!item) return "";
+  
+  const leaderStatus = item.LeaderStatus || item.leaderStatus || item["สถานะหัวหน้างาน"] || "";
+  const deanStatus = item.DeanStatus || item.deanStatus || item["สถานะผู้อำนวยการ"] || "";
+
+  if (deanStatus === "อนุมัติ" || deanStatus === "อนุมัติแล้ว") return "อนุมัติแล้ว";
+  if (deanStatus === "ไม้อนุมัติ") return "ไม้อนุมัติ";
+  if (leaderStatus === "ตีกลับ") return "ตีกลับ";
+  if (deanStatus === "รออนุมัติ" || leaderStatus === "ผ่านพิจารณา") return "รออนุมัติ (ค้างอยู่ที่ผู้อำนวยการ)";
+  if (leaderStatus === "รอพิจารณา" || !leaderStatus) return "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)";
+
   for (let key in item) {
     const k = key.toLowerCase().trim();
     if (k === "status" || k.includes("สถานะ")) {
@@ -11,21 +21,33 @@ function getDelayStatus(item) {
       if (val) return val;
     }
   }
-  return String(item.Status || item.status || "").trim();
+  return String(item.Status || item.status || "รอพิจารณา").trim();
 }
 
 function getDelayFields(item) {
   if (!item) {
-    return { department: "ไม่ระบุส่วนงาน", requestor: "ไม่ระบุผู้ขอ", email: "", supervisor: "ไม่ระบุหัวหน้างาน", status: "รอพิจารณา" };
+    return { 
+      department: "ไม่ระบุส่วนงาน", 
+      requestor: "ไม่ระบุผู้ขอ", 
+      email: "", 
+      supervisor: "ไม่ระบุหัวหน้างาน", 
+      totalDays: 0,
+      leaderStatus: "รอพิจารณา",
+      deanStatus: "-",
+      status: "รอพิจารณา" 
+    };
   }
 
   let department = item.Department || item.department || item["ส่วนงาน"] || item["หน่วยงาน"] || "";
   let requestor = item.Requestor || item.requestor || item["ผู้ขอ"] || item.Name || item.name || "";
   let email = item.Email || item.email || item["อีเมล"] || "";
-  let supervisor = item["Supervisor Name"] || item.supervisorName || item["หัวหน้างาน"] || "";
+  let supervisor = item.Leader || item["Supervisor Name"] || item.supervisorName || item["หัวหน้างาน"] || "";
+  let totalDays = item["Total number of days"] || item.totalDays || item["จำนวนวันรวมที่ขอขยาย"] || 0;
+  let leaderStatus = item.LeaderStatus || item.leaderStatus || "รอพิจารณา";
+  let deanStatus = item.DeanStatus || item.deanStatus || "-";
   let status = getDelayStatus(item);
 
-  // Fix field swap edge cases: if department is "Team 2" / "Pui" and requestor is "กองพัฒนานักศึกษา" / "คณะเกษตรศาสตร์"
+  // Fix field swap edge cases
   if (department && (department.toLowerCase().startsWith("team") || department === "Pui") && requestor && !requestor.toLowerCase().startsWith("team")) {
     const temp = department;
     department = requestor;
@@ -37,6 +59,9 @@ function getDelayFields(item) {
     requestor: requestor || "ไม่ระบุผู้ขอ",
     email: email,
     supervisor: supervisor || "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)",
+    totalDays: parseInt(totalDays) || 0,
+    leaderStatus: leaderStatus,
+    deanStatus: deanStatus,
     status: status || "รอพิจารณา"
   };
 }
@@ -53,7 +78,7 @@ function filterDelayListByRole(delayList, currentUser) {
 
   if (role === "Leader") {
     return delayList.filter(item => {
-      const supName = String(item["Supervisor Name"] || item.supervisorName || "").toLowerCase();
+      const supName = String(item.Leader || item["Supervisor Name"] || item.supervisorName || "").toLowerCase();
       const itemEmail = String(item.Email || item.email || "").toLowerCase();
       const status = getDelayStatus(item);
       const userMatch = supName.includes(currentUser.name.toLowerCase()) || itemEmail === email;
@@ -71,13 +96,14 @@ function countPendingRequests(delayList) {
 
   if (Array.isArray(delayList)) {
     delayList.forEach(item => {
-      const status = getDelayStatus(item);
-      if (status.includes('รอพิจารณา') || status.includes('ค้างอยู่ที่หัวหน้า')) {
+      const fields = getDelayFields(item);
+      const status = fields.status;
+
+      if (status.includes('รอพิจารณา') || fields.leaderStatus === 'รอพิจารณา') {
         supervisorCount++;
-      } else if (status.includes('รออนุมัติ') || status.includes('ค้างอยู่ที่ผู้อำนวยการ')) {
+      } else if (status.includes('รออนุมัติ') || fields.deanStatus === 'รออนุมัติ') {
         directorCount++;
       }
-      // Do NOT count อนุมัติแล้ว, ไม้อนุมัติ, ตีกลับ, ขอยกเลิก
     });
   }
 

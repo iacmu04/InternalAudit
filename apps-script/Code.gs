@@ -180,6 +180,20 @@ function saveAuditEntry(ss, data) {
   const sheet = ss.getSheetByName("Main_Audit");
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
   
+  // Calculate duration metrics before saving
+  const plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
+  const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
+  const nonAuditDays = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
+  const actualDays = Math.max(plannedDays + approvedExtDays - nonAuditDays, 0);
+
+  const durPresident = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนออธิการบดี_รายงาน"]);
+  const durCts = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนอ_คตส"]);
+
+  if (plannedDays > 0) data["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
+  data["ระยะเวลาจริงในการตรวจสอบ"] = actualDays;
+  if (durPresident >= 0) data["ระยะเวลาเสนออธิการบดี"] = durPresident;
+  if (durCts >= 0) data["ระยะเวลาเสนอ_คตส"] = durCts;
+
   const row = headers.map(h => data[h] !== undefined ? data[h] : "");
   sheet.appendRow(row);
 
@@ -196,11 +210,76 @@ function updateAuditEntry(ss, rowIndex, data) {
   if (!rowIndex || rowIndex < 2) return { status: "error", message: "Invalid row index" };
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
+
+  // Calculate duration metrics before updating
+  const plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
+  const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
+  const nonAuditDays = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
+  const actualDays = Math.max(plannedDays + approvedExtDays - nonAuditDays, 0);
+
+  const durPresident = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนออธิการบดี_รายงาน"]);
+  const durCts = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนอ_คตส"]);
+
+  if (plannedDays > 0) data["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
+  data["ระยะเวลาจริงในการตรวจสอบ"] = actualDays;
+  if (durPresident >= 0) data["ระยะเวลาเสนออธิการบดี"] = durPresident;
+  if (durCts >= 0) data["ระยะเวลาเสนอ_คตส"] = durCts;
+
   const rowValues = headers.map(h => data[h] !== undefined ? data[h] : "");
-  
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);
 
   return { status: "success", message: "แก้ไขข้อมูลใน Google Sheet เรียบร้อยแล้ว" };
+}
+
+function getApprovedExtensionDaysForDept(ss, deptName) {
+  if (!deptName) return 0;
+  const delaySheet = ss.getSheetByName("Delay");
+  if (!delaySheet) return 0;
+
+  const values = delaySheet.getDataRange().getValues();
+  if (values.length < 2) return 0;
+
+  const deptClean = String(deptName).trim().toLowerCase();
+  let sum = 0;
+
+  for (let i = 1; i < values.length; i++) {
+    const rDept = String(values[i][3] || "").trim().toLowerCase(); // Col D: Department
+    const deanStatus = String(values[i][11] || values[i][8] || "").trim(); // Col L / Col I: DeanStatus/Status
+    if (rDept === deptClean && (deanStatus === "อนุมัติ" || deanStatus === "อนุมัติแล้ว")) {
+      const days = parseInt(values[i][6]) || 0; // Col G: Total number of days
+      sum += days;
+    }
+  }
+  return sum;
+}
+
+function countNonAuditDaysForDept(ss, deptName) {
+  if (!deptName) return 0;
+  const nonAuditSheet = ss.getSheetByName("Non_Audit_Days");
+  if (!nonAuditSheet) return 0;
+
+  const values = nonAuditSheet.getDataRange().getValues();
+  if (values.length < 2) return 0;
+
+  const deptClean = String(deptName).trim().toLowerCase();
+  let count = 0;
+
+  for (let i = 1; i < values.length; i++) {
+    const rDept = String(values[i][2] || "").trim().toLowerCase(); // Col C: ส่วนงาน
+    if (rDept === deptClean || rDept === "ทั้งหมด") {
+      count++;
+    }
+  }
+  return count;
+}
+
+function calculateDaysDiff(startDateStr, endDateStr) {
+  if (!startDateStr || !endDateStr) return -1;
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
+  if (isNaN(start) || isNaN(end) || start > end) return -1;
+  const ms = 1000 * 60 * 60 * 24;
+  return Math.round((end - start) / ms);
 }
 
 function addDepartmentToMaster(ss, deptName) {
@@ -223,6 +302,10 @@ function submitExtension(ss, data) {
   const sheet = ss.getSheetByName("Delay");
   const nowStr = formatDate(new Date());
   
+  // Columns A-N schema:
+  // A: Timestamp, B: Requestor, C: Email, D: Department, E: Start Date, F: End Date,
+  // G: Total number of days, H: Reason, I: Leader, J: LeaderStatus, K: LeaderDate,
+  // L: DeanStatus, M: DeanDate, N: Remarks
   const newRow = [
     nowStr,
     data.requestorName || "",
@@ -230,10 +313,12 @@ function submitExtension(ss, data) {
     data.department || "",
     data.startDate || "",
     data.endDate || "",
+    data.totalDays || 0,
     data.reason || "",
     data.supervisorName || "",
-    "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)",
+    "รอพิจารณา",
     "",
+    "-",
     "",
     ""
   ];
@@ -253,7 +338,7 @@ function processApproval(ss, id, status, comment, userEmail, userRole) {
     targetRow = id;
   } else {
     for (let i = 1; i < values.length; i++) {
-      if (values[i][0] === id || (values[i][2] === userEmail && values[i][3] === comment)) {
+      if (values[i][0] === id || (values[i][2] === userEmail && values[i][7] === comment)) {
         targetRow = i + 1;
         break;
       }
@@ -262,34 +347,39 @@ function processApproval(ss, id, status, comment, userEmail, userRole) {
 
   if (targetRow === -1) return { status: "error", message: "ไม่พบรายการคำขอ" };
 
-  let newStatus = "";
+  let actionResult = "";
   if (userRole === "Leader" || userRole === "Admin") {
     if (status === "approved") {
-      newStatus = "รออนุมัติ (ค้างอยู่ที่ผู้อำนวยการ)";
+      sheet.getRange(targetRow, 10).setValue("ผ่านพิจารณา"); // Col J: LeaderStatus
+      sheet.getRange(targetRow, 11).setValue(nowStr);       // Col K: LeaderDate
+      sheet.getRange(targetRow, 12).setValue("รออนุมัติ");  // Col L: DeanStatus
+      actionResult = "ผ่านพิจารณาเสนอ ผอ.";
     } else if (status === "rejected") {
-      newStatus = "ตีกลับ";
+      sheet.getRange(targetRow, 10).setValue("ตีกลับ");      // Col J: LeaderStatus
+      sheet.getRange(targetRow, 11).setValue(nowStr);       // Col K: LeaderDate
+      actionResult = "ตีกลับคำขอ";
     }
-    sheet.getRange(targetRow, 9).setValue(newStatus);
-    sheet.getRange(targetRow, 10).setValue(nowStr);
   } 
   
-  if (userRole === "Dean" || (userRole === "Admin" && newStatus === "")) {
+  if (userRole === "Dean" || (userRole === "Admin" && actionResult === "")) {
     if (status === "approved") {
-      newStatus = "อนุมัติแล้ว";
+      sheet.getRange(targetRow, 12).setValue("อนุมัติ");     // Col L: DeanStatus
+      sheet.getRange(targetRow, 13).setValue(nowStr);       // Col M: DeanDate
+      actionResult = "อนุมัติเรียบร้อย";
     } else if (status === "rejected") {
-      newStatus = "ไม้อนุมัติ";
+      sheet.getRange(targetRow, 12).setValue("ไม้อนุมัติ");  // Col L: DeanStatus
+      sheet.getRange(targetRow, 13).setValue(nowStr);       // Col M: DeanDate
+      actionResult = "ไม้อนุมัติ";
     }
-    sheet.getRange(targetRow, 9).setValue(newStatus);
-    sheet.getRange(targetRow, 11).setValue(nowStr);
   }
 
   if (comment) {
-    const oldRemark = sheet.getRange(targetRow, 12).getValue();
+    const oldRemark = sheet.getRange(targetRow, 14).getValue();
     const newRemark = oldRemark ? `${oldRemark} | ${userRole}: ${comment}` : `${userRole}: ${comment}`;
-    sheet.getRange(targetRow, 12).setValue(newRemark);
+    sheet.getRange(targetRow, 14).setValue(newRemark); // Col N: Remarks
   }
 
-  return { status: "success", message: `ดำเนินการ ${newStatus} ใน Google Sheet เรียบร้อยแล้ว` };
+  return { status: "success", message: `ดำเนินการ ${actionResult} ใน Google Sheet เรียบร้อยแล้ว` };
 }
 
 function cancelExtension(ss, rowIndex) {
@@ -297,23 +387,13 @@ function cancelExtension(ss, rowIndex) {
   const sheet = ss.getSheetByName("Delay");
   if (!rowIndex || rowIndex < 2) return { status: "error", message: "Invalid row" };
 
-  sheet.getRange(rowIndex, 9).setValue("ขอยกเลิก");
+  sheet.getRange(rowIndex, 10).setValue("ขอยกเลิก"); // Col J: LeaderStatus
   return { status: "success", message: "ยกเลิกคำขอขยายเวลาใน Google Sheet เรียบร้อยแล้ว" };
 }
 
 function resubmitExtension(ss, rowIndex, data) {
-  if (!ss) ss = getSpreadsheet();
-  const sheet = ss.getSheetByName("Delay");
-  if (!rowIndex || rowIndex < 2) return { status: "error", message: "Invalid row" };
-
-  sheet.getRange(rowIndex, 5).setValue(data.startDate);
-  sheet.getRange(rowIndex, 6).setValue(data.endDate);
-  sheet.getRange(rowIndex, 7).setValue(data.reason);
-  sheet.getRange(rowIndex, 8).setValue(data.supervisorName);
-  sheet.getRange(rowIndex, 9).setValue("รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)");
-  sheet.getRange(rowIndex, 10).setValue("");
-
-  return { status: "success", message: "ส่งคำขอแก้ไขลง Google Sheet เรียบร้อยแล้ว" };
+  // Appends new row for resubmitted request
+  return submitExtension(ss, data);
 }
 
 function ensureSheets(ss) {
@@ -329,7 +409,7 @@ function ensureSheets(ss) {
       } else if (name === "Non_Audit_Days") {
         sheet.appendRow(["วันที่", "ประเภท", "ส่วนงาน", "สาเหตุ/หมายเหตุ"]);
       } else if (name === "Delay") {
-        sheet.appendRow(["Timestamp", "Requestor", "Email", "Department", "Start Date", "End Date", "Reason", "Supervisor Name", "Status", "Supervisor Action Date", "Director Action Date", "Remarks"]);
+        sheet.appendRow(["Timestamp", "Requestor", "Email", "Department", "Start Date", "End Date", "Total number of days", "Reason", "Leader", "LeaderStatus", "LeaderDate", "DeanStatus", "DeanDate", "Remarks"]);
       }
     }
   });

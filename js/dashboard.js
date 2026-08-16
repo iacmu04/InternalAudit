@@ -41,11 +41,25 @@ const STATUS_PRIORITY_ORDER = [
   { phase: "1.1", sub: "วันที่มอบหมายงาน", title: "ก่อนเข้าตรวจ:มอบหมายงาน" }
 ];
 
-function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList) {
+function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, delayList = []) {
   let completedCount = 0;
+
+  // Build department extension days map from approved Delay requests
+  const deptExtensionDaysMap = {};
+  if (Array.isArray(delayList)) {
+    delayList.forEach(item => {
+      const dept = String(item.Department || item.department || item["ส่วนงาน"] || "").trim().toLowerCase();
+      const status = String(item.DeanStatus || item.Status || item.status || "");
+      if (dept && (status.includes("อนุมัติ") || status.includes("อนุมัติแล้ว"))) {
+        const days = parseInt(item["Total number of days"] || item.totalDays || item["จำนวนวันรวมที่ขอขยาย"] || 0) || 0;
+        deptExtensionDaysMap[dept] = (deptExtensionDaysMap[dept] || 0) + days;
+      }
+    });
+  }
 
   const processedUnits = rawAuditList.map((row, idx) => {
     const deptName = row["ส่วนงาน"] || `ส่วนงาน ${idx + 1}`;
+    const deptClean = String(deptName).trim().toLowerCase();
     const fiscalYear = row["ปีงบประมาณ"] || "";
     const team = row["ทีม"] || "";
 
@@ -74,7 +88,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList) {
       latestDateVal = "-";
     }
 
-    // 2.3 Calculate Actual Audit Days (G to H minus weekends, holidays, and non-audit days)
+    // 2.3 Calculate Planned Audit Days (G to H minus weekends and holidays)
     const startDateG = row["วันที่เริ่มตรวจสอบ"];
     const endDateH = row["วันที่สิ้นสุดการตรวจสอบ"];
     
@@ -85,6 +99,10 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList) {
       holidaysList,
       nonAuditDaysList
     );
+
+    const plannedDays = auditCalc.actualDays + auditCalc.nonAuditDays; // Planned working days before deductions
+    const approvedExtensionDays = deptExtensionDaysMap[deptClean] || 0;
+    const totalActualAuditDays = Math.max(plannedDays + approvedExtensionDays - auditCalc.nonAuditDays, 0);
 
     // 2.4 Calculate Duration: Closed Audit (J) -> Report to President (K)
     const dateJ = row["วันที่ปิดตรวจ"];
@@ -119,7 +137,9 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList) {
       latestDate: latestDateVal,
       statusFormatted: `${latestStatusObj.title} (${latestDateVal})`,
       isCompleted: isCompleted,
-      actualAuditDays: auditCalc.actualDays,
+      plannedDays: plannedDays,
+      extensionDays: approvedExtensionDays,
+      actualAuditDays: totalActualAuditDays,
       weekendDays: auditCalc.weekendDays,
       holidayDays: auditCalc.holidayDays,
       interruptedDays: auditCalc.nonAuditDays,

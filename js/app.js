@@ -196,7 +196,7 @@ const app = createApp({
 
     // Filtered Audit Data
     const dashboardResult = computed(() => {
-      return processDashboardData(rawAuditList.value, holidaysList.value, nonAuditDaysList.value);
+      return processDashboardData(rawAuditList.value, holidaysList.value, nonAuditDaysList.value, delayList.value);
     });
 
     const filteredUnits = computed(() => {
@@ -293,13 +293,13 @@ const app = createApp({
       return filteredUnits.value.filter(u => u.latestPhase === phaseKey).length;
     };
 
-    // Chart Stats (#C1BFEC for Phase 1.3)
+    // Chart Stats with User-Specified Palette Colors
     const phaseChartStats = computed(() => {
       return [
-        { key: "1.1", name: "1.1 ก่อนเข้าตรวจ", color: "#5167D7", count: getPhaseCount("1.1") },
-        { key: "1.2", name: "1.2 ระหว่างการตรวจสอบ", color: "#B086DF", count: getPhaseCount("1.2") },
-        { key: "1.3", name: "1.3 รายงานผลการตรวจสอบ", color: "#C1BFEC", count: getPhaseCount("1.3") },
-        { key: "1.4", name: "1.4 ชี้แจงผลการดำเนินงาน", color: "#839B77", count: getPhaseCount("1.4") }
+        { key: "1.1", name: "1.1 ก่อนเข้าตรวจ", color: "#FA897B", count: getPhaseCount("1.1") },
+        { key: "1.2", name: "1.2 ระหว่างการตรวจสอบ", color: "#FFDD94", count: getPhaseCount("1.2") },
+        { key: "1.3", name: "1.3 รายงานผลการตรวจสอบ", color: "#D0E6A5", count: getPhaseCount("1.3") },
+        { key: "1.4", name: "1.4 ชี้แจงผลการดำเนินงาน", color: "#86E3CE", count: getPhaseCount("1.4") }
       ];
     });
 
@@ -501,28 +501,38 @@ const app = createApp({
     };
 
     const submitDelayForm = async () => {
+      const extensionCalc = calculateActualAuditDays(
+        delayForm.value.startDate, 
+        delayForm.value.endDate, 
+        delayForm.value.department, 
+        holidaysList.value, 
+        nonAuditDaysList.value
+      );
+      const totalDays = extensionCalc.actualDays || 0;
+
       const payload = {
         requestorName: currentUser.value.name,
         requestorEmail: currentUser.value.email,
         department: delayForm.value.department,
         startDate: delayForm.value.startDate,
         endDate: delayForm.value.endDate,
+        totalDays: totalDays,
         reason: delayForm.value.reason,
         supervisorName: delayForm.value.supervisorName
       };
 
-      let res;
-      if (isEditingDelay.value && editingDelayIndex.value) {
-        res = await API.postAction("resubmitExtension", { id: editingDelayIndex.value, data: payload });
-      } else {
-        res = await API.postAction("submitExtension", { data: payload });
-      }
+      // Always append as new row for starting new/resubmitted request process per specs
+      const res = await API.postAction("submitExtension", { data: payload });
 
       if (!handleApiResponse(res)) return;
 
       showDelayModal.value = false;
       await loadData();
       alert(res.message || "เสนอขอขยายเวลาเรียบร้อยแล้ว");
+    };
+
+    const exportPdfReportAction = () => {
+      generatePdfReport(masterLists.value, rawAuditList.value, delayList.value);
     };
 
     const editAndResubmitDelay = (item) => {
@@ -712,6 +722,7 @@ const app = createApp({
       dateDiffInDays,
       calculateExtensionDays,
       warningDeptsList,
+      exportPdfReportAction,
       formatDateDMY,
       getDelayFields
     };

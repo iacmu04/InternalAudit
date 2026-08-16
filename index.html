@@ -20,6 +20,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+    <!-- html2pdf.js for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="min-h-screen text-slate-800">
 
@@ -30,15 +32,15 @@
         <!-- Top Row: System Identity & User Controls -->
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-slate-100 pb-4">
             <div class="flex items-center gap-3.5">
-                <div class="p-3.5 bg-gradient-to-br from-indigo-600 to-sky-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20 shrink-0">
+                <div class="p-3.5 bg-gradient-to-br from-purple-700 to-indigo-700 text-white rounded-2xl shadow-lg shadow-purple-500/20 shrink-0">
                     <i data-lucide="shield-check" class="w-8 h-8"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl md:text-2xl font-black text-slate-900 leading-tight tracking-tight">
+                    <h1 class="text-xl md:text-2xl font-black text-purple-950 leading-tight tracking-tight">
                         ระบบติดตามงานตรวจสอบและขอขยายระยะเวลา
                     </h1>
                     <p class="text-xs md:text-sm text-slate-500 mt-1 font-semibold flex items-center gap-2 flex-wrap">
-                        <span>สำนักงานการตรวจสอบภายใน</span>
+                        <span class="text-purple-900 font-bold">สำนักงานการตรวจสอบภายใน</span>
                         <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-300"></span>
                         <span :class="isApiConnected ? 'text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200' : 'text-amber-700 font-bold flex items-center gap-1 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200'">
                             <span class="w-2 h-2 rounded-full dot-pulse" :class="isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'"></span>
@@ -50,13 +52,13 @@
 
             <!-- Right Controls: Profile Pill + Sheet Config -->
             <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-                <div class="flex items-center gap-2 bg-slate-100/90 px-3 py-2 rounded-xl border border-slate-200 text-xs">
-                    <i data-lucide="user-check" class="w-4 h-4 text-indigo-600"></i>
+                <div class="flex items-center gap-2 bg-purple-50/90 px-3 py-2 rounded-xl border border-purple-200 text-xs">
+                    <i data-lucide="user-check" class="w-4 h-4 text-purple-700"></i>
                     <div>
-                        <span class="font-bold text-slate-900">{{ currentUser.name }}</span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-black ml-1">{{ currentUser.role }}</span>
+                        <span class="font-bold text-purple-950">{{ currentUser.name }}</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-200 text-purple-900 font-black ml-1">{{ currentUser.role }}</span>
                     </div>
-                    <button @click="openLoginModal" class="ml-1 text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-200/60" title="สลับผู้ใช้งาน">
+                    <button @click="openLoginModal" class="ml-1 text-purple-400 hover:text-purple-700 p-1 rounded-md hover:bg-purple-100/60" title="สลับผู้ใช้งาน">
                         <i data-lucide="log-out" class="w-4 h-4"></i>
                     </button>
                 </div>
@@ -69,21 +71,26 @@
             </div>
         </div>
 
-        <!-- Row 2: 3 Main Primary Action Buttons -->
+        <!-- Row 2: Main Primary Action Buttons + PDF Export Button -->
         <div class="flex flex-wrap items-center gap-3">
-            <button @click="openAuditModal()" class="btn-action-primary flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[200px]">
+            <button @click="openAuditModal()" class="btn-action-primary flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[180px]">
                 <i data-lucide="plus-circle" class="w-4.5 h-4.5"></i>
                 <span>เพิ่มข้อมูลการตรวจสอบ</span>
             </button>
 
-            <button @click="openDelayModal()" class="btn-action-warning flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[200px]">
+            <button @click="openDelayModal()" class="btn-action-warning flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[180px]">
                 <i data-lucide="clock" class="w-4.5 h-4.5"></i>
                 <span>ขอขยายระยะเวลาการตรวจสอบ</span>
             </button>
 
-            <button @click="openEditManagerModal()" class="btn-action-secondary flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[200px]">
+            <button @click="openEditManagerModal()" class="btn-action-secondary flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl transition-all flex-1 min-w-[180px]">
                 <i data-lucide="edit-3" class="w-4.5 h-4.5"></i>
                 <span>จัดการและแก้ไขข้อมูล</span>
+            </button>
+
+            <button @click="exportPdfReportAction" class="bg-gradient-to-r from-purple-800 to-indigo-800 hover:from-purple-900 hover:to-indigo-900 text-white flex items-center justify-center gap-2 px-5 py-2.5 text-xs md:text-sm font-extrabold rounded-xl shadow-md transition-all flex-1 min-w-[180px]">
+                <i data-lucide="file-down" class="w-4.5 h-4.5"></i>
+                <span>📄 ส่งออกรายงาน PDF</span>
             </button>
         </div>
     </header>
@@ -286,24 +293,24 @@
                     แสดงส่วนงานในขั้นตอนล่าสุดพร้อมวันที่ (แสดงรูปแบบ วัน/เดือน/ปี)
                 </p>
             </div>
-            <div class="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-                <span class="inline-block w-3 h-3 rounded-full" style="background-color: #5167D7;"></span> 1.1 ก่อนเข้าตรวจ
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #B086DF;"></span> 1.2 ระหว่างตรวจ
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #C1BFEC;"></span> 1.3 รายงานผล (#C1BFEC)
-                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #839B77;"></span> 1.4 ชี้แจงผล
+            <div class="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700 bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200">
+                <span class="inline-block w-3 h-3 rounded-full" style="background-color: #FA897B;"></span> 1.1 ก่อนเข้าตรวจ
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #FFDD94;"></span> 1.2 ระหว่างตรวจ
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #D0E6A5;"></span> 1.3 รายงานผล (#D0E6A5)
+                <span class="inline-block w-3 h-3 rounded-full ml-1" style="background-color: #86E3CE;"></span> 1.4 ชี้แจงผล (#86E3CE)
             </div>
         </div>
 
         <div class="space-y-6 w-full">
 
-            <!-- Block 1.1: ก่อนเข้าตรวจ (#5167D7) -->
+            <!-- Block 1.1: ก่อนเข้าตรวจ (#FA897B) -->
             <div class="w-full phase-box-1-1 rounded-2xl overflow-hidden">
                 <div class="phase-header-1-1 p-3.5 px-5 flex items-center justify-between">
                     <div class="font-extrabold text-sm flex items-center gap-2">
                         <i data-lucide="clipboard-list" class="w-4.5 h-4.5"></i>
                         1.1 ก่อนเข้าตรวจ
                     </div>
-                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-indigo-800 shadow-2xs">
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-red-900 shadow-2xs">
                         {{ getPhaseCount('1.1') }} ส่วนงาน
                     </span>
                 </div>
@@ -317,10 +324,10 @@
                         <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
                             <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
                             <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2.5 text-xs rounded-xl border bg-slate-50 border-slate-200 text-slate-800 hover:shadow-2xs transition-all">
-                                <div class="font-bold text-slate-900 line-clamp-1">{{ u.name }}</div>
+                                <div class="font-black dept-name-pill inline-block mb-1">{{ u.name }}</div>
                                 <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center font-medium">
                                     <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-bold" style="color: #5167D7;">({{ u.latestDate }})</span>
+                                    <span class="font-bold" style="color: #9A2C1E;">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -328,14 +335,14 @@
                 </div>
             </div>
 
-            <!-- Block 1.2: ระหว่างการตรวจสอบ (#B086DF) -->
+            <!-- Block 1.2: ระหว่างการตรวจสอบ (#FFDD94) -->
             <div class="w-full phase-box-1-2 rounded-2xl overflow-hidden">
                 <div class="phase-header-1-2 p-3.5 px-5 flex items-center justify-between">
                     <div class="font-extrabold text-sm flex items-center gap-2">
                         <i data-lucide="search" class="w-4.5 h-4.5"></i>
                         1.2 ระหว่างการตรวจสอบ
                     </div>
-                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-purple-900 shadow-2xs">
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-amber-950 shadow-2xs">
                         {{ getPhaseCount('1.2') }} ส่วนงาน
                     </span>
                 </div>
@@ -349,10 +356,10 @@
                         <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
                             <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
                             <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2.5 text-xs rounded-xl border bg-slate-50 border-slate-200 text-slate-800 hover:shadow-2xs transition-all">
-                                <div class="font-bold text-slate-900 line-clamp-1">{{ u.name }}</div>
+                                <div class="font-black dept-name-pill inline-block mb-1">{{ u.name }}</div>
                                 <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center font-medium">
                                     <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-bold text-purple-700">({{ u.latestDate }})</span>
+                                    <span class="font-bold text-amber-800">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -360,14 +367,14 @@
                 </div>
             </div>
 
-            <!-- Block 1.3: รายงานผลการตรวจสอบ (#C1BFEC) -->
+            <!-- Block 1.3: รายงานผลการตรวจสอบ (#D0E6A5) -->
             <div class="w-full phase-box-1-3 rounded-2xl overflow-hidden">
-                <div class="phase-header-1-3 p-3.5 px-5 flex items-center justify-between" style="background: #C1BFEC !important; color: #2d266e !important;">
+                <div class="phase-header-1-3 p-3.5 px-5 flex items-center justify-between">
                     <div class="font-black text-sm flex items-center gap-2">
                         <i data-lucide="file-check-2" class="w-4.5 h-4.5"></i>
                         1.3 รายงานผลการตรวจสอบ
                     </div>
-                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-indigo-950 shadow-2xs">
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-lime-950 shadow-2xs">
                         {{ getPhaseCount('1.3') }} ส่วนงาน
                     </span>
                 </div>
@@ -376,15 +383,15 @@
                     <div v-for="sub in phaseStructure['1.3']" :key="sub.code" class="w-full bg-white/95 p-3.5 rounded-xl border border-slate-200 shadow-2xs">
                         <div class="text-xs font-bold text-slate-800 mb-2.5 flex justify-between items-center pb-2 border-b border-slate-100">
                             <span>{{ sub.title }}</span>
-                            <span class="text-xs font-black px-2.5 py-0.5 rounded-lg status-pill-1-3" style="background-color: #C1BFEC; color: #2d266e;">{{ getUnitsByStatus(sub.col).length }}</span>
+                            <span class="text-xs font-black px-2.5 py-0.5 rounded-lg status-pill-1-3">{{ getUnitsByStatus(sub.col).length }}</span>
                         </div>
                         <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
                             <div v-if="getUnitsByStatus(sub.col).length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">ไม่มีส่วนงานในขั้นตอนนี้</div>
                             <div v-for="u in getUnitsByStatus(sub.col)" :key="u.id" class="p-2.5 text-xs rounded-xl border bg-slate-50 border-slate-200 text-slate-800 hover:shadow-2xs transition-all">
-                                <div class="font-bold text-slate-900 line-clamp-1">{{ u.name }}</div>
+                                <div class="font-black dept-name-pill inline-block mb-1">{{ u.name }}</div>
                                 <div class="text-[10px] text-slate-500 mt-1 flex justify-between items-center font-medium">
                                     <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-bold" style="color: #2d266e;">({{ u.latestDate }})</span>
+                                    <span class="font-bold text-lime-900">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -392,14 +399,14 @@
                 </div>
             </div>
 
-            <!-- Block 1.4: ชี้แจงผลการดำเนินงาน (#839B77) -->
+            <!-- Block 1.4: ชี้แจงผลการดำเนินงาน (#86E3CE) -->
             <div class="w-full phase-box-1-4 rounded-2xl overflow-hidden">
                 <div class="phase-header-1-4 p-3.5 px-5 flex items-center justify-between">
                     <div class="font-extrabold text-sm flex items-center gap-2">
                         <i data-lucide="check-circle" class="w-4.5 h-4.5"></i>
                         1.4 ชี้แจงผลการดำเนินงาน / เสร็จสมบูรณ์
                     </div>
-                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-emerald-900 shadow-2xs">
+                    <span class="text-xs font-black px-3 py-1 rounded-full bg-white text-teal-950 shadow-2xs">
                         {{ getPhaseCount('1.4') }} ส่วนงาน
                     </span>
                 </div>
@@ -416,12 +423,12 @@
                                  class="p-2.5 text-xs rounded-xl border transition-all hover:shadow-2xs"
                                  :class="u.isCompleted ? 'completed-unit-card font-bold' : 'bg-slate-50 border-slate-200 text-slate-800'">
                                 <div class="flex items-center justify-between gap-1">
-                                    <span class="line-clamp-1 font-bold">{{ u.name }}</span>
-                                    <i v-if="u.isCompleted" data-lucide="check-circle-2" class="w-4.5 h-4.5 shrink-0" style="color: #839B77;"></i>
+                                    <span class="font-black dept-name-pill inline-block">{{ u.name }}</span>
+                                    <i v-if="u.isCompleted" data-lucide="check-circle-2" class="w-4.5 h-4.5 shrink-0 text-teal-600"></i>
                                 </div>
                                 <div class="text-[10px] mt-1 flex justify-between items-center font-medium">
                                     <span class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">ทีม {{ u.team }}</span>
-                                    <span class="font-extrabold" style="color: #2D3E27;">({{ u.latestDate }})</span>
+                                    <span class="font-extrabold text-teal-900">({{ u.latestDate }})</span>
                                 </div>
                             </div>
                         </div>
@@ -530,11 +537,11 @@
                         <td class="py-3.5 px-4 text-center font-bold text-slate-400">{{ index + 1 }}</td>
                         
                         <td class="py-3.5 px-4 font-bold text-slate-900">
-                            <div class="flex items-center gap-1.5">
-                                <span>{{ u.name }}</span>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="dept-name-pill inline-block text-xs">{{ u.name }}</span>
                                 <span v-if="u.isWarning" class="inline-block w-2.5 h-2.5 rounded-full bg-red-600 dot-pulse" title="เตือนใกล้ครบ/เกินกำหนดเสนอ คตส."></span>
                             </div>
-                            <span class="block text-[10px] font-medium text-slate-400 mt-0.5">ทีม {{ u.team }} | ปี {{ u.fiscalYear }}</span>
+                            <span class="block text-[10px] font-medium text-purple-700 mt-1">ทีม {{ u.team }} | ปี {{ u.fiscalYear }}</span>
                         </td>
 
                         <td class="py-3.5 px-4">
@@ -1167,6 +1174,7 @@
 <script src="js/dashboard.js"></script>
 <script src="js/audit-form.js"></script>
 <script src="js/delay-system.js"></script>
+<script src="js/pdf-export.js"></script>
 <script src="js/app.js"></script>
 
 </body>
