@@ -193,10 +193,24 @@ function saveAuditEntry(ss, data) {
   const durPresident = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนออธิการบดี_รายงาน"]);
   const durCts = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนอ_คตส"]);
 
-  if (plannedDays > 0) data["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
-  data["ระยะเวลาจริงในการตรวจสอบ"] = actualDays;
-  if (durPresident >= 0) data["ระยะเวลาเสนออธิการบดี"] = durPresident;
-  if (durCts >= 0) data["ระยะเวลาเสนอ_คตส"] = durCts;
+  if (plannedDays > 0) {
+    data["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
+  }
+  if (actualDays >= 0) {
+    data["ระยะเวลาจริงในการตรวจสอบ"] = actualDays;
+    data["ระยะเวลาตรวจจริง"] = actualDays;
+    data["ระยะเวลาตรวจจริง (วัน)"] = actualDays;
+    data["ระยะเวลาจริงในการตรวจสอบ (วัน)"] = actualDays;
+  }
+  if (durPresident >= 0) {
+    data["ระยะเวลาเสนออธิการบดี"] = durPresident;
+  }
+  if (durCts >= 0) {
+    data["ระยะเวลาเสนอ_คตส"] = durCts;
+    data["ระยะเวลาเสนอ คตส."] = durCts;
+    data["ระยะเวลาเสนอคตส."] = durCts;
+    data["ระยะเวลาเสนอรายงานคตส."] = durCts;
+  }
 
   const row = headers.map(h => data[h] !== undefined ? data[h] : "");
   sheet.appendRow(row);
@@ -224,10 +238,24 @@ function updateAuditEntry(ss, rowIndex, data) {
   const durPresident = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนออธิการบดี_รายงาน"]);
   const durCts = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนอ_คตส"]);
 
-  if (plannedDays > 0) data["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
-  data["ระยะเวลาจริงในการตรวจสอบ"] = actualDays;
-  if (durPresident >= 0) data["ระยะเวลาเสนออธิการบดี"] = durPresident;
-  if (durCts >= 0) data["ระยะเวลาเสนอ_คตส"] = durCts;
+  if (plannedDays > 0) {
+    data["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
+  }
+  if (actualDays >= 0) {
+    data["ระยะเวลาจริงในการตรวจสอบ"] = actualDays;
+    data["ระยะเวลาตรวจจริง"] = actualDays;
+    data["ระยะเวลาตรวจจริง (วัน)"] = actualDays;
+    data["ระยะเวลาจริงในการตรวจสอบ (วัน)"] = actualDays;
+  }
+  if (durPresident >= 0) {
+    data["ระยะเวลาเสนออธิการบดี"] = durPresident;
+  }
+  if (durCts >= 0) {
+    data["ระยะเวลาเสนอ_คตส"] = durCts;
+    data["ระยะเวลาเสนอ คตส."] = durCts;
+    data["ระยะเวลาเสนอคตส."] = durCts;
+    data["ระยะเวลาเสนอรายงานคตส."] = durCts;
+  }
 
   const rowValues = headers.map(h => data[h] !== undefined ? data[h] : "");
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);

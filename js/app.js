@@ -24,7 +24,43 @@ const app = createApp({
     const nonAuditDaysList = ref([]);
 
     // Main Filters
-    const selectedFiscalYear = ref("ALL");
+    const selectedFiscalYears = ref(["ALL"]);
+    const showYearDropdown = ref(false);
+
+    const selectedFiscalYear = computed({
+      get: () => selectedFiscalYears.value.includes("ALL") ? "ALL" : (selectedFiscalYears.value[0] || "ALL"),
+      set: (val) => {
+        if (Array.isArray(val)) selectedFiscalYears.value = val;
+        else selectedFiscalYears.value = [val];
+      }
+    });
+
+    const toggleYearSelection = (yr) => {
+      if (yr === "ALL") {
+        selectedFiscalYears.value = ["ALL"];
+      } else {
+        let current = selectedFiscalYears.value.filter(y => y !== "ALL");
+        if (current.includes(yr)) {
+          current = current.filter(y => y !== yr);
+        } else {
+          current.push(yr);
+        }
+        const availableYears = fiscalYearOptions.value || ["2570", "2569"];
+        if (current.length === 0 || current.length === availableYears.length) {
+          selectedFiscalYears.value = ["ALL"];
+        } else {
+          selectedFiscalYears.value = current.sort((a,b) => b.localeCompare(a));
+        }
+      }
+    };
+
+    const selectedYearDisplayLabel = computed(() => {
+      const active = selectedFiscalYears.value;
+      if (active.includes("ALL") || active.length === 0) return "ทุกปีงบประมาณ";
+      if (active.length === 1) return `ปี พ.ศ. ${active[0]}`;
+      return `ปี ${active.join(", ")}`;
+    });
+
     const selectedTeam = ref("ALL");
     const selectedPhase = ref("ALL");
     const selectedCtsCycle = ref("ALL");
