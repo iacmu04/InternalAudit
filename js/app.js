@@ -138,9 +138,17 @@ const app = createApp({
     const teamOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.teams) || ["1", "2", "3", "4"]);
     const teamList = computed(() => teamOptions.value);
 
-    const ctsCycleOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.ctsCycles) || ["1/2569", "2/2569"]);
+    const ctsCycleOptions = computed(() => {
+      const raw = (parsedMasterListsSchema.value && parsedMasterListsSchema.value.ctsCycles) || [];
+      const filtered = raw.filter(c => c && !c.match(/(คณะ|กอง|ศูนย์|สถาบัน|สำนักงาน|วิทยาลัย|ส่วนงาน)/i));
+      return filtered.length > 0 ? filtered : ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569", "1/2570", "2/2570"];
+    });
     const nonAuditReasonOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.nonAuditTypes) || []);
-    const fiscalYearOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.years) || ["2570", "2569"]);
+    const fiscalYearOptions = computed(() => {
+      const list = (parsedMasterListsSchema.value && parsedMasterListsSchema.value.years) || [];
+      const set = new Set([...list, "2570", "2569"]);
+      return Array.from(set).sort((a,b) => b.localeCompare(a));
+    });
 
     // Form department options dynamic per year (Col D for 2569, Col F for 2570, etc.)
     const formDepartmentOptions = computed(() => {
