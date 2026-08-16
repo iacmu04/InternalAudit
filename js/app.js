@@ -24,35 +24,14 @@ const app = createApp({
     const nonAuditDaysList = ref([]);
 
     // Main Filters
-    const selectedFiscalYears = ref(["ALL"]);
-    const showYearDropdown = ref(false);
+    const selectedFiscalYear = ref("ALL");
 
-    const selectedFiscalYear = computed({
-      get: () => selectedFiscalYears.value.includes("ALL") ? "ALL" : (selectedFiscalYears.value[0] || "ALL"),
-      set: (val) => {
-        if (Array.isArray(val)) selectedFiscalYears.value = val;
-        else selectedFiscalYears.value = [val];
-      }
+    const selectedFiscalYears = computed(() => {
+      const val = String(selectedFiscalYear.value || "ALL");
+      if (val === "ALL") return ["ALL"];
+      if (val.includes(",")) return val.split(",");
+      return [val];
     });
-
-    const toggleYearSelection = (yr) => {
-      if (yr === "ALL") {
-        selectedFiscalYears.value = ["ALL"];
-      } else {
-        let current = selectedFiscalYears.value.filter(y => y !== "ALL");
-        if (current.includes(yr)) {
-          current = current.filter(y => y !== yr);
-        } else {
-          current.push(yr);
-        }
-        const availableYears = fiscalYearOptions.value || ["2570", "2569"];
-        if (current.length === 0 || current.length === availableYears.length) {
-          selectedFiscalYears.value = ["ALL"];
-        } else {
-          selectedFiscalYears.value = current.sort((a,b) => b.localeCompare(a));
-        }
-      }
-    };
 
     const selectedYearDisplayLabel = computed(() => {
       const active = selectedFiscalYears.value;
