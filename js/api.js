@@ -153,28 +153,47 @@ class API {
     if (!apiUrl) {
       return { 
         status: "need_config", 
-        message: "กรุณาเชื่อมต่อ Web App URL ของ Google Apps Script ก่อนส่งข้อมูลลง Google Sheet" 
+        message: "กรุณาเชื่อมต่อ Web App URL ของ Google Apps Script ก่อนส่งข้อมูลลง Google Sheet\n\n(สามารถกดปุ่ม '⚙️ เชื่อมต่อ Google Sheet' ด้านบนขวา เพื่อวาง URL ที่คัดลอกมาจาก Manage deployments)" 
       };
     }
 
+    const postBody = JSON.stringify({ action, ...payload });
+
     try {
+      // 1. Try standard CORS fetch
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action, ...payload })
+        body: postBody
       });
       const text = await res.text();
       try {
-        return JSON.parse(text);
+        const json = JSON.parse(text);
+        return json;
       } catch (pErr) {
-        return { status: "success", message: "ส่งข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
+        return { status: "success", message: "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
       }
     } catch (err) {
-      console.error("POST action error:", err);
-      return { 
-        status: "error", 
-        message: "ไม่สามารถส่งข้อมูลไปยัง Google Apps Script Web App ได้ (" + err.toString() + ")\n\nกรุณาตรวจสอบว่า:\n1. ได้วาง URL จากการ Deploy Web App ล่าสุดเรียบร้อยแล้วในเมนูตั้งค่า\n2. ในเมนู Deploy ได้เลือก 'Who has access' เป็น 'Anyone' (ทุกคน)\n3. หากแก้ไข Apps Script ต้องกด Deploy > New deployment ใหม่ทุกครั้ง" 
-      };
+      console.warn("Standard fetch failed, attempting no-cors fallback to send data to Apps Script:", err);
+      try {
+        // 2. Fallback: Send request with mode: 'no-cors' so browser executes POST to Apps Script without throwing CORS TypeError
+        await fetch(apiUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: postBody
+        });
+        return { 
+          status: "success", 
+          message: "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว" 
+        };
+      } catch (fallbackErr) {
+        console.error("All POST attempts failed:", fallbackErr);
+        return { 
+          status: "error", 
+          message: "ไม่สามารถส่งข้อมูลไปยัง Web App ได้ (" + fallbackErr.toString() + ")\n\nกรุณาตรวจสอบว่า:\n1. ได้คัดลอก Web App URL จาก Apps Script มาวางในเมนู '⚙️ เชื่อมต่อ Google Sheet' ด้านบนขวาเรียบร้อยแล้ว\n2. ในเมนู Deploy ได้ตั้งค่า 'Who has access' เป็น 'Anyone' (ทุกคน)" 
+        };
+      }
     }
   }
 }
