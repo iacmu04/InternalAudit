@@ -94,95 +94,63 @@ const app = createApp({
       }
     };
 
-    // Filter Options Dropdowns (from Master_Lists sheet)
-    const departmentOptions = computed(() => {
+    // Parsed Master_Lists schema
+    const parsedMasterListsSchema = computed(() => {
+      return parseMasterListsSchema(masterLists.value);
+    });
+
+    const teamOptions = computed(() => parsedMasterListsSchema.value.teams);
+    const teamList = computed(() => teamOptions.value);
+
+    const ctsCycleOptions = computed(() => parsedMasterListsSchema.value.ctsCycles);
+    const nonAuditReasonOptions = computed(() => parsedMasterListsSchema.value.nonAuditTypes);
+    const fiscalYearOptions = computed(() => parsedMasterListsSchema.value.years);
+
+    // Form department options dynamic per year (Col D for 2569, Col F for 2570, etc.)
+    const formDepartmentOptions = computed(() => {
+      const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
+      const deptsForYear = parsedMasterListsSchema.value.departmentsByYear[selectedYear];
+      if (deptsForYear && deptsForYear.length > 0) {
+        return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
+      }
+      // Fallback to all departments across years
       const set = new Set();
-      masterLists.value.forEach(item => {
-        const val = item["รายชื่อส่วนงาน"] || item["ส่วนงาน"] || item["คอลัมน์ A"];
-        if (val && String(val).trim() !== "") set.add(String(val).trim());
+      Object.values(parsedMasterListsSchema.value.departmentsByYear).forEach(list => {
+        list.forEach(d => set.add(d.name));
       });
-      rawAuditList.value.forEach(item => {
-        if (item["ส่วนงาน"]) set.add(String(item["ส่วนงาน"]).trim());
+      masterLists.value.forEach(item => {
+        const val = item["รายชื่อส่วนงาน"] || item["ส่วนงาน"];
+        if (val && String(val).trim() !== "") set.add(String(val).trim());
       });
       return Array.from(set).sort((a,b) => a.localeCompare(b, 'th'));
     });
 
-    const teamOptions = computed(() => {
-      const set = new Set();
-      masterLists.value.forEach(item => {
-        const val = item["รายชื่อทีม"] || item["ทีม"];
-        if (val && String(val).trim() !== "") set.add(String(val).trim());
-      });
-      rawAuditList.value.forEach(item => {
-        if (item["ทีม"]) set.add(String(item["ทีม"]).trim());
-      });
-      if (set.size === 0) ["ทีม 1", "ทีม 2", "ทีม 3", "ทีม 4", "ทีมพิเศษ"].forEach(t => set.add(t));
-      return Array.from(set).sort();
-    });
+    const departmentOptions = computed(() => formDepartmentOptions.value);
 
-    const teamList = computed(() => teamOptions.value);
-
-    // Master_Lists Column D & Non_Audit_Days Dropdown for Reasons
-    const nonAuditReasonOptions = computed(() => {
-      const set = new Set();
-
-      // 1. From Master_Lists sheet (Column D)
-      masterLists.value.forEach(item => {
-        const val = item["ประเภท_เหตุผล_ไม่เข้าตรวจ"] || item["ประเภท/เหตุผล"] || item["เหตุผล_ไม่เข้าตรวจ"] || item["คอลัมน์ D"];
-        if (val && String(val).trim() !== "") set.add(String(val).trim());
-      });
-
-      // 2. From Non_Audit_Days sheet
-      nonAuditDaysList.value.forEach(item => {
-        const val = item["ประเภท"] || item["ประเภท/เหตุผล"] || item["สาเหตุ/หมายเหตุ"];
-        if (val && String(val).trim() !== "") set.add(String(val).trim());
-      });
-
-      // 3. Fallback defaults if no custom reasons defined in sheet yet
-      if (set.size === 0) {
-        ["ติดประชุมมหาวิทยาลัย", "อบรม/สัมมนา", "วันหยุดนักขัตฤกษ์", "ติดภารกิจอื่น"].forEach(r => set.add(r));
+    // Form Change Handlers
+    const onFiscalYearChange = () => {
+      const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
+      const deptsForYear = parsedMasterListsSchema.value.departmentsByYear[selectedYear];
+      if (deptsForYear && deptsForYear.length > 0) {
+        const deptNames = deptsForYear.map(d => d.name);
+        if (!deptNames.includes(auditForm.value['ส่วนงาน'])) {
+          auditForm.value['ส่วนงาน'] = deptNames[0] || "";
+        }
       }
+      onDepartmentChange();
+    };
 
-      return Array.from(set);
-    });
-
-    // CTS Cycle Options strictly from Master_Lists Column C
-    const ctsCycleOptions = computed(() => {
-      const set = new Set();
-      masterLists.value.forEach(item => {
-        let val = item["รอบประชุม_คตส"] || item["ครั้งที่ประชุม_คตส"] || item["ครั้งที่ประชุม คตส."] || item["คอลัมน์ C"];
-        if (val && String(val).trim() !== "") {
-          let str = String(val).trim();
-          if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-            const parts = str.split("-");
-            const monthNum = parseInt(parts[1], 10);
-            const yearNum = parts[0];
-            str = `${monthNum}/${yearNum}`;
-          } else if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
-            const d = new Date(str);
-            str = `${d.getMonth() + 1}/${d.getFullYear()}`;
-          }
-          set.add(str);
+    const onDepartmentChange = () => {
+      const selectedDept = auditForm.value['ส่วนงาน'];
+      const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
+      const deptsForYear = parsedMasterListsSchema.value.departmentsByYear[selectedYear];
+      if (deptsForYear && selectedDept) {
+        const found = deptsForYear.find(d => d.name === selectedDept);
+        if (found && found.team) {
+          auditForm.value['ทีม'] = found.team;
         }
-      });
-      
-      rawAuditList.value.forEach(item => {
-        let val = item["ครั้งที่ประชุม_คตส"] || item["รอบประชุม_คตส"];
-        if (val && String(val).trim() !== "") {
-          let str = String(val).trim();
-          if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-            const parts = str.split("-");
-            const monthNum = parseInt(parts[1], 10);
-            const yearNum = parts[0];
-            str = `${monthNum}/${yearNum}`;
-          }
-          set.add(str);
-        }
-      });
-
-      if (set.size === 0) ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569"].forEach(c => set.add(c));
-      return Array.from(set).sort();
-    });
+      }
+    };
 
     const supervisorOptions = computed(() => {
       return userList.value.filter(u => {
@@ -287,10 +255,21 @@ const app = createApp({
     // Unstarted Units logic by Teams
     const unstartedUnitsList = computed(() => {
       const plannedMap = {};
+
+      // Gather departments across all years from parsedMasterListsSchema
+      Object.values(parsedMasterListsSchema.value.departmentsByYear).forEach(list => {
+        list.forEach(item => {
+          if (item.name && !plannedMap[item.name]) {
+            plannedMap[item.name] = { name: item.name, team: item.team || "1" };
+          }
+        });
+      });
+
+      // Fallback from masterLists Col A if any
       masterLists.value.forEach(item => {
-        const name = String(item["รายชื่อส่วนงาน"] || item["ส่วนงาน"] || item["คอลัมน์ A"] || "").trim();
+        const name = String(item["รายชื่อส่วนงาน"] || item["ส่วนงาน"] || "").trim();
         const team = String(item["รายชื่อทีม"] || item["ทีม"] || "1").replace("ทีม", "").trim() || "1";
-        if (name) plannedMap[name] = { name: name, team: team };
+        if (name && !plannedMap[name]) plannedMap[name] = { name: name, team: team };
       });
 
       const recordedDeptsSet = new Set();
@@ -457,6 +436,7 @@ const app = createApp({
       } else {
         editingRowIndex.value = null;
         auditForm.value = createInitialAuditFormState();
+        onFiscalYearChange();
       }
       newDepartmentInput.value = "";
       showAuditModal.value = true;
@@ -767,7 +747,10 @@ const app = createApp({
       team1Unstarted,
       team2Unstarted,
       team3Unstarted,
-      team4Unstarted,
+      fiscalYearOptions,
+      formDepartmentOptions,
+      onFiscalYearChange,
+      onDepartmentChange,
       exportPdfReportAction,
       formatDateDMY,
       getDelayFields

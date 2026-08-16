@@ -753,27 +753,23 @@
             <form @submit.prevent="submitAuditForm" class="space-y-5 text-xs">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                        <label class="font-black text-slate-800 block mb-1">ส่วนงาน <span class="text-red-500">*</span></label>
+                        <label class="font-black text-slate-800 block mb-1">ปีงบประมาณ <span class="text-red-500">*</span></label>
+                        <select v-model="auditForm['ปีงบประมาณ']" @change="onFiscalYearChange" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold">
+                            <option v-for="y in fiscalYearOptions" :key="y" :value="y">{{ y }}</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="font-black text-slate-800 block mb-1">ส่วนงาน (ตามแผนปี {{ auditForm['ปีงบประมาณ'] }}) <span class="text-red-500">*</span></label>
                         <div class="space-y-1">
-                            <select v-model="auditForm['ส่วนงาน']" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold">
+                            <select v-model="auditForm['ส่วนงาน']" @change="onDepartmentChange" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold">
                                 <option value="">-- เลือกส่วนงาน --</option>
-                                <option v-for="d in departmentOptions" :key="d" :value="d">{{ d }}</option>
+                                <option v-for="d in formDepartmentOptions" :key="d" :value="d">{{ d }}</option>
                                 <option value="__NEW__">+ เพิ่มส่วนงานใหม่...</option>
                             </select>
                             <input v-if="auditForm['ส่วนงาน'] === '__NEW__'" type="text" v-model="newDepartmentInput" placeholder="กรอกชื่อส่วนงานใหม่"
                                    class="w-full p-2.5 border border-indigo-400 rounded-xl focus:ring-2 focus:ring-indigo-500 font-bold">
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="font-black text-slate-800 block mb-1">ปีงบประมาณ <span class="text-red-500">*</span></label>
-                        <select v-model="auditForm['ปีงบประมาณ']" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold">
-                            <option value="2568">2568</option>
-                            <option value="2569">2569</option>
-                            <option value="2570">2570</option>
-                            <option value="2571">2571</option>
-                            <option value="2572">2572</option>
-                        </select>
                     </div>
 
                     <div>

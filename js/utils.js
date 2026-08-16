@@ -188,3 +188,97 @@ function dateDiffInDays(startDateStr, endDateStr) {
   const diffTime = end.getTime() - start.getTime();
   return Math.round(diffTime / msPerDay);
 }
+
+/**
+ * Parse Master_Lists sheet structure according to user specifications:
+ * Col A (Index 0): Team List
+ * Col B (Index 1): CTS Meeting Cycles
+ * Col C (Index 2): Non-Audit Day Reasons / Types
+ * Col D onwards (Index 3, 4...): Year Column (Col 2N) -> Dept Names, Next Col (Col 2N+1) -> Responsible Team
+ */
+function parseMasterListsSchema(rawRows) {
+  const teamSet = new Set();
+  const ctsSet = new Set();
+  const nonAuditTypeSet = new Set();
+  const departmentsByYear = {};
+  const yearSet = new Set();
+
+  if (!rawRows || !Array.isArray(rawRows) || rawRows.length === 0) {
+    return {
+      teams: ["1", "2", "3", "4"],
+      ctsCycles: ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569"],
+      nonAuditTypes: ["ติดประชุมมหาวิทยาลัย", "อบรม/สัมมนา", "วันหยุดนักขัตฤกษ์", "ติดภารกิจอื่น"],
+      departmentsByYear: {},
+      years: ["2570", "2569"]
+    };
+  }
+
+  // Find column headers from the first row object keys
+  const firstObj = rawRows[0] || {};
+  const allKeys = Object.keys(firstObj).filter(k => k !== "_rowIndex");
+
+  const colAKey = allKeys[0] || "รายชื่อทีม";
+  const colBKey = allKeys[1] || "รอบประชุม_คตส";
+  const colCKey = allKeys[2] || "ประเภท";
+
+  rawRows.forEach(row => {
+    const teamVal = String(row[colAKey] || "").trim();
+    if (teamVal) teamSet.add(teamVal);
+
+    const ctsVal = String(row[colBKey] || "").trim();
+    if (ctsVal) ctsSet.add(ctsVal);
+
+    const typeVal = String(row[colCKey] || "").trim();
+    if (typeVal) nonAuditTypeSet.add(typeVal);
+  });
+
+  // Process Col D onwards for Year & Dept pairs
+  for (let i = 3; i < allKeys.length; i++) {
+    const key = allKeys[i].trim();
+    const yearMatch = key.match(/(\d{4})/);
+    if (yearMatch) {
+      const yearStr = yearMatch[1];
+      yearSet.add(yearStr);
+
+      if (!departmentsByYear[yearStr]) {
+        departmentsByYear[yearStr] = [];
+      }
+
+      const deptKey = allKeys[i];
+      const teamKey = (i + 1 < allKeys.length) ? allKeys[i + 1] : null;
+
+      rawRows.forEach(row => {
+        const deptName = String(row[deptKey] || "").trim();
+        if (deptName) {
+          let teamName = "1";
+          if (teamKey && row[teamKey] !== undefined) {
+            teamName = String(row[teamKey]).replace("ทีม", "").trim() || "1";
+          }
+          if (!departmentsByYear[yearStr].some(d => d.name === deptName)) {
+            departmentsByYear[yearStr].push({
+              name: deptName,
+              team: teamName,
+              year: yearStr
+            });
+          }
+        }
+      });
+
+      if (teamKey && (teamKey.toLowerCase().includes("ทีม") || teamKey.match(/ทีม/i))) {
+        i++;
+      }
+    }
+  }
+
+  const years = Array.from(yearSet).sort((a, b) => b.localeCompare(a));
+  if (!years.includes("2570")) years.unshift("2570");
+  if (!years.includes("2569")) years.push("2569");
+
+  return {
+    teams: teamSet.size > 0 ? Array.from(teamSet) : ["1", "2", "3", "4"],
+    ctsCycles: ctsSet.size > 0 ? Array.from(ctsSet) : ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569"],
+    nonAuditTypes: nonAuditTypeSet.size > 0 ? Array.from(nonAuditTypeSet) : ["ติดประชุมมหาวิทยาลัย", "อบรม/สัมมนา", "วันหยุดนักขัตฤกษ์", "ติดภารกิจอื่น"],
+    departmentsByYear: departmentsByYear,
+    years: years
+  };
+}

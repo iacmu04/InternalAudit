@@ -4,9 +4,10 @@
  */
 
 const SPREADSHEET_ID = "1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw";
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbz_InternalAudit_Web_App/exec";
 
 function getStoredApiUrl() {
-  return localStorage.getItem("APPS_SCRIPT_URL") || "";
+  return localStorage.getItem("APPS_SCRIPT_URL") || DEFAULT_API_URL;
 }
 
 function setStoredApiUrl(url) {
