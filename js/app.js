@@ -284,19 +284,60 @@ const app = createApp({
       searchQuery.value = "";
     };
 
+    // Unstarted Units logic by Teams
+    const unstartedUnitsList = computed(() => {
+      const plannedMap = {};
+      masterLists.value.forEach(item => {
+        const name = String(item["รายชื่อส่วนงาน"] || item["ส่วนงาน"] || item["คอลัมน์ A"] || "").trim();
+        const team = String(item["รายชื่อทีม"] || item["ทีม"] || "1").replace("ทีม", "").trim() || "1";
+        if (name) plannedMap[name] = { name: name, team: team };
+      });
+
+      const recordedDeptsSet = new Set();
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      rawAuditList.value.forEach(r => {
+        const dept = String(r["ส่วนงาน"] || "").trim();
+        if (dept) {
+          const startDateG = parseDate(r["วันที่เริ่มตรวจสอบ"]);
+          if (startDateG && now >= startDateG) {
+            recordedDeptsSet.add(dept);
+          }
+        }
+      });
+
+      const result = [];
+      Object.values(plannedMap).forEach(unit => {
+        if (!recordedDeptsSet.has(unit.name)) {
+          result.push(unit);
+        }
+      });
+      return result;
+    });
+
+    const team1Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "1"));
+    const team2Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "2"));
+    const team3Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "3"));
+    const team4Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "4" || u.team === "พิเศษ"));
+
     // Phase Status Groups for Section 1
     const getUnitsByStatus = (subCol) => {
       return filteredUnits.value.filter(u => u.latestSubCol === subCol);
     };
 
     const getPhaseCount = (phaseKey) => {
-      return filteredUnits.value.filter(u => u.latestPhase === phaseKey).length;
+      const count = filteredUnits.value.filter(u => u.latestPhase === phaseKey).length;
+      if (phaseKey === "1.1") {
+        return count + unstartedUnitsList.value.length;
+      }
+      return count;
     };
 
     // Chart Stats with User-Specified Palette Colors
     const phaseChartStats = computed(() => {
       return [
-        { key: "1.1", name: "1.1 ก่อนเข้าตรวจ", color: "#FA897B", count: getPhaseCount("1.1") },
+        { key: "1.1", name: "1.1 ก่อนเข้าตรวจ (รวมยังไม่ดำเนินการ)", color: "#FA897B", count: getPhaseCount("1.1") },
         { key: "1.2", name: "1.2 ระหว่างการตรวจสอบ", color: "#FFDD94", count: getPhaseCount("1.2") },
         { key: "1.3", name: "1.3 รายงานผลการตรวจสอบ", color: "#D0E6A5", count: getPhaseCount("1.3") },
         { key: "1.4", name: "1.4 ชี้แจงผลการดำเนินงาน", color: "#86E3CE", count: getPhaseCount("1.4") }
@@ -571,7 +612,7 @@ const app = createApp({
     };
 
     const promptReject = async (rowIndex) => {
-      const reason = prompt("กรุณาระบุเหตุผลการตีกลับ / ไม้อนุมัติ:");
+      const reason = prompt("กรุณาระบุเหตุผลการตีกลับ / ไม่อนุมัติ:");
       if (reason !== null) {
         const res = await API.postAction("processApproval", {
           id: rowIndex,
@@ -722,6 +763,11 @@ const app = createApp({
       dateDiffInDays,
       calculateExtensionDays,
       warningDeptsList,
+      unstartedUnitsList,
+      team1Unstarted,
+      team2Unstarted,
+      team3Unstarted,
+      team4Unstarted,
       exportPdfReportAction,
       formatDateDMY,
       getDelayFields

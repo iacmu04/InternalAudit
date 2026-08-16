@@ -9,7 +9,7 @@ function getDelayStatus(item) {
   const deanStatus = item.DeanStatus || item.deanStatus || item["สถานะผู้อำนวยการ"] || "";
 
   if (deanStatus === "อนุมัติ" || deanStatus === "อนุมัติแล้ว") return "อนุมัติแล้ว";
-  if (deanStatus === "ไม้อนุมัติ") return "ไม้อนุมัติ";
+  if (deanStatus === "ไม่อนุมัติ") return "ไม่อนุมัติ";
   if (leaderStatus === "ตีกลับ") return "ตีกลับ";
   if (deanStatus === "รออนุมัติ" || leaderStatus === "ผ่านพิจารณา") return "รออนุมัติ (ค้างอยู่ที่ผู้อำนวยการ)";
   if (leaderStatus === "รอพิจารณา" || !leaderStatus) return "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)";

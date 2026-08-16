@@ -367,9 +367,9 @@ function processApproval(ss, id, status, comment, userEmail, userRole) {
       sheet.getRange(targetRow, 13).setValue(nowStr);       // Col M: DeanDate
       actionResult = "อนุมัติเรียบร้อย";
     } else if (status === "rejected") {
-      sheet.getRange(targetRow, 12).setValue("ไม้อนุมัติ");  // Col L: DeanStatus
+      sheet.getRange(targetRow, 12).setValue("ไม่อนุมัติ");  // Col L: DeanStatus
       sheet.getRange(targetRow, 13).setValue(nowStr);       // Col M: DeanDate
-      actionResult = "ไม้อนุมัติ";
+      actionResult = "ไม่อนุมัติ";
     }
   }
 
