@@ -2,7 +2,8 @@
  * PDF Export Module for Internal Audit Tracking System
  * Generates formatted multi-page PDF summary report with explicit 3-section page structure
  * Supports both Single-Year and Multi-Year modes with per-year column breakdown & team categorization
- * Theme color #B889CF, center aligned table headers, 12pt department font size
+ * Page break optimizations: Each Fiscal Year starts cleanly on a NEW page with zero split boxes
+ * Theme color #B889CF, center aligned table headers with 2-line year breaks, 12pt department font size
  */
 
 function generatePdfReport(options) {
@@ -32,11 +33,16 @@ function generatePdfReport(options) {
 
   const parsedSchema = options.parsedSchema || {};
 
-  // Active years for report
+  // Determine list of active years for report
   const sortedYearOptions = [...fiscalYearOptions].sort((a,b) => a.localeCompare(b));
   let activeYears = [];
-  if (selectedFiscalYear !== "ALL") {
-    activeYears = [selectedFiscalYear];
+  
+  const selectedYears = options.selectedFiscalYears || (options.selectedFiscalYear ? [options.selectedFiscalYear] : ["ALL"]);
+
+  if (Array.isArray(selectedYears) && !selectedYears.includes("ALL") && selectedYears.length > 0) {
+    activeYears = [...selectedYears].sort((a,b) => a.localeCompare(b));
+  } else if (typeof selectedYears === "string" && selectedYears !== "ALL") {
+    activeYears = [selectedYears];
   } else {
     activeYears = sortedYearOptions.length > 0 ? sortedYearOptions : ["2569", "2570"];
   }
@@ -106,16 +112,10 @@ function generatePdfReport(options) {
 
   // Line 3 Header Fiscal Year Text
   let yearText = "";
-  if (selectedFiscalYear !== "ALL") {
-    yearText = `ปีงบประมาณ พ.ศ. ${selectedFiscalYear}`;
+  if (!isMultiYear) {
+    yearText = `ปีงบประมาณ พ.ศ. ${activeYears[0]}`;
   } else {
-    if (sortedYearOptions.length >= 2) {
-      yearText = `ปีงบประมาณ พ.ศ. ${sortedYearOptions[0]} - ${sortedYearOptions[sortedYearOptions.length - 1]}`;
-    } else if (sortedYearOptions.length === 1) {
-      yearText = `ปีงบประมาณ พ.ศ. ${sortedYearOptions[0]}`;
-    } else {
-      yearText = `ปีงบประมาณ พ.ศ. 2569 - 2570`;
-    }
+    yearText = `ปีงบประมาณ พ.ศ. ${activeYears.join(' - ')}`;
   }
 
   const todayStr = formatDateDMY(new Date());
@@ -127,70 +127,70 @@ function generatePdfReport(options) {
   if (isMultiYear) {
     tableHeaderHTML = `
       <tr style="background-color: #B889CF; color: #ffffff;">
-        <th style="padding: 9px 10px; border: 1px solid #a372bb; font-size: 11pt; text-align: left; vertical-align: middle;">สถานะการดำเนินงาน</th>
+        <th style="padding: 8px 10px; border: 1px solid #a372bb; font-size: 10.5pt; text-align: left; vertical-align: middle; width: 34%;">สถานะการดำเนินงาน</th>
         ${activeYears.map(yr => `
-          <th style="padding: 9px 6px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10.5pt;">จำนวน ปี ${yr}</th>
-          <th style="padding: 9px 6px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10.5pt;">สัดส่วน (%) ${yr}</th>
+          <th style="padding: 8px 4px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%;">จำนวนส่วนงาน<br>${yr}</th>
+          <th style="padding: 8px 4px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%;">สัดส่วน (%)<br>${yr}</th>
         `).join('')}
-        <th style="padding: 9px 6px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10.5pt;">จำนวนรวม (${activeYears.length} ปี)</th>
-        <th style="padding: 9px 6px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10.5pt;">สัดส่วนรวม (%)</th>
+        <th style="padding: 8px 4px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%;">จำนวนรวม<br>(${activeYears.length} ปี)</th>
+        <th style="padding: 8px 4px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%;">สัดส่วนรวม<br>(%)</th>
       </tr>
     `;
 
     tableBodyHTML = `
       <tr style="background-color: #f6ecfc;">
-        <td style="padding: 9px 10px; border: 1px solid #d4b2e6; font-weight: 800; font-size: 11pt; color: #5e327a;">1. จำนวนหน่วยรับตรวจทั้งหมด ตามแผนการตรวจสอบประจำปี</td>
+        <td style="padding: 9px 10px; border: 1px solid #d4b2e6; font-weight: 800; font-size: 10.5pt; color: #5e327a; line-height: 1.3; word-break: break-word;">1. จำนวนหน่วยรับตรวจทั้งหมด ตามแผนการตรวจสอบประจำปี</td>
         ${activeYears.map(yr => `
-          <td style="padding: 9px 6px; border: 1px solid #d4b2e6; text-align: center !important; font-weight: 800; color: #5e327a;">${yearStatsMap[yr].totalPlanned}</td>
-          <td style="padding: 9px 6px; border: 1px solid #d4b2e6; text-align: center !important; font-weight: 800; color: #6b3e80;">100.0%</td>
+          <td style="padding: 9px 4px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #5e327a;">${yearStatsMap[yr].totalPlanned}</td>
+          <td style="padding: 9px 4px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #6b3e80;">100.0%</td>
         `).join('')}
-        <td style="padding: 9px 6px; border: 1px solid #d4b2e6; text-align: center !important; font-weight: 800; color: #5e327a;">${combinedTotalPlanned}</td>
-        <td style="padding: 9px 6px; border: 1px solid #d4b2e6; text-align: center !important; font-weight: 800; color: #6b3e80;">100.0%</td>
+        <td style="padding: 9px 4px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #5e327a;">${combinedTotalPlanned}</td>
+        <td style="padding: 9px 4px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #6b3e80;">100.0%</td>
       </tr>
       <tr style="background-color: #f0fdf4;">
-        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #166534;">2. ดำเนินการเสร็จสมบูรณ์</td>
+        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #166534; line-height: 1.3;">2. ดำเนินการเสร็จสมบูรณ์</td>
         ${activeYears.map(yr => `
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #166534;">${yearStatsMap[yr].completed.length}</td>
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #166534;">${((yearStatsMap[yr].completed.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534;">${yearStatsMap[yr].completed.length}</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534;">${((yearStatsMap[yr].completed.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
         `).join('')}
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #166534;">${combinedCompleted}</td>
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #166534;">${((combinedCompleted / combinedTotalPlanned) * 100).toFixed(1)}%</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534;">${combinedCompleted}</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534;">${((combinedCompleted / combinedTotalPlanned) * 100).toFixed(1)}%</td>
       </tr>
       <tr style="background-color: #f7fee7;">
-        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #3f6212;">3. ระหว่างสรุปปิดตรวจ</td>
+        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #3f6212; line-height: 1.3;">3. ระหว่างสรุปปิดตรวจ</td>
         ${activeYears.map(yr => `
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #3f6212;">${yearStatsMap[yr].closingSummary.length}</td>
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #3f6212;">${((yearStatsMap[yr].closingSummary.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #3f6212;">${yearStatsMap[yr].closingSummary.length}</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #3f6212;">${((yearStatsMap[yr].closingSummary.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
         `).join('')}
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #3f6212;">${combinedClosingSummary}</td>
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #3f6212;">${((combinedClosingSummary / combinedTotalPlanned) * 100).toFixed(1)}%</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #3f6212;">${combinedClosingSummary}</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #3f6212;">${((combinedClosingSummary / combinedTotalPlanned) * 100).toFixed(1)}%</td>
       </tr>
       <tr style="background-color: #fefce8;">
-        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #854d0e;">4. ระหว่างร่างรายงาน</td>
+        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #854d0e; line-height: 1.3;">4. ระหว่างร่างรายงาน</td>
         ${activeYears.map(yr => `
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #854d0e;">${yearStatsMap[yr].draftingReport.length}</td>
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #854d0e;">${((yearStatsMap[yr].draftingReport.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #854d0e;">${yearStatsMap[yr].draftingReport.length}</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #854d0e;">${((yearStatsMap[yr].draftingReport.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
         `).join('')}
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #854d0e;">${combinedDraftingReport}</td>
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #854d0e;">${((combinedDraftingReport / combinedTotalPlanned) * 100).toFixed(1)}%</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #854d0e;">${combinedDraftingReport}</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #854d0e;">${((combinedDraftingReport / combinedTotalPlanned) * 100).toFixed(1)}%</td>
       </tr>
       <tr style="background-color: #fff1f2;">
-        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #9f1239;">5. ระหว่างเข้าตรวจ</td>
+        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #9f1239; line-height: 1.3;">5. ระหว่างเข้าตรวจ</td>
         ${activeYears.map(yr => `
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #9f1239;">${yearStatsMap[yr].auditing.length}</td>
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #9f1239;">${((yearStatsMap[yr].auditing.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #9f1239;">${yearStatsMap[yr].auditing.length}</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #9f1239;">${((yearStatsMap[yr].auditing.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
         `).join('')}
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #9f1239;">${combinedAuditing}</td>
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #9f1239;">${((combinedAuditing / combinedTotalPlanned) * 100).toFixed(1)}%</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #9f1239;">${combinedAuditing}</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #9f1239;">${((combinedAuditing / combinedTotalPlanned) * 100).toFixed(1)}%</td>
       </tr>
       <tr style="background-color: #f8fafc;">
-        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #475569;">6. ยังไม่ได้ดำเนินการ</td>
+        <td style="padding: 8px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #475569; line-height: 1.3;">6. ยังไม่ได้ดำเนินการ</td>
         ${activeYears.map(yr => `
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #475569;">${yearStatsMap[yr].unstarted.length}</td>
-          <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #475569;">${((yearStatsMap[yr].unstarted.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #475569;">${yearStatsMap[yr].unstarted.length}</td>
+          <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #475569;">${((yearStatsMap[yr].unstarted.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
         `).join('')}
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #475569;">${combinedUnstarted}</td>
-        <td style="padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #475569;">${((combinedUnstarted / combinedTotalPlanned) * 100).toFixed(1)}%</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #475569;">${combinedUnstarted}</td>
+        <td style="padding: 8px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #475569;">${((combinedUnstarted / combinedTotalPlanned) * 100).toFixed(1)}%</td>
       </tr>
     `;
   } else {
@@ -212,45 +212,45 @@ function generatePdfReport(options) {
 
     tableBodyHTML = `
       <tr style="background-color: #f6ecfc;">
-        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; font-weight: 800; font-size: 11pt; color: #5e327a;">1. จำนวนหน่วยรับตรวจทั้งหมด ตามแผนการตรวจสอบประจำปี</td>
-        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; text-align: center !important; font-weight: 800; font-size: 12pt; color: #5e327a;">${stats.totalPlanned}</td>
-        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; text-align: center !important; font-weight: 800; font-size: 12pt; color: #6b3e80;">100.0%</td>
+        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; font-weight: 800; font-size: 11pt; color: #5e327a; line-height: 1.3;">1. จำนวนหน่วยรับตรวจทั้งหมด ตามแผนการตรวจสอบประจำปี</td>
+        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; font-size: 12pt; color: #5e327a;">${stats.totalPlanned}</td>
+        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; font-size: 12pt; color: #6b3e80;">100.0%</td>
       </tr>
       <tr style="background-color: #f0fdf4;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #166534;">2. ดำเนินการเสร็จสมบูรณ์</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #166534; font-size: 12pt;">${stats.completed.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #166534; font-size: 12pt;">${yrPct(stats.completed.length)}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #166534; line-height: 1.3;">2. ดำเนินการเสร็จสมบูรณ์</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534; font-size: 12pt;">${stats.completed.length}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534; font-size: 12pt;">${yrPct(stats.completed.length)}</td>
       </tr>
       <tr style="background-color: #f7fee7;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #3f6212;">3. ระหว่างสรุปปิดตรวจ</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #3f6212; font-size: 12pt;">${stats.closingSummary.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #3f6212; font-size: 12pt;">${yrPct(stats.closingSummary.length)}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #3f6212; line-height: 1.3;">3. ระหว่างสรุปปิดตรวจ</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #3f6212; font-size: 12pt;">${stats.closingSummary.length}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #3f6212; font-size: 12pt;">${yrPct(stats.closingSummary.length)}</td>
       </tr>
       <tr style="background-color: #fefce8;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #854d0e;">4. ระหว่างร่างรายงาน</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #854d0e; font-size: 12pt;">${stats.draftingReport.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #854d0e; font-size: 12pt;">${yrPct(stats.draftingReport.length)}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #854d0e; line-height: 1.3;">4. ระหว่างร่างรายงาน</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #854d0e; font-size: 12pt;">${stats.draftingReport.length}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #854d0e; font-size: 12pt;">${yrPct(stats.draftingReport.length)}</td>
       </tr>
       <tr style="background-color: #fff1f2;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #9f1239;">5. ระหว่างเข้าตรวจ</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #9f1239; font-size: 12pt;">${stats.auditing.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #9f1239; font-size: 12pt;">${yrPct(stats.auditing.length)}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #9f1239; line-height: 1.3;">5. ระหว่างเข้าตรวจ</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #9f1239; font-size: 12pt;">${stats.auditing.length}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #9f1239; font-size: 12pt;">${yrPct(stats.auditing.length)}</td>
       </tr>
       <tr style="background-color: #f8fafc;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #475569;">6. ยังไม่ได้ดำเนินการ</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #475569; font-size: 12pt;">${stats.unstarted.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; font-weight: 800; color: #475569; font-size: 12pt;">${yrPct(stats.unstarted.length)}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #475569; line-height: 1.3;">6. ยังไม่ได้ดำเนินการ</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #475569; font-size: 12pt;">${stats.unstarted.length}</td>
+        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #475569; font-size: 12pt;">${yrPct(stats.unstarted.length)}</td>
       </tr>
     `;
   }
 
-  // Render Section 2 (Active Details Grouped by Year)
-  const section2HTML = activeYears.map(yr => {
+  // Render Section 2 (Active Details Grouped by Year with Explicit Clean Pagebreaks)
+  const section2HTML = activeYears.map((yr, idx) => {
     const stats = yearStatsMap[yr];
     const yrPct = (count) => ((count / stats.totalPlanned) * 100).toFixed(1) + "%";
 
     return `
-      <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+      <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid; ${idx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
         <div style="background-color: #f6ecfc; padding: 10px 14px; font-weight: 800; font-size: 13pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
           📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)
         </div>
@@ -301,13 +301,13 @@ function generatePdfReport(options) {
     `;
   }).join('');
 
-  // Render Section 3 (Unstarted Units Grouped by Year and Workgroup)
-  const section3HTML = activeYears.map(yr => {
+  // Render Section 3 (Unstarted Units Grouped by Year and Workgroup with Explicit Clean Pagebreaks)
+  const section3HTML = activeYears.map((yr, idx) => {
     const stats = yearStatsMap[yr];
     const yrPct = (count) => ((count / stats.totalPlanned) * 100).toFixed(1) + "%";
 
     return `
-      <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+      <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid; ${idx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
         <div style="background-color: #B889CF; color: #ffffff; padding: 10px 14px; font-weight: 800; font-size: 13pt;">
           📅 รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ ปีงบประมาณ พ.ศ. ${yr} (รวม ${stats.unstarted.length} ส่วนงาน - ${yrPct(stats.unstarted.length)})
         </div>

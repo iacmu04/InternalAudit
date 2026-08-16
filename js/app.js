@@ -189,8 +189,9 @@ const app = createApp({
         }
       }
 
-      if (selectedFiscalYear.value !== "ALL") {
-        list = list.filter(u => u.fiscalYear === selectedFiscalYear.value);
+      const activeYears = selectedFiscalYears.value;
+      if (!activeYears.includes("ALL") && activeYears.length > 0) {
+        list = list.filter(u => activeYears.includes(String(u.fiscalYear)));
       }
 
       if (selectedTeam.value !== "ALL") {
@@ -239,22 +240,24 @@ const app = createApp({
 
     // Unstarted Units logic filtered by selected fiscal year and team
     const unstartedUnitsList = computed(() => {
-      const selectedYear = selectedFiscalYear.value;
+      const activeYears = selectedFiscalYears.value;
+      const isAllYears = activeYears.includes("ALL") || activeYears.length === 0;
       const selectedTeamFilter = selectedTeam.value;
       const plannedMap = {};
 
       const schema = parsedMasterListsSchema.value;
       if (schema && schema.departmentsByYear) {
-        if (selectedYear !== "ALL") {
-          // Pull ONLY departments planned for the selected year
-          const list = schema.departmentsByYear[selectedYear] || [];
-          list.forEach(item => {
-            if (item.name && !plannedMap[item.name]) {
-              plannedMap[item.name] = { name: item.name, team: item.team || "1", year: selectedYear };
-            }
+        if (!isAllYears) {
+          activeYears.forEach(yr => {
+            const list = schema.departmentsByYear[yr] || [];
+            list.forEach(item => {
+              const key = `${item.name}_${yr}`;
+              if (item.name && !plannedMap[key]) {
+                plannedMap[key] = { name: item.name, team: item.team || "1", year: yr };
+              }
+            });
           });
         } else {
-          // Pull planned departments across ALL years
           Object.entries(schema.departmentsByYear).forEach(([yr, list]) => {
             if (Array.isArray(list)) {
               list.forEach(item => {
@@ -274,9 +277,9 @@ const app = createApp({
         const dept = String(r["ส่วนงาน"] || "").trim();
         const rYear = String(r["ปีงบประมาณ"] || "").trim();
         if (dept) {
-          if (selectedYear !== "ALL") {
-            if (!rYear || rYear === selectedYear) {
-              recordedDeptsSet.add(dept);
+          if (!isAllYears) {
+            if (activeYears.includes(rYear)) {
+              recordedDeptsSet.add(`${dept}_${rYear}`);
             }
           } else {
             recordedDeptsSet.add(`${dept}_${rYear}`);
@@ -287,8 +290,8 @@ const app = createApp({
 
       let result = [];
       Object.values(plannedMap).forEach(unit => {
-        const checkKey = selectedYear !== "ALL" ? unit.name : `${unit.name}_${unit.year}`;
-        if (!recordedDeptsSet.has(checkKey) && !recordedDeptsSet.has(unit.name)) {
+        const checkKey = `${unit.name}_${unit.year}`;
+        if (!recordedDeptsSet.has(checkKey) && (!isAllYears || !recordedDeptsSet.has(unit.name))) {
           result.push(unit);
         }
       });
@@ -309,19 +312,22 @@ const app = createApp({
 
     // Total Planned Units for the selected year filter (from Master_Lists or recorded)
     const totalPlannedUnitsCount = computed(() => {
-      const selectedYear = selectedFiscalYear.value;
+      const activeYears = selectedFiscalYears.value;
+      const isAllYears = activeYears.includes("ALL") || activeYears.length === 0;
       const selectedTeamFilter = selectedTeam.value;
       const schema = parsedMasterListsSchema.value;
       let totalPlanned = 0;
 
       if (schema && schema.departmentsByYear) {
-        if (selectedYear !== "ALL") {
-          let list = schema.departmentsByYear[selectedYear] || [];
-          if (selectedTeamFilter !== "ALL") {
-            const cleanTeam = selectedTeamFilter.replace(/^ทีม\s*/, "").trim();
-            list = list.filter(item => item.team === cleanTeam || `ทีม ${item.team}` === selectedTeamFilter);
-          }
-          totalPlanned = list.length;
+        if (!isAllYears) {
+          activeYears.forEach(yr => {
+            let list = schema.departmentsByYear[yr] || [];
+            if (selectedTeamFilter !== "ALL") {
+              const cleanTeam = selectedTeamFilter.replace(/^ทีม\s*/, "").trim();
+              list = list.filter(item => item.team === cleanTeam || `ทีม ${item.team}` === selectedTeamFilter);
+            }
+            totalPlanned += list.length;
+          });
         } else {
           Object.values(schema.departmentsByYear).forEach(list => {
             if (Array.isArray(list)) {
@@ -353,7 +359,7 @@ const app = createApp({
     });
 
     const hasActiveFilters = computed(() => {
-      return selectedFiscalYear.value !== "ALL" ||
+      return !selectedFiscalYears.value.includes("ALL") ||
              selectedTeam.value !== "ALL" ||
              selectedPhase.value !== "ALL" ||
              selectedCtsCycle.value !== "ALL" ||
@@ -770,6 +776,10 @@ const app = createApp({
       ctsCycleOptions,
       supervisorOptions,
       selectedFiscalYear,
+      selectedFiscalYears,
+      showYearDropdown,
+      toggleYearSelection,
+      selectedYearDisplayLabel,
       selectedTeam,
       selectedPhase,
       selectedCtsCycle,

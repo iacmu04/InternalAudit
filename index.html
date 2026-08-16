@@ -176,17 +176,25 @@
             ตัวกรองข้อมูล:
         </div>
 
-        <!-- Filter: Year -->
-        <div class="flex items-center gap-1.5">
+        <!-- Filter: Year (Multi-Select) -->
+        <div class="relative flex items-center gap-1.5">
             <label class="text-xs text-slate-600 font-medium">ปีงบประมาณ:</label>
-            <select v-model="selectedFiscalYear" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500/20">
-                <option value="ALL">ทุกปีงบประมาณ</option>
-                <option value="2568">2568</option>
-                <option value="2569">2569</option>
-                <option value="2570">2570</option>
-                <option value="2571">2571</option>
-                <option value="2572">2572</option>
-            </select>
+            <button @click.stop="showYearDropdown = !showYearDropdown" type="button" class="py-1.5 px-3 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500/20 flex items-center gap-2 shadow-2xs hover:bg-slate-100 transition-all">
+                <span>{{ selectedYearDisplayLabel }}</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-purple-600 transition-transform" :class="{'rotate-180': showYearDropdown}"></i>
+            </button>
+            <div v-if="showYearDropdown" @click.stop class="absolute left-16 top-full mt-1.5 w-52 rounded-xl bg-white border border-purple-200 shadow-xl z-50 p-2 space-y-1 text-xs">
+                <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-purple-50 cursor-pointer font-black text-purple-950 border-b border-purple-100">
+                    <input type="checkbox" :checked="selectedFiscalYears.includes('ALL')" @change="toggleYearSelection('ALL')" class="rounded text-purple-600 focus:ring-purple-500 w-4 h-4">
+                    <span>เลือกทุกปีงบประมาณ</span>
+                </label>
+                <div class="max-h-48 overflow-y-auto space-y-0.5 pt-1">
+                    <label v-for="yr in fiscalYearOptions" :key="yr" class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-purple-50 cursor-pointer font-bold text-slate-800">
+                        <input type="checkbox" :checked="selectedFiscalYears.includes('ALL') || selectedFiscalYears.includes(yr)" @change="toggleYearSelection(yr)" class="rounded text-purple-600 focus:ring-purple-500 w-4 h-4">
+                        <span>ปีงบประมาณ พ.ศ. {{ yr }}</span>
+                    </label>
+                </div>
+            </div>
         </div>
 
         <!-- Filter: Team -->
