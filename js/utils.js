@@ -213,11 +213,23 @@ function parseMasterListsSchema(rawRows) {
     };
   }
 
+  // Pre-process and normalize rows so every row has positional keys _col0, _col1, _col2, _col3, _col4...
+  const normalizedRows = rawRows.map(row => {
+    const norm = { ...row };
+    const keys = Object.keys(row).filter(k => !k.startsWith("_"));
+    keys.forEach((key, idx) => {
+      if (norm[`_col${idx}`] === undefined) {
+        norm[`_col${idx}`] = row[key];
+      }
+    });
+    return norm;
+  });
+
   // Get headers if available
-  const sampleRow = rawRows[0] || {};
+  const sampleRow = normalizedRows[0] || {};
   const headers = sampleRow._headers || Object.keys(sampleRow).filter(k => !k.startsWith("_"));
 
-  rawRows.forEach(row => {
+  normalizedRows.forEach(row => {
     // 1. Col A (Index 0): Team Options
     const colA = String(row._col0 !== undefined ? row._col0 : (row[headers[0]] || "")).trim();
     if (colA && !colA.startsWith("รายชื่อ") && colA !== "ทีม") {
@@ -267,7 +279,7 @@ function parseMasterListsSchema(rawRows) {
     }
 
     let hasData = false;
-    rawRows.forEach(row => {
+    normalizedRows.forEach(row => {
       const deptName = String(row[`_col${pair.deptIdx}`] !== undefined ? row[`_col${pair.deptIdx}`] : (row[headers[pair.deptIdx]] || "")).trim();
       
       // Strict Dept Name Validation: Must not be date, pure year, header text, or pure number
