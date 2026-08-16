@@ -17,9 +17,13 @@ function createInitialAuditFormState() {
     "วันที่แจ้งหน่วยรับตรวจ_รายงาน": "",
     "วันที่เสนอ_คตส": "",
     "ครั้งที่ประชุม_คตส": "",
-    "วันที่หน่วยรับตรวจชี้แจง": "",
-    "วันที่เสนออธิการบดี_ชี้แจง": "",
-    "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์": "",
+    "clarifications": [
+      {
+        "วันที่หน่วยรับตรวจชี้แจง": "",
+        "วันที่เสนออธิการบดี_ชี้แจง": "",
+        "วันที่แจ้งหน่วยรับตรวจ_ชี้แจง": ""
+      }
+    ],
     "nonAuditDays": []
   };
 }
@@ -27,7 +31,7 @@ function createInitialAuditFormState() {
 function populateAuditFormFromRow(row, existingNonAuditList = []) {
   const form = createInitialAuditFormState();
   Object.keys(form).forEach(key => {
-    if (key !== "nonAuditDays" && row[key]) {
+    if (key !== "nonAuditDays" && key !== "clarifications" && row[key]) {
       form[key] = formatDateDMY(row[key]);
     }
   });
@@ -35,6 +39,23 @@ function populateAuditFormFromRow(row, existingNonAuditList = []) {
   form["ปีงบประมาณ"] = row["ปีงบประมาณ"] || "2570";
   form["ทีม"] = String(row["ทีม"] || "1");
   form["ครั้งที่ประชุม_คตส"] = row["ครั้งที่ประชุม_คตส"] || "";
+
+  // Load clarifications array or single fields
+  if (Array.isArray(row.clarifications) && row.clarifications.length > 0) {
+    form.clarifications = row.clarifications.map(c => ({
+      "วันที่หน่วยรับตรวจชี้แจง": formatDateDMY(c["วันที่หน่วยรับตรวจชี้แจง"]),
+      "วันที่เสนออธิการบดี_ชี้แจง": formatDateDMY(c["วันที่เสนออธิการบดี_ชี้แจง"]),
+      "วันที่แจ้งหน่วยรับตรวจ_ชี้แจง": formatDateDMY(c["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || c["วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์"])
+    }));
+  } else {
+    form.clarifications = [
+      {
+        "วันที่หน่วยรับตรวจชี้แจง": formatDateDMY(row["วันที่หน่วยรับตรวจชี้แจง"]),
+        "วันที่เสนออธิการบดี_ชี้แจง": formatDateDMY(row["วันที่เสนออธิการบดี_ชี้แจง"]),
+        "วันที่แจ้งหน่วยรับตรวจ_ชี้แจง": formatDateDMY(row["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || row["วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์"])
+      }
+    ];
+  }
 
   // Load existing non-audit days for this unit
   if (Array.isArray(existingNonAuditList) && form["ส่วนงาน"]) {

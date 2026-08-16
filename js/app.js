@@ -502,6 +502,32 @@ const app = createApp({
       return true;
     };
 
+    const addClarificationItem = () => {
+      if (!Array.isArray(auditForm.value.clarifications)) {
+        auditForm.value.clarifications = [];
+      }
+      auditForm.value.clarifications.push({
+        "วันที่หน่วยรับตรวจชี้แจง": "",
+        "วันที่เสนออธิการบดี_ชี้แจง": "",
+        "วันที่แจ้งหน่วยรับตรวจ_ชี้แจง": ""
+      });
+      nextTick(() => {
+        if (window.flatpickr) {
+          flatpickr(".flatpickr-date", {
+            dateFormat: "d/m/Y",
+            allowInput: true,
+            locale: "th"
+          });
+        }
+      });
+    };
+
+    const removeClarificationItem = (index) => {
+      if (Array.isArray(auditForm.value.clarifications) && auditForm.value.clarifications.length > 1) {
+        auditForm.value.clarifications.splice(index, 1);
+      }
+    };
+
     // Modal Actions
     const openAuditModal = (rowToEdit = null) => {
       if (rowToEdit) {
@@ -544,11 +570,34 @@ const app = createApp({
       // Normalize date values to ISO format before posting
       const formDataToSend = { ...auditForm.value };
       Object.keys(formDataToSend).forEach(key => {
-        if (key !== "nonAuditDays" && formDataToSend[key] && key.startsWith("วันที่")) {
+        if (key !== "nonAuditDays" && key !== "clarifications" && formDataToSend[key] && key.startsWith("วันที่")) {
           const d = parseDate(formDataToSend[key]);
           if (d) formDataToSend[key] = formatISODate(d);
         }
       });
+
+      // Normalize clarifications array
+      if (Array.isArray(auditForm.value.clarifications)) {
+        const normClarifications = auditForm.value.clarifications.map(c => {
+          const item = { ...c };
+          Object.keys(item).forEach(k => {
+            if (item[k] && k.startsWith("วันที่")) {
+              const d = parseDate(item[k]);
+              if (d) item[k] = formatISODate(d);
+            }
+          });
+          return item;
+        });
+
+        formDataToSend.clarifications = normClarifications;
+        const c0 = normClarifications[0] || {};
+        const cLast = normClarifications[normClarifications.length - 1] || {};
+
+        formDataToSend["วันที่หน่วยรับตรวจชี้แจง"] = c0["วันที่หน่วยรับตรวจชี้แจง"] || "";
+        formDataToSend["วันที่เสนออธิการบดี_ชี้แจง"] = c0["วันที่เสนออธิการบดี_ชี้แจง"] || "";
+        formDataToSend["วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์"] = cLast["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || c0["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || "";
+        formDataToSend["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] = cLast["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || c0["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || "";
+      }
 
       let res;
       if (editingRowIndex.value) {
@@ -774,6 +823,8 @@ const app = createApp({
       teamList,
       nonAuditReasonOptions,
       ctsCycleOptions,
+      addClarificationItem,
+      removeClarificationItem,
       supervisorOptions,
       selectedFiscalYear,
       selectedFiscalYears,

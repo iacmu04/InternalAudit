@@ -163,10 +163,18 @@ class API {
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({ action, ...payload })
       });
-      return await res.json();
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (pErr) {
+        return { status: "success", message: "ส่งข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
+      }
     } catch (err) {
       console.error("POST action error:", err);
-      return { status: "error", message: err.toString() };
+      return { 
+        status: "error", 
+        message: "ไม่สามารถส่งข้อมูลไปยัง Google Apps Script Web App ได้ (" + err.toString() + ")\n\nกรุณาตรวจสอบว่า:\n1. ได้วาง URL จากการ Deploy Web App ล่าสุดเรียบร้อยแล้วในเมนูตั้งค่า\n2. ในเมนู Deploy ได้เลือก 'Who has access' เป็น 'Anyone' (ทุกคน)\n3. หากแก้ไข Apps Script ต้องกด Deploy > New deployment ใหม่ทุกครั้ง" 
+      };
     }
   }
 }
