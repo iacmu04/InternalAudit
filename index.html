@@ -176,20 +176,27 @@
             ตัวกรองข้อมูล:
         </div>
 
-        <!-- Filter: Year -->
-        <div class="flex items-center gap-1.5">
-            <label class="text-xs text-slate-600 font-medium">ปีงบประมาณ:</label>
-            <select v-model="selectedFiscalYear" class="py-1.5 px-3 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500/20 shadow-2xs">
-                <option value="ALL">ทุกปีงบประมาณ</option>
-                <option value="2568">ปีงบประมาณ พ.ศ. 2568</option>
-                <option value="2569">ปีงบประมาณ พ.ศ. 2569</option>
-                <option value="2570">ปีงบประมาณ พ.ศ. 2570</option>
-                <option value="2571">ปีงบประมาณ พ.ศ. 2571</option>
-                <option value="2572">ปีงบประมาณ พ.ศ. 2572</option>
-                <option value="2568,2569">ปี 2568 และ 2569 (2 ปี)</option>
-                <option value="2569,2570">ปี 2569 และ 2570 (2 ปี)</option>
-                <option value="2570,2571">ปี 2570 และ 2571 (2 ปี)</option>
-            </select>
+        <!-- Filter: Year (Multi-Select Interactive Button Chips) -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-slate-600 font-medium">ปีงบประมาณ:</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" 
+                        @click="toggleYearButton('ALL')" 
+                        :class="isYearSelected('ALL') ? 'bg-purple-700 text-white font-black shadow-xs ring-2 ring-purple-400/50' : 'bg-slate-100 hover:bg-purple-50 text-slate-700 font-bold border border-slate-200'" 
+                        class="px-2.5 py-1 text-xs rounded-xl transition-all flex items-center gap-1">
+                    <span v-if="isYearSelected('ALL')">✓</span>
+                    <span>เลือกทุกปี</span>
+                </button>
+                <button v-for="yr in yearButtonList" 
+                        :key="yr" 
+                        type="button" 
+                        @click="toggleYearButton(yr)" 
+                        :class="isYearSelected(yr) ? 'bg-purple-700 text-white font-black shadow-xs ring-2 ring-purple-400/50' : 'bg-slate-100 hover:bg-purple-50 text-slate-700 font-bold border border-slate-200'" 
+                        class="px-2.5 py-1 text-xs rounded-xl transition-all flex items-center gap-1">
+                    <span v-if="isYearSelected(yr)">✓</span>
+                    <span>พ.ศ. {{ yr }}</span>
+                </button>
+            </div>
         </div>
 
         <!-- Filter: Team -->

@@ -24,13 +24,41 @@ const app = createApp({
     const nonAuditDaysList = ref([]);
 
     // Main Filters
-    const selectedFiscalYear = ref("ALL");
+    const selectedFiscalYears = ref(["ALL"]);
+    const yearButtonList = ["2568", "2569", "2570", "2571", "2572"];
 
-    const selectedFiscalYears = computed(() => {
-      const val = String(selectedFiscalYear.value || "ALL");
-      if (val === "ALL") return ["ALL"];
-      if (val.includes(",")) return val.split(",");
-      return [val];
+    const toggleYearButton = (yr) => {
+      if (yr === "ALL") {
+        selectedFiscalYears.value = ["ALL"];
+        return;
+      }
+      let current = Array.isArray(selectedFiscalYears.value) ? selectedFiscalYears.value.filter(y => y !== "ALL") : [];
+      if (current.includes(yr)) {
+        current = current.filter(y => y !== yr);
+      } else {
+        current.push(yr);
+      }
+      if (current.length === 0 || current.length === yearButtonList.length) {
+        selectedFiscalYears.value = ["ALL"];
+      } else {
+        selectedFiscalYears.value = current.sort((a,b) => a.localeCompare(b));
+      }
+    };
+
+    const isYearSelected = (yr) => {
+      if (yr === "ALL") {
+        return selectedFiscalYears.value.includes("ALL");
+      }
+      return selectedFiscalYears.value.includes("ALL") || selectedFiscalYears.value.includes(yr);
+    };
+
+    const selectedFiscalYear = computed({
+      get: () => selectedFiscalYears.value.includes("ALL") ? "ALL" : (selectedFiscalYears.value[0] || "ALL"),
+      set: (val) => {
+        if (val === "ALL") selectedFiscalYears.value = ["ALL"];
+        else if (Array.isArray(val)) selectedFiscalYears.value = val;
+        else selectedFiscalYears.value = [val];
+      }
     });
 
     const selectedYearDisplayLabel = computed(() => {
@@ -864,8 +892,9 @@ const app = createApp({
       supervisorOptions,
       selectedFiscalYear,
       selectedFiscalYears,
-      showYearDropdown,
-      toggleYearSelection,
+      yearButtonList,
+      toggleYearButton,
+      isYearSelected,
       selectedYearDisplayLabel,
       selectedTeam,
       selectedPhase,
