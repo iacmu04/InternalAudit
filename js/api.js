@@ -4,7 +4,7 @@
  */
 
 const SPREADSHEET_ID = "1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw";
-const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbx-ZrpKcAGH8b9MZ9qJWXvN6Zc_gewDScPCn66QXhxJSFC8Pw9fn9TiPdoS4s/exec";
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbx-ZrpKcAGH8b9MZ9qJWXvN6Zc_gewDScPCn66QXhxJSFC8Pw9fn9TiPdoS4sXQFsKM/exec";
 
 function getStoredApiUrl() {
   return localStorage.getItem("APPS_SCRIPT_URL") || DEFAULT_API_URL;
