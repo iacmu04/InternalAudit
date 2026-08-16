@@ -92,19 +92,25 @@ class API {
 
   static async fetchInitialData() {
     const apiUrl = getStoredApiUrl();
-    if (apiUrl) {
+    
+    // Strategy 1: Try fetching via Apps Script Web App (doGet)
+    if (apiUrl && !apiUrl.includes("AKfycbz_InternalAudit")) {
       try {
-        const res = await fetch(`${apiUrl}?action=getInitialData&t=${Date.now()}`);
-        const json = await res.json();
-        if (json && json.status === "success") {
+        const url = `${apiUrl}?action=getInitialData&t=${Date.now()}`;
+        const res = await fetch(url, { redirect: "follow" });
+        const text = await res.text();
+        const json = JSON.parse(text);
+        if (json && json.status === "success" && json.mainAudit) {
+          console.log("✅ Data loaded from Apps Script Web App successfully");
           return json;
         }
       } catch (err) {
-        console.warn("Backend Web App fetch failed, falling back to direct GViz CSV:", err);
+        console.warn("Apps Script Web App GET failed, falling back to GViz CSV:", err.message);
       }
     }
 
-    console.log("Fetching live data directly from Google Sheets...");
+    // Strategy 2: Fallback to direct Google Sheets GViz CSV (public read)
+    console.log("Fetching live data directly from Google Sheets via GViz CSV...");
     const [mainAudit, masterListsRaw, usersRaw, holidaysRaw, nonAuditRaw, delayRaw] = await Promise.all([
       fetchLiveSheetCSV("Main_Audit"),
       fetchLiveSheetCSV("Master_Lists"),
@@ -160,8 +166,10 @@ class API {
     const postBody = JSON.stringify({ action, ...payload });
 
     try {
+      // Google Apps Script Web App POST: use redirect:follow to handle 302 chain
       const res = await fetch(apiUrl, {
         method: "POST",
+        redirect: "follow",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: postBody
       });
@@ -171,7 +179,11 @@ class API {
         if (json && json.status) return json;
         return { status: "success", message: "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
       } catch (pErr) {
-        return { status: "success", message: "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
+        // If we get HTML or non-JSON response, it means Apps Script processed but returned non-JSON
+        if (res.ok || res.status === 0) {
+          return { status: "success", message: "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
+        }
+        return { status: "error", message: "ได้รับข้อมูลตอบกลับที่ไม่สามารถอ่านได้จาก Google Apps Script: " + text.substring(0, 200) };
       }
     } catch (err) {
       console.error("POST action error:", err);
