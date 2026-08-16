@@ -99,29 +99,36 @@ const app = createApp({
       return parseMasterListsSchema(masterLists.value);
     });
 
-    const teamOptions = computed(() => parsedMasterListsSchema.value.teams);
+    const teamOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.teams) || ["1", "2", "3", "4"]);
     const teamList = computed(() => teamOptions.value);
 
-    const ctsCycleOptions = computed(() => parsedMasterListsSchema.value.ctsCycles);
-    const nonAuditReasonOptions = computed(() => parsedMasterListsSchema.value.nonAuditTypes);
-    const fiscalYearOptions = computed(() => parsedMasterListsSchema.value.years);
+    const ctsCycleOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.ctsCycles) || ["1/2569", "2/2569"]);
+    const nonAuditReasonOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.nonAuditTypes) || []);
+    const fiscalYearOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.years) || ["2570", "2569"]);
 
     // Form department options dynamic per year (Col D for 2569, Col F for 2570, etc.)
     const formDepartmentOptions = computed(() => {
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
-      const deptsForYear = parsedMasterListsSchema.value.departmentsByYear[selectedYear];
-      if (deptsForYear && deptsForYear.length > 0) {
-        return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
+      const schema = parsedMasterListsSchema.value;
+      if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear]) {
+        const deptsForYear = schema.departmentsByYear[selectedYear];
+        if (deptsForYear && deptsForYear.length > 0) {
+          return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
+        }
       }
       // Fallback to all departments across years
       const set = new Set();
-      Object.values(parsedMasterListsSchema.value.departmentsByYear).forEach(list => {
-        list.forEach(d => set.add(d.name));
-      });
-      masterLists.value.forEach(item => {
-        const val = item["รายชื่อส่วนงาน"] || item["ส่วนงาน"];
-        if (val && String(val).trim() !== "") set.add(String(val).trim());
-      });
+      if (schema && schema.departmentsByYear) {
+        Object.values(schema.departmentsByYear).forEach(list => {
+          if (Array.isArray(list)) list.forEach(d => set.add(d.name));
+        });
+      }
+      if (Array.isArray(masterLists.value)) {
+        masterLists.value.forEach(item => {
+          const val = item["รายชื่อส่วนงาน"] || item["ส่วนงาน"];
+          if (val && String(val).trim() !== "") set.add(String(val).trim());
+        });
+      }
       return Array.from(set).sort((a,b) => a.localeCompare(b, 'th'));
     });
 
@@ -130,11 +137,14 @@ const app = createApp({
     // Form Change Handlers
     const onFiscalYearChange = () => {
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
-      const deptsForYear = parsedMasterListsSchema.value.departmentsByYear[selectedYear];
-      if (deptsForYear && deptsForYear.length > 0) {
-        const deptNames = deptsForYear.map(d => d.name);
-        if (!deptNames.includes(auditForm.value['ส่วนงาน'])) {
-          auditForm.value['ส่วนงาน'] = deptNames[0] || "";
+      const schema = parsedMasterListsSchema.value;
+      if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear]) {
+        const deptsForYear = schema.departmentsByYear[selectedYear];
+        if (deptsForYear && deptsForYear.length > 0) {
+          const deptNames = deptsForYear.map(d => d.name);
+          if (!deptNames.includes(auditForm.value['ส่วนงาน'])) {
+            auditForm.value['ส่วนงาน'] = deptNames[0] || "";
+          }
         }
       }
       onDepartmentChange();
@@ -143,8 +153,9 @@ const app = createApp({
     const onDepartmentChange = () => {
       const selectedDept = auditForm.value['ส่วนงาน'];
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
-      const deptsForYear = parsedMasterListsSchema.value.departmentsByYear[selectedYear];
-      if (deptsForYear && selectedDept) {
+      const schema = parsedMasterListsSchema.value;
+      if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear] && selectedDept) {
+        const deptsForYear = schema.departmentsByYear[selectedYear];
         const found = deptsForYear.find(d => d.name === selectedDept);
         if (found && found.team) {
           auditForm.value['ทีม'] = found.team;
@@ -747,6 +758,7 @@ const app = createApp({
       team1Unstarted,
       team2Unstarted,
       team3Unstarted,
+      team4Unstarted,
       fiscalYearOptions,
       formDepartmentOptions,
       onFiscalYearChange,
