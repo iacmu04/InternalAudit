@@ -213,69 +213,83 @@ function parseMasterListsSchema(rawRows) {
     };
   }
 
-  // Find column headers from the first row object keys
-  const firstObj = rawRows[0] || {};
-  const allKeys = Object.keys(firstObj).filter(k => k !== "_rowIndex");
-
-  const colAKey = allKeys[0] || "รายชื่อทีม";
-  const colBKey = allKeys[1] || "รอบประชุม_คตส";
-  const colCKey = allKeys[2] || "ประเภท";
+  // Get headers if available
+  const sampleRow = rawRows[0] || {};
+  const headers = sampleRow._headers || Object.keys(sampleRow).filter(k => !k.startsWith("_"));
 
   rawRows.forEach(row => {
-    const teamVal = String(row[colAKey] || "").trim();
-    if (teamVal) teamSet.add(teamVal);
+    // 1. Col A (Index 0): Team Options for dropdown
+    const colA = String(row._col0 !== undefined ? row._col0 : (row[headers[0]] || row["รายชื่อทีม"] || row["ทีม"] || "")).trim();
+    if (colA && !colA.startsWith("รายชื่อ") && colA !== "ทีม") {
+      teamSet.add(colA.replace(/^ทีม\s*/, ""));
+    }
 
-    const ctsVal = String(row[colBKey] || "").trim();
-    if (ctsVal) ctsSet.add(ctsVal);
+    // 2. Col B (Index 1): CTS Cycle Options for dropdown
+    const colB = String(row._col1 !== undefined ? row._col1 : (row[headers[1]] || row["รอบประชุม_คตส"] || row["รอบประชุม คตส."] || "")).trim();
+    if (colB && !colB.startsWith("รอบ") && !colB.startsWith("ครั้ง")) {
+      ctsSet.add(colB);
+    }
 
-    const typeVal = String(row[colCKey] || "").trim();
-    if (typeVal) nonAuditTypeSet.add(typeVal);
+    // 3. Col C (Index 2): Non-Audit Day Reasons / Types for dropdown
+    const colC = String(row._col2 !== undefined ? row._col2 : (row[headers[2]] || row["ประเภท"] || row["ประเภท/เหตุผล"] || "")).trim();
+    if (colC && !colC.startsWith("ประเภท")) {
+      nonAuditTypeSet.add(colC);
+    }
   });
 
-  // Process Col D onwards for Year & Dept pairs
-  for (let i = 3; i < allKeys.length; i++) {
-    const key = allKeys[i].trim();
-    const yearMatch = key.match(/(\d{4})/);
-    if (yearMatch) {
-      const yearStr = yearMatch[1];
-      yearSet.add(yearStr);
+  // Determine year pairs starting from Index 3 (Col D)
+  // Col D (index 3) = Dept for 2569, Col E (index 4) = Team for 2569
+  // Col F (index 5) = Dept for 2570, Col G (index 6) = Team for 2570
+  // Col H (index 7) = Dept for 2571, Col I (index 8) = Team for 2571
+  const allColIndices = [
+    { year: "2569", deptIdx: 3, teamIdx: 4 },
+    { year: "2570", deptIdx: 5, teamIdx: 6 },
+    { year: "2571", deptIdx: 7, teamIdx: 8 },
+    { year: "2572", deptIdx: 9, teamIdx: 10 }
+  ];
 
-      if (!departmentsByYear[yearStr]) {
-        departmentsByYear[yearStr] = [];
-      }
-
-      const deptKey = allKeys[i];
-      const teamKey = (i + 1 < allKeys.length) ? allKeys[i + 1] : null;
-
-      rawRows.forEach(row => {
-        const deptName = String(row[deptKey] || "").trim();
-        if (deptName) {
-          let teamName = "1";
-          if (teamKey && row[teamKey] !== undefined) {
-            teamName = String(row[teamKey]).replace("ทีม", "").trim() || "1";
-          }
-          if (!departmentsByYear[yearStr].some(d => d.name === deptName)) {
-            departmentsByYear[yearStr].push({
-              name: deptName,
-              team: teamName,
-              year: yearStr
-            });
-          }
-        }
-      });
-
-      if (teamKey && (teamKey.toLowerCase().includes("ทีม") || teamKey.match(/ทีม/i))) {
-        i++;
-      }
+  allColIndices.forEach(pair => {
+    // Check if headers specify a custom year name for this pair
+    let yearStr = pair.year;
+    if (headers[pair.deptIdx]) {
+      const match = String(headers[pair.deptIdx]).match(/(\d{4})/);
+      if (match) yearStr = match[1];
     }
-  }
+
+    let hasData = false;
+    rawRows.forEach(row => {
+      const deptName = String(row[`_col${pair.deptIdx}`] !== undefined ? row[`_col${pair.deptIdx}`] : (row[headers[pair.deptIdx]] || "")).trim();
+      if (deptName && !deptName.match(/^\d{4}$/) && !deptName.includes("ส่วนงาน")) {
+        hasData = true;
+        const rawTeam = row[`_col${pair.teamIdx}`] !== undefined ? row[`_col${pair.teamIdx}`] : (row[headers[pair.teamIdx]] || "1");
+        const teamName = String(rawTeam).replace(/^ทีม\s*/, "").trim() || "1";
+
+        if (!departmentsByYear[yearStr]) {
+          departmentsByYear[yearStr] = [];
+        }
+        if (!departmentsByYear[yearStr].some(d => d.name === deptName)) {
+          departmentsByYear[yearStr].push({
+            name: deptName,
+            team: teamName,
+            year: yearStr
+          });
+        }
+      }
+    });
+
+    if (hasData) {
+      yearSet.add(yearStr);
+    }
+  });
 
   const years = Array.from(yearSet).sort((a, b) => b.localeCompare(a));
   if (!years.includes("2570")) years.unshift("2570");
   if (!years.includes("2569")) years.push("2569");
 
+  const teams = Array.from(teamSet).filter(t => t && t !== "ทีม");
+
   return {
-    teams: teamSet.size > 0 ? Array.from(teamSet) : ["1", "2", "3", "4"],
+    teams: teams.length > 0 ? teams : ["1", "2", "3", "4"],
     ctsCycles: ctsSet.size > 0 ? Array.from(ctsSet) : ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569"],
     nonAuditTypes: nonAuditTypeSet.size > 0 ? Array.from(nonAuditTypeSet) : ["ติดประชุมมหาวิทยาลัย", "อบรม/สัมมนา", "วันหยุดนักขัตฤกษ์", "ติดภารกิจอื่น"],
     departmentsByYear: departmentsByYear,

@@ -51,11 +51,16 @@ function parseCSV(csvText) {
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const values = parseRow(lines[i]);
-    const obj = { _rowIndex: i + 1 };
+    const obj = { _rowIndex: i + 1, _headers: headers };
     let hasVal = false;
+    values.forEach((val, idx) => {
+      obj[`_col${idx}`] = val;
+    });
     headers.forEach((h, idx) => {
       const val = values[idx] !== undefined ? values[idx] : "";
-      obj[h] = val;
+      if (obj[h] === undefined) {
+        obj[h] = val;
+      }
       if (val !== "") hasVal = true;
     });
     if (hasVal) rows.push(obj);

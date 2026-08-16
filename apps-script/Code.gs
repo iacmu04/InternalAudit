@@ -130,15 +130,19 @@ function readSheetData(sheet) {
   const rows = [];
 
   for (let i = 1; i < values.length; i++) {
-    const rowObj = { _rowIndex: i + 1 };
+    const rowObj = { _rowIndex: i + 1, _headers: headers };
     let hasVal = false;
     for (let j = 0; j < headers.length; j++) {
       let val = values[i][j];
       if (val instanceof Date) {
         val = formatDate(val);
       }
-      rowObj[headers[j] || `col_${j}`] = val;
-      if (val !== "" && val !== null && val !== undefined) hasVal = true;
+      rowObj[`_col${j}`] = val;
+      const keyName = headers[j] || `col_${j}`;
+      if (rowObj[keyName] === undefined) {
+        rowObj[keyName] = val;
+      }
+      if (val !== "") hasVal = true;
     }
     if (hasVal) rows.push(rowObj);
   }
