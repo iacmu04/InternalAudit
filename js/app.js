@@ -237,14 +237,119 @@ const app = createApp({
       return list;
     });
 
-    const overallCompletionRate = computed(() => {
-      if (filteredUnits.value.length === 0) return 0;
-      const count = filteredUnits.value.filter(u => u.isCompleted).length;
-      return Math.round((count / filteredUnits.value.length) * 100);
+    // Unstarted Units logic filtered by selected fiscal year and team
+    const unstartedUnitsList = computed(() => {
+      const selectedYear = selectedFiscalYear.value;
+      const selectedTeamFilter = selectedTeam.value;
+      const plannedMap = {};
+
+      const schema = parsedMasterListsSchema.value;
+      if (schema && schema.departmentsByYear) {
+        if (selectedYear !== "ALL") {
+          // Pull ONLY departments planned for the selected year
+          const list = schema.departmentsByYear[selectedYear] || [];
+          list.forEach(item => {
+            if (item.name && !plannedMap[item.name]) {
+              plannedMap[item.name] = { name: item.name, team: item.team || "1", year: selectedYear };
+            }
+          });
+        } else {
+          // Pull planned departments across ALL years
+          Object.entries(schema.departmentsByYear).forEach(([yr, list]) => {
+            if (Array.isArray(list)) {
+              list.forEach(item => {
+                const key = `${item.name}_${yr}`;
+                if (item.name && !plannedMap[key]) {
+                  plannedMap[key] = { name: item.name, team: item.team || "1", year: yr };
+                }
+              });
+            }
+          });
+        }
+      }
+
+      // Check recorded audit units in rawAuditList to exclude ones that have already started/been recorded
+      const recordedDeptsSet = new Set();
+      rawAuditList.value.forEach(r => {
+        const dept = String(r["ส่วนงาน"] || "").trim();
+        const rYear = String(r["ปีงบประมาณ"] || "").trim();
+        if (dept) {
+          if (selectedYear !== "ALL") {
+            if (!rYear || rYear === selectedYear) {
+              recordedDeptsSet.add(dept);
+            }
+          } else {
+            recordedDeptsSet.add(`${dept}_${rYear}`);
+            recordedDeptsSet.add(dept);
+          }
+        }
+      });
+
+      let result = [];
+      Object.values(plannedMap).forEach(unit => {
+        const checkKey = selectedYear !== "ALL" ? unit.name : `${unit.name}_${unit.year}`;
+        if (!recordedDeptsSet.has(checkKey) && !recordedDeptsSet.has(unit.name)) {
+          result.push(unit);
+        }
+      });
+
+      // Filter by Team if a specific team filter is selected
+      if (selectedTeamFilter !== "ALL") {
+        const cleanTeamFilter = selectedTeamFilter.replace(/^ทีม\s*/, "").trim();
+        result = result.filter(u => u.team === cleanTeamFilter || `ทีม ${u.team}` === selectedTeamFilter);
+      }
+
+      return result;
+    });
+
+    const team1Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "1"));
+    const team2Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "2"));
+    const team3Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "3"));
+    const team4Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "4" || u.team === "พิเศษ"));
+
+    // Total Planned Units for the selected year filter (from Master_Lists or recorded)
+    const totalPlannedUnitsCount = computed(() => {
+      const selectedYear = selectedFiscalYear.value;
+      const selectedTeamFilter = selectedTeam.value;
+      const schema = parsedMasterListsSchema.value;
+      let totalPlanned = 0;
+
+      if (schema && schema.departmentsByYear) {
+        if (selectedYear !== "ALL") {
+          let list = schema.departmentsByYear[selectedYear] || [];
+          if (selectedTeamFilter !== "ALL") {
+            const cleanTeam = selectedTeamFilter.replace(/^ทีม\s*/, "").trim();
+            list = list.filter(item => item.team === cleanTeam || `ทีม ${item.team}` === selectedTeamFilter);
+          }
+          totalPlanned = list.length;
+        } else {
+          Object.values(schema.departmentsByYear).forEach(list => {
+            if (Array.isArray(list)) {
+              let subList = list;
+              if (selectedTeamFilter !== "ALL") {
+                const cleanTeam = selectedTeamFilter.replace(/^ทีม\s*/, "").trim();
+                subList = subList.filter(item => item.team === cleanTeam || `ทีม ${item.team}` === selectedTeamFilter);
+              }
+              totalPlanned += subList.length;
+            }
+          });
+        }
+      }
+
+      const currentFilteredCount = filteredUnits.value.length;
+      const unstartedCount = unstartedUnitsList.value.length;
+
+      return Math.max(totalPlanned, currentFilteredCount + unstartedCount);
     });
 
     const completedUnitsCount = computed(() => {
-      return filteredUnits.value.filter(u => u.isCompleted).length;
+      return filteredUnits.value.filter(u => u.isCompleted || u.latestSubCol === "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์").length;
+    });
+
+    const overallCompletionRate = computed(() => {
+      const total = totalPlannedUnitsCount.value;
+      if (total <= 0) return 0;
+      return Math.round((completedUnitsCount.value / total) * 100);
     });
 
     const hasActiveFilters = computed(() => {
@@ -262,54 +367,6 @@ const app = createApp({
       selectedCtsCycle.value = "ALL";
       searchQuery.value = "";
     };
-
-    // Unstarted Units logic by Teams
-    const unstartedUnitsList = computed(() => {
-      const plannedMap = {};
-
-      // Gather departments across all years from parsedMasterListsSchema
-      Object.values(parsedMasterListsSchema.value.departmentsByYear).forEach(list => {
-        list.forEach(item => {
-          if (item.name && !plannedMap[item.name]) {
-            plannedMap[item.name] = { name: item.name, team: item.team || "1" };
-          }
-        });
-      });
-
-      // Fallback from masterLists Col A if any
-      masterLists.value.forEach(item => {
-        const name = String(item["รายชื่อส่วนงาน"] || item["ส่วนงาน"] || "").trim();
-        const team = String(item["รายชื่อทีม"] || item["ทีม"] || "1").replace("ทีม", "").trim() || "1";
-        if (name && !plannedMap[name]) plannedMap[name] = { name: name, team: team };
-      });
-
-      const recordedDeptsSet = new Set();
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-
-      rawAuditList.value.forEach(r => {
-        const dept = String(r["ส่วนงาน"] || "").trim();
-        if (dept) {
-          const startDateG = parseDate(r["วันที่เริ่มตรวจสอบ"]);
-          if (startDateG && now >= startDateG) {
-            recordedDeptsSet.add(dept);
-          }
-        }
-      });
-
-      const result = [];
-      Object.values(plannedMap).forEach(unit => {
-        if (!recordedDeptsSet.has(unit.name)) {
-          result.push(unit);
-        }
-      });
-      return result;
-    });
-
-    const team1Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "1"));
-    const team2Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "2"));
-    const team3Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "3"));
-    const team4Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "4" || u.team === "พิเศษ"));
 
     // Phase Status Groups for Section 1
     const getUnitsByStatus = (subCol) => {
@@ -711,6 +768,7 @@ const app = createApp({
       allAuditUnits,
       overallCompletionRate,
       completedUnitsCount,
+      totalPlannedUnitsCount,
       hasActiveFilters,
       resetFilters,
       phaseStructure,

@@ -241,7 +241,7 @@
                     กราฟแสดงจำนวนส่วนงานในแต่ละสถานะหลัก (อัตราร้อยละความคืบหน้า)
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5 font-medium">
-                    สัดส่วนงานดำเนินการเสร็จสิ้นสมบูรณ์ {{ overallCompletionRate }}% จากทั้งหมด {{ filteredUnits.length }} ส่วนงาน
+                    สัดส่วนงานดำเนินการเสร็จสิ้นสมบูรณ์ {{ overallCompletionRate }}% จากทั้งหมด {{ totalPlannedUnitsCount }} ส่วนงาน
                 </p>
             </div>
 
@@ -249,7 +249,7 @@
             <div class="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-emerald-100/70 border border-emerald-300 px-4 py-2.5 rounded-2xl shadow-2xs">
                 <div class="text-right">
                     <div class="text-[10px] text-emerald-800 font-extrabold uppercase tracking-wider">เสร็จสมบูรณ์</div>
-                    <div class="text-lg font-black text-emerald-900 leading-none mt-0.5">{{ completedUnitsCount }} / {{ filteredUnits.length }} ส่วนงาน ({{ overallCompletionRate }}%)</div>
+                    <div class="text-lg font-black text-emerald-900 leading-none mt-0.5">{{ completedUnitsCount }} / {{ totalPlannedUnitsCount }} ส่วนงาน ({{ overallCompletionRate }}%)</div>
                 </div>
                 <div class="w-12 h-12 rounded-full border-4 border-emerald-500 flex items-center justify-center font-black text-xs text-emerald-900 bg-white shadow-xs">
                     {{ overallCompletionRate }}%
