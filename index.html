@@ -499,14 +499,13 @@
                 </div>
             </div>
 
-            <!-- Team 4 -->
+            <!-- งานตรวจสอบอื่น -->
             <div class="p-4 bg-white/95 rounded-xl border border-purple-200 shadow-2xs space-y-2">
                 <div class="font-extrabold text-xs text-purple-950 flex justify-between items-center pb-2 border-b border-purple-100">
-                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500"></span>ทีม 4</span>
-                    <span class="px-2.5 py-0.5 bg-purple-100 text-purple-900 rounded-md font-black text-[11px]">{{ team4Unstarted.length }} ส่วนงาน</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500"></span>งานตรวจสอบอื่น</span>
                 </div>
                 <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                    <div v-if="team4Unstarted.length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">- ไม่มีส่วนงาน -</div>
+                    <div v-if="team4Unstarted.length === 0" class="text-[11px] text-slate-400 italic py-2 text-center">- ไม่มีรายการ -</div>
                     <div v-for="u in team4Unstarted" :key="u.name" class="p-2 text-xs rounded-lg border border-purple-100 bg-purple-50/40">
                         <span class="dept-name-pill inline-block text-xs">{{ u.name }}</span>
                     </div>

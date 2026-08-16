@@ -306,7 +306,7 @@ function renderUnstartedByTeamHTML(unstartedByTeam, totalCount, totalPct) {
     "1": "งานตรวจสอบ 1",
     "2": "งานตรวจสอบ 2",
     "3": "งานตรวจสอบ 3",
-    "4": "งานตรวจสอบ 4 / งานตรวจสอบพิเศษ"
+    "4": "งานตรวจสอบอื่น"
   };
 
   return `
@@ -317,13 +317,14 @@ function renderUnstartedByTeamHTML(unstartedByTeam, totalCount, totalPct) {
       <div style="padding: 12px; background-color: #fdf8ff;">
         ${teamKeys.map(key => {
           const list = unstartedByTeam[key] || [];
+          const headerTitle = key === "4" ? `📌 งานตรวจสอบอื่น` : `📌 ${teamLabels[key]} (${list.length} ส่วนงาน)`;
           return `
             <div style="margin-bottom: 10px; padding: 10px; background-color: #ffffff; border: 1px solid #e9d5ff; border-radius: 6px; page-break-inside: avoid; break-inside: avoid;">
               <div style="font-weight: 800; font-size: 12pt; color: #5e327a; margin-bottom: 6px; border-bottom: 1px solid #f3e8ff; padding-bottom: 4px;">
-                📌 ${teamLabels[key]} (${list.length} ส่วนงาน)
+                ${headerTitle}
               </div>
               ${list.length === 0 ? `
-                <div style="color: #94a3b8; font-style: italic; font-size: 11pt;">- ไม่มีส่วนงาน -</div>
+                <div style="color: #94a3b8; font-style: italic; font-size: 11pt;">- ไม่มีรายการ -</div>
               ` : `
                 <ul style="margin: 0; padding-left: 20px; font-size: 11pt; color: #1e293b;">
                   ${list.map(u => `
