@@ -221,7 +221,10 @@ function parseMasterListsSchema(rawRows) {
     // 1. Col A (Index 0): Team Options for dropdown
     const colA = String(row._col0 !== undefined ? row._col0 : (row[headers[0]] || row["รายชื่อทีม"] || row["ทีม"] || "")).trim();
     if (colA && !colA.startsWith("รายชื่อ") && colA !== "ทีม") {
-      teamSet.add(colA.replace(/^ทีม\s*/, ""));
+      const cleanT = colA.replace(/^ทีม\s*/, "").trim();
+      if (cleanT && cleanT.length <= 10 && !cleanT.match(/(คณะ|กอง|ศูนย์|สถาบัน|สำนักงาน|วิทยาลัย|ส่วนงาน|ภาควิชา)/i)) {
+        teamSet.add(cleanT);
+      }
     }
 
     // 2. Col B (Index 1): CTS Cycle Options for dropdown
