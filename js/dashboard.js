@@ -60,7 +60,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
   const processedUnits = rawAuditList.map((row, idx) => {
     const deptName = row["ส่วนงาน"] || `ส่วนงาน ${idx + 1}`;
     const deptClean = String(deptName).trim().toLowerCase();
-    const fiscalYear = row["ปีงบประมาณ"] || "";
+    const fiscalYear = String(row["ปีงบประมาณ"] || row["ปี"] || row._col1 || (row._headers ? row[row._headers[1]] : "") || "").trim();
     const team = row["ทีม"] || "";
 
     // 1. Determine Latest Status by checking right-to-left

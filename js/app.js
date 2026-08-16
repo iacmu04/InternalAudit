@@ -145,9 +145,19 @@ const app = createApp({
     });
     const nonAuditReasonOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.nonAuditTypes) || []);
     const fiscalYearOptions = computed(() => {
+      const defaultYears = ["2568", "2569", "2570", "2571", "2572"];
+      const set = new Set(defaultYears);
       const list = (parsedMasterListsSchema.value && parsedMasterListsSchema.value.years) || [];
-      const set = new Set([...list, "2570", "2569"]);
-      return Array.from(set).sort((a,b) => b.localeCompare(a));
+      list.forEach(y => set.add(y));
+      if (Array.isArray(rawAuditList.value)) {
+        rawAuditList.value.forEach(row => {
+          const yr = String(row["ปีงบประมาณ"] || row["ปี"] || row._col1 || "").trim();
+          if (yr && yr.match(/^\d{4}$/)) {
+            set.add(yr);
+          }
+        });
+      }
+      return Array.from(set).sort((a,b) => a.localeCompare(b));
     });
 
     // Form department options dynamic per year (Col D for 2569, Col F for 2570, etc.)
@@ -235,7 +245,10 @@ const app = createApp({
 
       const activeYears = selectedFiscalYears.value;
       if (!activeYears.includes("ALL") && activeYears.length > 0) {
-        list = list.filter(u => activeYears.includes(String(u.fiscalYear)));
+        list = list.filter(u => {
+          const uYr = String(u.fiscalYear || (u.raw ? (u.raw["ปีงบประมาณ"] || u.raw._col1) : "") || "").trim();
+          return activeYears.includes(uYr);
+        });
       }
 
       if (selectedTeam.value !== "ALL") {
