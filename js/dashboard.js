@@ -41,6 +41,24 @@ const STATUS_PRIORITY_ORDER = [
   { phase: "1.1", sub: "วันที่มอบหมายงาน", title: "ก่อนเข้าตรวจ:มอบหมายงาน" }
 ];
 
+// Helper to safely get field value from row trying key names, column indices, and normalized keys
+function getRowDateVal(row, subKey, colIdx) {
+  if (!row) return "";
+  if (row[subKey] && String(row[subKey]).trim() !== "" && row[subKey] !== "-") return String(row[subKey]).trim();
+  if (colIdx !== undefined) {
+    if (row[`_col${colIdx}`] && String(row[`_col${colIdx}`]).trim() !== "" && row[`_col${colIdx}`] !== "-") return String(row[`_col${colIdx}`]).trim();
+    if (row[`col_${colIdx}`] && String(row[`col_${colIdx}`]).trim() !== "" && row[`col_${colIdx}`] !== "-") return String(row[`col_${colIdx}`]).trim();
+  }
+  const cleanTarget = subKey.replace(/[\s_]/g, "").toLowerCase();
+  for (const k of Object.keys(row)) {
+    if (k.replace(/[\s_]/g, "").toLowerCase() === cleanTarget) {
+      const v = row[k];
+      if (v && String(v).trim() !== "" && v !== "-") return String(v).trim();
+    }
+  }
+  return "";
+}
+
 function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, delayList = []) {
   let completedCount = 0;
 
@@ -57,11 +75,36 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     });
   }
 
-  const processedUnits = rawAuditList.map((row, idx) => {
-    const deptName = row["ส่วนงาน"] || `ส่วนงาน ${idx + 1}`;
+  // Deduplicate rawAuditList by (deptClean, fiscalYear) - if duplicates exist, merge and prioritize most complete row
+  const deduplicatedRowsMap = {};
+  rawAuditList.forEach((row, idx) => {
+    const deptName = String(row["ส่วนงาน"] || row._col0 || `ส่วนงาน ${idx + 1}`).trim();
+    const deptClean = deptName.toLowerCase();
+    const fiscalYear = String(row["ปีงบประมาณ"] || row["ปี"] || row._col1 || "2570").trim();
+    const key = `${deptClean}_${fiscalYear}`;
+
+    if (!deduplicatedRowsMap[key]) {
+      deduplicatedRowsMap[key] = { ...row, _rowIndex: row._rowIndex || idx + 2, _deptName: deptName, _fiscalYear: fiscalYear };
+    } else {
+      // Merge non-empty fields into the existing object so no entered data is lost
+      const existing = deduplicatedRowsMap[key];
+      Object.keys(row).forEach(k => {
+        if (row[k] && String(row[k]).trim() !== "" && row[k] !== "-" && (!existing[k] || existing[k] === "-" || existing[k] === "")) {
+          existing[k] = row[k];
+        }
+      });
+      // Preserve the row index of the most complete/latest record
+      if (row._rowIndex) existing._rowIndex = row._rowIndex;
+    }
+  });
+
+  const uniqueRows = Object.values(deduplicatedRowsMap);
+
+  const processedUnits = uniqueRows.map((row, idx) => {
+    const deptName = row._deptName || row["ส่วนงาน"] || `ส่วนงาน ${idx + 1}`;
     const deptClean = String(deptName).trim().toLowerCase();
-    const fiscalYear = String(row["ปีงบประมาณ"] || row["ปี"] || row._col1 || (row._headers ? row[row._headers[1]] : "") || "").trim();
-    const team = row["ทีม"] || "";
+    const fiscalYear = row._fiscalYear || String(row["ปีงบประมาณ"] || row["ปี"] || row._col1 || "2570").trim();
+    const team = String(row["ทีม"] || row._col2 || "").replace(/^ทีม\s*/, "").trim();
 
     // 1. Determine Latest Status by checking right-to-left
     let latestStatusObj = null;
@@ -70,8 +113,8 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     let isCompleted = false;
 
     for (let item of STATUS_PRIORITY_ORDER) {
-      const val = row[item.sub];
-      if (val && String(val).trim() !== "") {
+      const val = getRowDateVal(row, item.sub);
+      if (val && val !== "-") {
         latestStatusObj = item;
         latestDateVal = formatThaiDateShort(val);
         latestPhase = item.phase;
@@ -84,13 +127,13 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     }
 
     if (!latestStatusObj) {
-      latestStatusObj = { phase: "1.1", title: "ก่อนเข้าตรวจ:มอบหมายงาน" };
+      latestStatusObj = { phase: "1.1", sub: "วันที่มอบหมายงาน", title: "ก่อนเข้าตรวจ:มอบหมายงาน" };
       latestDateVal = "-";
     }
 
     // 2.3 Calculate Planned Audit Days (Col I) and Actual Audit Days (Col J = Col I + Approved Extension Days)
-    const startDateG = row["วันที่เริ่มตรวจสอบ"];
-    const endDateH = row["วันที่สิ้นสุดการตรวจสอบ"];
+    const startDateG = getRowDateVal(row, "วันที่เริ่มตรวจสอบ", 6);
+    const endDateH = getRowDateVal(row, "วันที่สิ้นสุดการตรวจสอบ", 7);
     
     const auditCalc = calculateActualAuditDays(
       startDateG,
@@ -107,15 +150,15 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     const savedActual = (row["ระยะเวลาตรวจจริง (วัน)"] !== undefined && row["ระยะเวลาตรวจจริง (วัน)"] !== "") ? parseInt(row["ระยะเวลาตรวจจริง (วัน)"]) : (row["ระยะเวลาตรวจจริง"] !== undefined && row["ระยะเวลาตรวจจริง"] !== "") ? parseInt(row["ระยะเวลาตรวจจริง"]) : NaN;
     const totalActualAuditDays = !isNaN(savedActual) ? savedActual : Math.max(plannedDays + approvedExtensionDays, 0);
 
-    // 2.4 Calculate Duration: Closed Audit (J) -> Report to President (K)
-    const dateJ = row["วันที่ปิดตรวจ"];
-    const dateK = row["วันที่เสนออธิการบดี_รายงาน"];
+    // 2.4 Calculate Duration: Closed Audit (Col K) -> Report to President (Col L)
+    const dateJ = getRowDateVal(row, "วันที่ปิดตรวจ", 10);
+    const dateK = getRowDateVal(row, "วันที่เสนออธิการบดี_รายงาน", 11);
     const aeDuration = dateDiffInDays(dateJ, dateK);
 
-    // 2.5 Calculate Duration: Closed Audit (J) -> Report to Audit Committee (N)
-    const dateN = row["วันที่เสนอ_คตส"];
+    // 2.5 Calculate Duration: Closed Audit (Col K) -> Report to Audit Committee (Col O)
+    const dateN = getRowDateVal(row, "วันที่เสนอ_คตส", 14);
     let ctsDuration = dateDiffInDays(dateJ, dateN);
-    const ctsCycle = row["ครั้งที่ประชุม_คตส"] || "";
+    const ctsCycle = row["ครั้งที่ประชุม_คตส"] || row._col16 || "";
 
     // 2.6 Warning calculation: if CTS submission is >= 50 days (or pending & today - dateJ >= 50)
     let isWarning = false;
@@ -135,7 +178,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       fiscalYear: fiscalYear,
       team: String(team),
       latestPhase: latestPhase,
-      latestSubCol: latestStatusObj ? latestStatusObj.sub : "",
+      latestSubCol: latestStatusObj ? latestStatusObj.sub : "วันที่มอบหมายงาน",
       latestStatusTitle: latestStatusObj.title,
       latestDate: latestDateVal,
       statusFormatted: `${latestStatusObj.title} (${latestDateVal})`,

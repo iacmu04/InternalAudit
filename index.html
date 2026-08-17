@@ -1290,9 +1290,14 @@
                             <td class="p-3 text-center font-semibold text-slate-700">{{ formatDateDMY(u['วันที่เสนอ_คตส']) }}</td>
                             <td class="p-3 text-center font-bold text-emerald-800">{{ formatDateDMY(u['วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์']) }}</td>
                             <td class="p-3 text-center">
-                                <button @click="openAuditModal(u); showEditManagerModal = false" class="px-3 py-1 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-2xs">
-                                    แก้ไข
-                                </button>
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button @click="openAuditModal(u); showEditManagerModal = false" class="px-2.5 py-1 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 shadow-2xs">
+                                        แก้ไข
+                                    </button>
+                                    <button v-if="currentUser.role !== 'User'" @click="deleteAuditRow(u._rowIndex, u['ส่วนงาน'])" class="px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 font-bold rounded-lg transition-all" title="ลบรายการนี้">
+                                        ลบ
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>

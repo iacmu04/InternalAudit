@@ -192,30 +192,31 @@ const app = createApp({
       return Array.from(set).sort((a,b) => a.localeCompare(b));
     });
 
-    // Form department options dynamic per year (Col D for 2569, Col F for 2570, etc.)
+    // Form department options dynamic per year (excluding already recorded depts to prevent duplicates)
     const formDepartmentOptions = computed(() => {
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
       const schema = parsedMasterListsSchema.value;
       if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear]) {
         const deptsForYear = schema.departmentsByYear[selectedYear];
         if (deptsForYear && deptsForYear.length > 0) {
-          return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
+          const currentDeptBeingEdited = editingRowIndex.value ? String(auditForm.value['ส่วนงาน'] || "").trim().toLowerCase() : null;
+          
+          const existingDeptsInYear = new Set(
+            rawAuditList.value
+              .filter(r => String(r["ปีงบประมาณ"] || r._col1 || "").trim() === String(selectedYear).trim())
+              .map(r => String(r["ส่วนงาน"] || r._col0 || "").trim().toLowerCase())
+          );
+          
+          return deptsForYear
+            .map(d => d.name)
+            .filter(name => {
+              if (currentDeptBeingEdited && name.toLowerCase() === currentDeptBeingEdited) return true;
+              return !existingDeptsInYear.has(name.toLowerCase());
+            })
+            .sort((a,b) => a.localeCompare(b, 'th'));
         }
       }
-      // Fallback to all departments across years
-      const set = new Set();
-      if (schema && schema.departmentsByYear) {
-        Object.values(schema.departmentsByYear).forEach(list => {
-          if (Array.isArray(list)) list.forEach(d => set.add(d.name));
-        });
-      }
-      if (Array.isArray(masterLists.value)) {
-        masterLists.value.forEach(item => {
-          const val = item["รายชื่อส่วนงาน"] || item["ส่วนงาน"];
-          if (val && String(val).trim() !== "") set.add(String(val).trim());
-        });
-      }
-      return Array.from(set).sort((a,b) => a.localeCompare(b, 'th'));
+      return [];
     });
 
     const departmentOptions = computed(() => formDepartmentOptions.value);
@@ -223,15 +224,13 @@ const app = createApp({
     // Form Change Handlers
     const onFiscalYearChange = () => {
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
-      const schema = parsedMasterListsSchema.value;
-      if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear]) {
-        const deptsForYear = schema.departmentsByYear[selectedYear];
-        if (deptsForYear && deptsForYear.length > 0) {
-          const deptNames = deptsForYear.map(d => d.name);
-          if (!deptNames.includes(auditForm.value['ส่วนงาน'])) {
-            auditForm.value['ส่วนงาน'] = deptNames[0] || "";
-          }
+      const availableDepts = formDepartmentOptions.value;
+      if (availableDepts.length > 0) {
+        if (!availableDepts.includes(auditForm.value['ส่วนงาน'])) {
+          auditForm.value['ส่วนงาน'] = availableDepts[0] || "";
         }
+      } else {
+        auditForm.value['ส่วนงาน'] = "";
       }
       onDepartmentChange();
     };
@@ -267,10 +266,11 @@ const app = createApp({
     const filteredUnits = computed(() => {
       let list = dashboardResult.value.units;
 
-      if (currentUser.value.role !== "Admin" && currentUser.value.role !== "Dean") {
-        const userTeam = String(currentUser.value.team);
-        const auth = String(currentUser.value.authorize);
-        if (auth !== "all") {
+      // Only restrict by team if user is a Leader with specific assigned team
+      if (currentUser.value.role === "Leader") {
+        const userTeam = String(currentUser.value.team).replace(/^ทีม\s*/, "").trim();
+        const auth = String(currentUser.value.authorize).trim();
+        if (auth !== "all" && userTeam) {
           list = list.filter(u => u.team === userTeam || auth.includes(u.team));
         }
       }
@@ -619,6 +619,11 @@ const app = createApp({
 
     // Modal Actions
     const openAuditModal = (rowToEdit = null) => {
+      if (currentUser.value.role === "User") {
+        alert("⚠️ คุณอยู่ในสิทธิ์ผู้ตรวจสอบ (User - ดูข้อมูลได้อย่างเดียว)\nไม่สามารถเพิ่มหรือแก้ไขข้อมูลการตรวจสอบได้ กรุณาเข้าสู่ระบบด้วยบัญชี Google ที่มีสิทธิ์แก้ไข");
+        return;
+      }
+
       if (rowToEdit) {
         editingRowIndex.value = rowToEdit._rowIndex;
         auditForm.value = populateAuditFormFromRow(rowToEdit, nonAuditDaysList.value);
@@ -641,6 +646,11 @@ const app = createApp({
     };
 
     const submitAuditForm = async () => {
+      if (currentUser.value.role === "User") {
+        alert("⚠️ คุณไม่มีสิทธิ์บันทึกหรือแก้ไขข้อมูล");
+        return;
+      }
+
       let deptName = auditForm.value["ส่วนงาน"];
       if (deptName === "__NEW__") {
         if (!newDepartmentInput.value.trim()) {
@@ -654,6 +664,20 @@ const app = createApp({
       if (!deptName) {
         alert("กรุณาเลือกหรือกรอกส่วนงาน");
         return;
+      }
+
+      const selectedYr = String(auditForm.value["ปีงบประมาณ"] || "2570").trim();
+
+      // Check duplicate when adding new record
+      if (!editingRowIndex.value) {
+        const isDuplicate = rawAuditList.value.some(r => 
+          String(r["ส่วนงาน"] || r._col0 || "").trim().toLowerCase() === String(deptName).trim().toLowerCase() &&
+          String(r["ปีงบประมาณ"] || r._col1 || "").trim() === selectedYr
+        );
+        if (isDuplicate) {
+          alert(`⚠️ ส่วนงาน "${deptName}" มีข้อมูลการตรวจสอบในปีงบประมาณ ${selectedYr} อยู่แล้วในระบบ\n\nไม่อนุญาตให้เพิ่มแถวซ้ำ กรุณาใช้เมนู "จัดการและแก้ไขข้อมูล" เพื่อแก้ไขข้อมูลของส่วนงานนี้`);
+          return;
+        }
       }
 
       // Normalize date values to ISO format before posting
@@ -955,10 +979,28 @@ const app = createApp({
     };
 
     const openEditManagerModal = () => {
+      if (currentUser.value.role === "User") {
+        alert("⚠️ คุณอยู่ในสิทธิ์ผู้ตรวจสอบ (User - ดูข้อมูลได้อย่างเดียว)\nไม่สามารถจัดการหรือแก้ไขข้อมูลได้ กรุณาเข้าสู่ระบบด้วยบัญชี Google ที่มีสิทธิ์แก้ไข");
+        return;
+      }
       editSearchQuery.value = "";
       editSelectedYear.value = "ALL";
       editSelectedTeam.value = "ALL";
       showEditManagerModal.value = true;
+    };
+
+    const deleteAuditRow = async (rowIndex, deptName) => {
+      if (currentUser.value.role === "User") {
+        alert("⚠️ คุณไม่มีสิทธิ์ลบข้อมูล");
+        return;
+      }
+      if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบรายการของ "${deptName}" ออกจากระบบ?`)) {
+        return;
+      }
+      const res = await API.postAction("deleteAuditEntry", { rowIndex: rowIndex });
+      if (!handleApiResponse(res)) return;
+      await loadData();
+      alert("ลบรายการเรียบร้อยแล้ว");
     };
 
     const GOOGLE_CLIENT_ID = "1032937309757-qdbtdlmrin42ah85cedoadj1l0td73ls.apps.googleusercontent.com";
@@ -1185,6 +1227,7 @@ const app = createApp({
       promptReject,
       openApprovalDrawer,
       openEditManagerModal,
+      deleteAuditRow,
       openLoginModal,
       selectUser,
       dateDiffInDays,

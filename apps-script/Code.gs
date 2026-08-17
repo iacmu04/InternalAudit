@@ -82,6 +82,8 @@ function doPost(e) {
       responseData = resubmitExtension(ss, contents.id, contents.data);
     } else if (action === "addDepartment") {
       responseData = addDepartmentToMaster(ss, contents.departmentName);
+    } else if (action === "deleteAuditEntry") {
+      responseData = deleteAuditEntry(ss, contents.rowIndex);
     } else {
       responseData = { status: "error", message: "Unknown action: " + action };
     }
@@ -184,6 +186,20 @@ function saveAuditEntry(ss, data) {
   const sheet = ss.getSheetByName("Main_Audit");
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
   
+  // Prevent duplicate rows for the same department and fiscal year
+  const existingRows = readSheetData(sheet);
+  const deptTarget = String(data["ส่วนงาน"] || "").trim().toLowerCase();
+  const yearTarget = String(data["ปีงบประมาณ"] || "").trim();
+  
+  const existingRow = existingRows.find(r => 
+    String(r["ส่วนงาน"] || "").trim().toLowerCase() === deptTarget &&
+    String(r["ปีงบประมาณ"] || "").trim() === yearTarget
+  );
+
+  if (existingRow && existingRow._rowIndex) {
+    return updateAuditEntry(ss, existingRow._rowIndex, data);
+  }
+
   const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
 
   let plannedDays = -1;
@@ -311,6 +327,17 @@ function updateAuditEntry(ss, rowIndex, data) {
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);
 
   return { status: "success", message: "แก้ไขข้อมูลใน Google Sheet เรียบร้อยแล้ว" };
+}
+
+function deleteAuditEntry(ss, rowIndex) {
+  if (!ss) ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Main_Audit");
+  const row = parseInt(rowIndex);
+  if (row >= 2 && row <= sheet.getLastRow()) {
+    sheet.deleteRow(row);
+    return { status: "success", message: "ลบรายการออกจาก Google Sheet เรียบร้อยแล้ว" };
+  }
+  return { status: "error", message: "ไม่พบตำแหน่งแถวที่ต้องการลบ" };
 }
 
 function getApprovedExtensionDaysForDept(ss, deptName) {
