@@ -677,7 +677,11 @@ const app = createApp({
       }
 
       // ═══════════════════════════════════════════════════════════
-      // Calculate duration fields and include in data to save to Google Sheet
+      // Calculate duration fields according to user specifications:
+      // 1. ระยะเวลาตรวจสอบตามแผน (Col I): วันที่เริ่ม (G) -> วันที่สิ้นสุด (H) ลบ เสาร์-อาทิตย์, วันหยุด (Thai_Holidays), วันไม่ตรวจ (Non_Audit_Days)
+      // 2. ระยะเวลาตรวจจริง (Col J): ผลลัพธ์ Col I + จำนวนวันที่ขอขยายเวลาที่ได้รับอนุมัติในชีท Delay (Col G) จับคู่ตามส่วนงาน
+      // 3. ระยะเวลาเสนอรายงาน อธิการบดี (Col M): วันที่ปิดตรวจ (K) -> วันที่เสนออธิการบดี (L)
+      // 4. ระยะเวลาเสนอรายงาน คตส. (Col P): วันที่ปิดตรวจ (K) -> วันที่เสนอ คตส. (O)
       // ═══════════════════════════════════════════════════════════
       const auditStartDate = formDataToSend["วันที่เริ่มตรวจสอบ"];
       const auditEndDate = formDataToSend["วันที่สิ้นสุดการตรวจสอบ"];
@@ -685,47 +689,64 @@ const app = createApp({
       const presidentReportDate = formDataToSend["วันที่เสนออธิการบดี_รายงาน"];
       const ctsReportDate = formDataToSend["วันที่เสนอ_คตส"];
 
-      // 1. ระยะเวลาตรวจสอบตามแผน (Col I): Business days from start to end
-      //    Minus weekends, Thai holidays, and non-audit days for this department
+      // 1. ระยะเวลาตรวจสอบตามแผน (Col I)
+      let plannedDays = 0;
       if (auditStartDate && auditEndDate) {
         const plannedCalc = calculateActualAuditDays(
           auditStartDate, auditEndDate, deptName, 
           holidaysList.value, nonAuditDaysList.value
         );
         if (plannedCalc && plannedCalc.actualDays >= 0) {
-          formDataToSend["ระยะเวลาตรวจสอบตามแผน"] = plannedCalc.actualDays;
-          console.log("📊 ระยะเวลาตรวจสอบตามแผน =", plannedCalc.actualDays, "วัน (ลบ สุดสัปดาห์:", plannedCalc.weekendDays, ", วันหยุด:", plannedCalc.holidayDays, ", วันไม่ตรวจ:", plannedCalc.nonAuditDays, ")");
+          plannedDays = plannedCalc.actualDays;
+          formDataToSend["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
+          console.log(`📊 1. ระยะเวลาตรวจสอบตามแผน (Col I) = ${plannedDays} วัน (หักเสาร์-อาทิตย์: ${plannedCalc.weekendDays}, วันหยุด: ${plannedCalc.holidayDays}, วันไม่ตรวจ: ${plannedCalc.nonAuditDays})`);
         }
       }
 
-      // 2. ระยะเวลาตรวจจริง (Col J): Same calculation as planned
-      //    Minus weekends, Thai holidays, and non-audit days for this department
+      // 2. ดึงจำนวนวันที่ขอขยายระยะเวลาที่ได้รับอนุมัติในชีท Delay (Col G) สำหรับส่วนงานนี้
+      let approvedExtensionDays = 0;
+      if (Array.isArray(delayList.value) && deptName) {
+        const deptClean = String(deptName).trim().toLowerCase();
+        delayList.value.forEach(item => {
+          const itemDept = String(item.Department || item.department || item["ส่วนงาน"] || item._col3 || "").trim().toLowerCase();
+          const deanStatus = String(item.DeanStatus || item.status || item.Status || item._col11 || "").trim();
+          const leaderStatus = String(item.LeaderStatus || item._col9 || "").trim();
+          
+          if (itemDept === deptClean && (deanStatus.includes("อนุมัติ") || deanStatus.includes("อนุมัติแล้ว") || (deanStatus === "-" && (leaderStatus.includes("อนุมัติ") || leaderStatus.includes("ผ่านพิจารณา"))))) {
+            const days = parseInt(item["Total number of days"] || item.totalDays || item["จำนวนวันรวมที่ขอขยาย"] || item._col6 || 0) || 0;
+            approvedExtensionDays += days;
+          }
+        });
+      }
+
+      // 2. ระยะเวลาตรวจจริง (Col J) = Col I + วันขอขยายเวลาที่ได้รับอนุมัติ
       if (auditStartDate && auditEndDate) {
-        const actualCalc = calculateActualAuditDays(
-          auditStartDate, auditEndDate, deptName,
-          holidaysList.value, nonAuditDaysList.value
-        );
-        if (actualCalc && actualCalc.actualDays >= 0) {
-          formDataToSend["ระยะเวลาตรวจจริง (วัน)"] = actualCalc.actualDays;
-          console.log("📊 ระยะเวลาตรวจจริง =", actualCalc.actualDays, "วัน");
-        }
+        const totalActualDays = plannedDays + approvedExtensionDays;
+        formDataToSend["ระยะเวลาตรวจจริง (วัน)"] = totalActualDays;
+        formDataToSend["ระยะเวลาตรวจจริง"] = totalActualDays;
+        formDataToSend["ระยะเวลาจริงในการตรวจสอบ"] = totalActualDays;
+        formDataToSend["ระยะเวลาจริงในการตรวจสอบ (วัน)"] = totalActualDays;
+        console.log(`📊 2. ระยะเวลาตรวจจริง (Col J) = Col I (${plannedDays}) + วันขอขยายเวลาที่อนุมัติ (${approvedExtensionDays}) = ${totalActualDays} วัน`);
       }
 
-      // 3. ระยะเวลาเสนออธิการบดี (Col M): Calendar days from close date to president report date
+      // 3. ระยะเวลาเสนออธิการบดี (Col M): ปิดตรวจ (K) -> เสนออธิการบดี (L)
       if (auditCloseDate && presidentReportDate) {
         const durPresident = dateDiffInDays(auditCloseDate, presidentReportDate);
         if (durPresident !== null && durPresident >= 0) {
           formDataToSend["ระยะเวลาเสนออธิการบดี"] = durPresident;
-          console.log("📊 ระยะเวลาเสนออธิการบดี =", durPresident, "วัน");
+          console.log(`📊 3. ระยะเวลาเสนอรายงาน อธิการบดี (Col M) = ${durPresident} วัน (ปิดตรวจ: ${auditCloseDate} -> เสนออธิการบดี: ${presidentReportDate})`);
         }
       }
 
-      // 4. ระยะเวลาเสนอ คตส. (Col P): Calendar days from close date to CTS report date
+      // 4. ระยะเวลาเสนอ คตส. (Col P): ปิดตรวจ (K) -> เสนอ คตส. (O)
       if (auditCloseDate && ctsReportDate) {
         const durCts = dateDiffInDays(auditCloseDate, ctsReportDate);
         if (durCts !== null && durCts >= 0) {
           formDataToSend["ระยะเวลาเสนอ_คตส"] = durCts;
-          console.log("📊 ระยะเวลาเสนอ_คตส =", durCts, "วัน");
+          formDataToSend["ระยะเวลาเสนอ คตส."] = durCts;
+          formDataToSend["ระยะเวลาเสนอคตส."] = durCts;
+          formDataToSend["ระยะเวลาเสนอรายงานคตส."] = durCts;
+          console.log(`📊 4. ระยะเวลาเสนอรายงาน คตส. (Col P) = ${durCts} วัน (ปิดตรวจ: ${auditCloseDate} -> เสนอ คตส.: ${ctsReportDate})`);
         }
       }
 
@@ -774,7 +795,22 @@ const app = createApp({
       showDelayModal.value = true;
     };
 
+    // Real-time calculation of requested extension days for Delay modal
+    const calculatedDelayDays = computed(() => {
+      if (!delayForm.value.startDate || !delayForm.value.endDate || !delayForm.value.department) return 0;
+      const calc = calculateActualAuditDays(
+        delayForm.value.startDate, 
+        delayForm.value.endDate, 
+        delayForm.value.department, 
+        holidaysList.value, 
+        nonAuditDaysList.value
+      );
+      return calc ? (calc.actualDays || 0) : 0;
+    });
+
     const submitDelayForm = async () => {
+      // คำนวณจำนวนวันที่ขอขยายเวลา: เริ่มขอขยาย (E) -> สิ้นสุดขอขยาย (F)
+      // ลบ เสาร์-อาทิตย์, วันหยุด (Thai_Holidays), วันไม่ตรวจ (Non_Audit_Days)
       const extensionCalc = calculateActualAuditDays(
         delayForm.value.startDate, 
         delayForm.value.endDate, 
@@ -782,7 +818,7 @@ const app = createApp({
         holidaysList.value, 
         nonAuditDaysList.value
       );
-      const totalDays = extensionCalc.actualDays || 0;
+      const totalDays = (extensionCalc && extensionCalc.actualDays !== undefined) ? extensionCalc.actualDays : 0;
 
       const payload = {
         requestorName: currentUser.value.name,
@@ -791,9 +827,13 @@ const app = createApp({
         startDate: delayForm.value.startDate,
         endDate: delayForm.value.endDate,
         totalDays: totalDays,
+        "Total number of days": totalDays,
+        "จำนวนวันรวมที่ขอขยาย": totalDays,
         reason: delayForm.value.reason,
         supervisorName: delayForm.value.supervisorName
       };
+
+      console.log(`⏱️ คำนวณจำนวนวันที่ขอขยายเวลา (ชีท Delay Col G) = ${totalDays} วัน (เริ่ม: ${delayForm.value.startDate} -> สิ้นสุด: ${delayForm.value.endDate}, หักเสาร์-อาทิตย์: ${extensionCalc.weekendDays}, วันหยุด: ${extensionCalc.holidayDays}, วันไม่ตรวจ: ${extensionCalc.nonAuditDays})`);
 
       // Always append as new row for starting new/resubmitted request process per specs
       const res = await API.postAction("submitExtension", { data: payload });
@@ -1000,6 +1040,7 @@ const app = createApp({
       newDepartmentInput,
       editingRowIndex,
       delayForm,
+      calculatedDelayDays,
       isEditingDelay,
       addNonAuditDateRow,
       removeNonAuditDateRow,

@@ -184,16 +184,41 @@ function saveAuditEntry(ss, data) {
   const sheet = ss.getSheetByName("Main_Audit");
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
   
-  // Calculate duration metrics before saving
-  const plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
   const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
-  const nonAuditDays = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
-  const actualDays = Math.max(plannedDays + approvedExtDays - nonAuditDays, 0);
 
-  const durPresident = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนออธิการบดี_รายงาน"]);
-  const durCts = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนอ_คตส"]);
+  let plannedDays = -1;
+  if (data["ระยะเวลาตรวจสอบตามแผน"] !== undefined && data["ระยะเวลาตรวจสอบตามแผน"] !== "") {
+    plannedDays = Number(data["ระยะเวลาตรวจสอบตามแผน"]);
+  } else {
+    plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
+  }
 
-  if (plannedDays > 0) {
+  let actualDays = -1;
+  if (data["ระยะเวลาตรวจจริง (วัน)"] !== undefined && data["ระยะเวลาตรวจจริง (วัน)"] !== "") {
+    actualDays = Number(data["ระยะเวลาตรวจจริง (วัน)"]);
+  } else if (data["ระยะเวลาตรวจจริง"] !== undefined && data["ระยะเวลาตรวจจริง"] !== "") {
+    actualDays = Number(data["ระยะเวลาตรวจจริง"]);
+  } else if (plannedDays >= 0) {
+    actualDays = Math.max(plannedDays + approvedExtDays, 0);
+  }
+
+  let durPresident = -1;
+  if (data["ระยะเวลาเสนออธิการบดี"] !== undefined && data["ระยะเวลาเสนออธิการบดี"] !== "") {
+    durPresident = Number(data["ระยะเวลาเสนออธิการบดี"]);
+  } else {
+    durPresident = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนออธิการบดี_รายงาน"]);
+  }
+
+  let durCts = -1;
+  if (data["ระยะเวลาเสนอ_คตส"] !== undefined && data["ระยะเวลาเสนอ_คตส"] !== "") {
+    durCts = Number(data["ระยะเวลาเสนอ_คตส"]);
+  } else if (data["ระยะเวลาเสนอ คตส."] !== undefined && data["ระยะเวลาเสนอ คตส."] !== "") {
+    durCts = Number(data["ระยะเวลาเสนอ คตส."]);
+  } else {
+    durCts = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนอ_คตส"]);
+  }
+
+  if (plannedDays >= 0) {
     data["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
   }
   if (actualDays >= 0) {
@@ -229,16 +254,41 @@ function updateAuditEntry(ss, rowIndex, data) {
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
 
-  // Calculate duration metrics before updating
-  const plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
   const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
-  const nonAuditDays = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
-  const actualDays = Math.max(plannedDays + approvedExtDays - nonAuditDays, 0);
 
-  const durPresident = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนออธิการบดี_รายงาน"]);
-  const durCts = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนอ_คตส"]);
+  let plannedDays = -1;
+  if (data["ระยะเวลาตรวจสอบตามแผน"] !== undefined && data["ระยะเวลาตรวจสอบตามแผน"] !== "") {
+    plannedDays = Number(data["ระยะเวลาตรวจสอบตามแผน"]);
+  } else {
+    plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
+  }
 
-  if (plannedDays > 0) {
+  let actualDays = -1;
+  if (data["ระยะเวลาตรวจจริง (วัน)"] !== undefined && data["ระยะเวลาตรวจจริง (วัน)"] !== "") {
+    actualDays = Number(data["ระยะเวลาตรวจจริง (วัน)"]);
+  } else if (data["ระยะเวลาตรวจจริง"] !== undefined && data["ระยะเวลาตรวจจริง"] !== "") {
+    actualDays = Number(data["ระยะเวลาตรวจจริง"]);
+  } else if (plannedDays >= 0) {
+    actualDays = Math.max(plannedDays + approvedExtDays, 0);
+  }
+
+  let durPresident = -1;
+  if (data["ระยะเวลาเสนออธิการบดี"] !== undefined && data["ระยะเวลาเสนออธิการบดี"] !== "") {
+    durPresident = Number(data["ระยะเวลาเสนออธิการบดี"]);
+  } else {
+    durPresident = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนออธิการบดี_รายงาน"]);
+  }
+
+  let durCts = -1;
+  if (data["ระยะเวลาเสนอ_คตส"] !== undefined && data["ระยะเวลาเสนอ_คตส"] !== "") {
+    durCts = Number(data["ระยะเวลาเสนอ_คตส"]);
+  } else if (data["ระยะเวลาเสนอ คตส."] !== undefined && data["ระยะเวลาเสนอ คตส."] !== "") {
+    durCts = Number(data["ระยะเวลาเสนอ คตส."]);
+  } else {
+    durCts = calculateDaysDiff(data["วันที่ปิดตรวจ"], data["วันที่เสนอ_คตส"]);
+  }
+
+  if (plannedDays >= 0) {
     data["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
   }
   if (actualDays >= 0) {

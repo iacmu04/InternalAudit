@@ -88,7 +88,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       latestDateVal = "-";
     }
 
-    // 2.3 Calculate Planned Audit Days (G to H minus weekends and holidays)
+    // 2.3 Calculate Planned Audit Days (Col I) and Actual Audit Days (Col J = Col I + Approved Extension Days)
     const startDateG = row["วันที่เริ่มตรวจสอบ"];
     const endDateH = row["วันที่สิ้นสุดการตรวจสอบ"];
     
@@ -100,9 +100,12 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       nonAuditDaysList
     );
 
-    const plannedDays = auditCalc.actualDays + auditCalc.nonAuditDays; // Planned working days before deductions
+    const savedPlanned = (row["ระยะเวลาตรวจสอบตามแผน"] !== undefined && row["ระยะเวลาตรวจสอบตามแผน"] !== "") ? parseInt(row["ระยะเวลาตรวจสอบตามแผน"]) : NaN;
+    const plannedDays = !isNaN(savedPlanned) ? savedPlanned : auditCalc.actualDays;
     const approvedExtensionDays = deptExtensionDaysMap[deptClean] || 0;
-    const totalActualAuditDays = Math.max(plannedDays + approvedExtensionDays - auditCalc.nonAuditDays, 0);
+
+    const savedActual = (row["ระยะเวลาตรวจจริง (วัน)"] !== undefined && row["ระยะเวลาตรวจจริง (วัน)"] !== "") ? parseInt(row["ระยะเวลาตรวจจริง (วัน)"]) : (row["ระยะเวลาตรวจจริง"] !== undefined && row["ระยะเวลาตรวจจริง"] !== "") ? parseInt(row["ระยะเวลาตรวจจริง"]) : NaN;
+    const totalActualAuditDays = !isNaN(savedActual) ? savedActual : Math.max(plannedDays + approvedExtensionDays, 0);
 
     // 2.4 Calculate Duration: Closed Audit (J) -> Report to President (K)
     const dateJ = row["วันที่ปิดตรวจ"];

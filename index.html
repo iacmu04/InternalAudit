@@ -1003,6 +1003,11 @@
                     </div>
                 </div>
 
+                <div v-if="delayForm.startDate && delayForm.endDate" class="p-2.5 bg-purple-50 border border-purple-200 rounded-xl text-xs flex items-center justify-between">
+                    <span class="font-bold text-purple-800">⏱️ จำนวนวันที่ขอขยาย (หักเสาร์-อาทิตย์, วันหยุด, วันไม่ตรวจ):</span>
+                    <span class="text-sm font-black text-purple-900 bg-purple-100 px-2.5 py-0.5 rounded-lg">{{ calculatedDelayDays }} วัน</span>
+                </div>
+
                 <div>
                     <label class="font-black text-slate-800 block mb-1">เหตุผลในการขอขยายระยะเวลา <span class="text-red-500">*</span></label>
                     <textarea v-model="delayForm.reason" rows="3" required placeholder="ระบุเหตุผลความจำเป็น..." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold"></textarea>
