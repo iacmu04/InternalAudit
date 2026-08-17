@@ -244,87 +244,248 @@ function generatePdfReport(options) {
     `;
   }
 
-  // Render Section 2 (Active Details Grouped by Year with Explicit Clean Pagebreaks)
-  const section2HTML = activeYears.map((yr, idx) => {
+  // Helper to chunk arrays
+  const chunkArray = (arr, size) => {
+    const res = [];
+    for (let i = 0; i < arr.length; i += size) {
+      res.push(arr.slice(i, i + size));
+    }
+    return res;
+  };
+
+  // Build Section 2 Page Blocks (Handles large completed list or large categories with repeated headers)
+  const section2PageBlocks = [];
+  activeYears.forEach(yr => {
     const stats = yearStatsMap[yr];
     const yrPct = (count) => ((count / stats.totalPlanned) * 100).toFixed(1) + "%";
 
-    return `
-      <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid; ${idx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
-        <div style="background-color: #f6ecfc; padding: 10px 14px; font-weight: 800; font-size: 13pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
-          📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)
+    const totalActiveItems = stats.completed.length + stats.closingSummary.length + stats.draftingReport.length + stats.auditing.length;
+
+    // Check if completed category itself is very large (> 16 items)
+    if (stats.completed.length > 16) {
+      const completedChunks = chunkArray(stats.completed, 16);
+      completedChunks.forEach((chunk, cIdx) => {
+        section2PageBlocks.push(`
+          <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+            <div style="background-color: #f6ecfc; padding: 10px 14px; font-weight: 800; font-size: 13pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
+              📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)${cIdx > 0 ? ' (ต่อ)' : ''}
+            </div>
+            <div style="padding: 12px; background-color: #ffffff;">
+              <div style="margin-bottom: 12px; border: 1px solid #86E3CE; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+                <div style="background-color: #86E3CE; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #0E5C4B;">
+                  2. ดำเนินการเสร็จสมบูรณ์ (${stats.completed.length} ส่วนงาน - ${yrPct(stats.completed.length)})${cIdx > 0 ? ' (ต่อ)' : ''}
+                </div>
+                <div style="padding: 10px; background-color: #EFFCF9;">
+                  ${renderCategoryListHTML(chunk)}
+                </div>
+              </div>
+              ${cIdx === completedChunks.length - 1 ? `
+                <!-- Cat 3 Detail -->
+                <div style="margin-bottom: 12px; border: 1px solid #D0E6A5; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+                  <div style="background-color: #D0E6A5; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #3D5A14;">
+                    3. ระหว่างสรุปปิดตรวจ (${stats.closingSummary.length} ส่วนงาน - ${yrPct(stats.closingSummary.length)})
+                  </div>
+                  <div style="padding: 10px; background-color: #F6FBF0;">
+                    ${renderCategoryListHTML(stats.closingSummary)}
+                  </div>
+                </div>
+                <!-- Cat 4 Detail -->
+                <div style="margin-bottom: 12px; border: 1px solid #FFDD94; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+                  <div style="background-color: #FFDD94; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #7A5200;">
+                    4. ระหว่างร่างรายงาน (${stats.draftingReport.length} ส่วนงาน - ${yrPct(stats.draftingReport.length)})
+                  </div>
+                  <div style="padding: 10px; background-color: #FFF9EC;">
+                    ${renderCategoryListHTML(stats.draftingReport)}
+                  </div>
+                </div>
+                <!-- Cat 5 Detail -->
+                <div style="margin-bottom: 12px; border: 1px solid #FA897B; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+                  <div style="background-color: #FA897B; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #9A2C1E;">
+                    5. ระหว่างเข้าตรวจ (${stats.auditing.length} ส่วนงาน - ${yrPct(stats.auditing.length)})
+                  </div>
+                  <div style="padding: 10px; background-color: #FFF0EE;">
+                    ${renderCategoryListHTML(stats.auditing)}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `);
+      });
+    } else if (totalActiveItems > 20) {
+      // Split between (Cat 2 & 3) and (Cat 4 & 5)
+      section2PageBlocks.push(`
+        <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #f6ecfc; padding: 10px 14px; font-weight: 800; font-size: 13pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
+            📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)
+          </div>
+          <div style="padding: 12px; background-color: #ffffff;">
+            <!-- Cat 2 Detail -->
+            <div style="margin-bottom: 12px; border: 1px solid #86E3CE; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+              <div style="background-color: #86E3CE; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #0E5C4B;">
+                2. ดำเนินการเสร็จสมบูรณ์ (${stats.completed.length} ส่วนงาน - ${yrPct(stats.completed.length)})
+              </div>
+              <div style="padding: 10px; background-color: #EFFCF9;">
+                ${renderCategoryListHTML(stats.completed)}
+              </div>
+            </div>
+            <!-- Cat 3 Detail -->
+            <div style="margin-bottom: 12px; border: 1px solid #D0E6A5; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+              <div style="background-color: #D0E6A5; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #3D5A14;">
+                3. ระหว่างสรุปปิดตรวจ (${stats.closingSummary.length} ส่วนงาน - ${yrPct(stats.closingSummary.length)})
+              </div>
+              <div style="padding: 10px; background-color: #F6FBF0;">
+                ${renderCategoryListHTML(stats.closingSummary)}
+              </div>
+            </div>
+          </div>
         </div>
-        <div style="padding: 12px; background-color: #ffffff;">
+      `);
 
-          <!-- Cat 2 Detail -->
-          <div style="margin-bottom: 12px; border: 1px solid #86E3CE; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-            <div style="background-color: #86E3CE; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #0E5C4B;">
-              2. ดำเนินการเสร็จสมบูรณ์ (${stats.completed.length} ส่วนงาน - ${yrPct(stats.completed.length)})
+      section2PageBlocks.push(`
+        <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #f6ecfc; padding: 10px 14px; font-weight: 800; font-size: 13pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
+            📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน) (ต่อ)
+          </div>
+          <div style="padding: 12px; background-color: #ffffff;">
+            <!-- Cat 4 Detail -->
+            <div style="margin-bottom: 12px; border: 1px solid #FFDD94; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+              <div style="background-color: #FFDD94; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #7A5200;">
+                4. ระหว่างร่างรายงาน (${stats.draftingReport.length} ส่วนงาน - ${yrPct(stats.draftingReport.length)})
+              </div>
+              <div style="padding: 10px; background-color: #FFF9EC;">
+                ${renderCategoryListHTML(stats.draftingReport)}
+              </div>
             </div>
-            <div style="padding: 10px; background-color: #EFFCF9;">
-              ${renderCategoryListHTML(stats.completed)}
+            <!-- Cat 5 Detail -->
+            <div style="margin-bottom: 12px; border: 1px solid #FA897B; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+              <div style="background-color: #FA897B; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #9A2C1E;">
+                5. ระหว่างเข้าตรวจ (${stats.auditing.length} ส่วนงาน - ${yrPct(stats.auditing.length)})
+              </div>
+              <div style="padding: 10px; background-color: #FFF0EE;">
+                ${renderCategoryListHTML(stats.auditing)}
+              </div>
             </div>
           </div>
-
-          <!-- Cat 3 Detail -->
-          <div style="margin-bottom: 12px; border: 1px solid #D0E6A5; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-            <div style="background-color: #D0E6A5; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #3D5A14;">
-              3. ระหว่างสรุปปิดตรวจ (${stats.closingSummary.length} ส่วนงาน - ${yrPct(stats.closingSummary.length)})
-            </div>
-            <div style="padding: 10px; background-color: #F6FBF0;">
-              ${renderCategoryListHTML(stats.closingSummary)}
-            </div>
-          </div>
-
-          <!-- Cat 4 Detail -->
-          <div style="margin-bottom: 12px; border: 1px solid #FFDD94; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-            <div style="background-color: #FFDD94; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #7A5200;">
-              4. ระหว่างร่างรายงาน (${stats.draftingReport.length} ส่วนงาน - ${yrPct(stats.draftingReport.length)})
-            </div>
-            <div style="padding: 10px; background-color: #FFF9EC;">
-              ${renderCategoryListHTML(stats.draftingReport)}
-            </div>
-          </div>
-
-          <!-- Cat 5 Detail -->
-          <div style="margin-bottom: 12px; border: 1px solid #FA897B; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-            <div style="background-color: #FA897B; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #9A2C1E;">
-              5. ระหว่างเข้าตรวจ (${stats.auditing.length} ส่วนงาน - ${yrPct(stats.auditing.length)})
-            </div>
-            <div style="padding: 10px; background-color: #FFF0EE;">
-              ${renderCategoryListHTML(stats.auditing)}
-            </div>
-          </div>
-
         </div>
-      </div>
-    `;
-  }).join('');
+      `);
+    } else {
+      // Normal single page for Section 2
+      section2PageBlocks.push(`
+        <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #f6ecfc; padding: 10px 14px; font-weight: 800; font-size: 13pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
+            📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)
+          </div>
+          <div style="padding: 12px; background-color: #ffffff;">
+            <!-- Cat 2 Detail -->
+            <div style="margin-bottom: 12px; border: 1px solid #86E3CE; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+              <div style="background-color: #86E3CE; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #0E5C4B;">
+                2. ดำเนินการเสร็จสมบูรณ์ (${stats.completed.length} ส่วนงาน - ${yrPct(stats.completed.length)})
+              </div>
+              <div style="padding: 10px; background-color: #EFFCF9;">
+                ${renderCategoryListHTML(stats.completed)}
+              </div>
+            </div>
 
-  // Render Section 3 (Unstarted Units Grouped by Year and Workgroup with Explicit Clean Pagebreaks)
-  const section3HTML = activeYears.map((yr, idx) => {
+            <!-- Cat 3 Detail -->
+            <div style="margin-bottom: 12px; border: 1px solid #D0E6A5; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+              <div style="background-color: #D0E6A5; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #3D5A14;">
+                3. ระหว่างสรุปปิดตรวจ (${stats.closingSummary.length} ส่วนงาน - ${yrPct(stats.closingSummary.length)})
+              </div>
+              <div style="padding: 10px; background-color: #F6FBF0;">
+                ${renderCategoryListHTML(stats.closingSummary)}
+              </div>
+            </div>
+
+            <!-- Cat 4 Detail -->
+            <div style="margin-bottom: 12px; border: 1px solid #FFDD94; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+              <div style="background-color: #FFDD94; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #7A5200;">
+                4. ระหว่างร่างรายงาน (${stats.draftingReport.length} ส่วนงาน - ${yrPct(stats.draftingReport.length)})
+              </div>
+              <div style="padding: 10px; background-color: #FFF9EC;">
+                ${renderCategoryListHTML(stats.draftingReport)}
+              </div>
+            </div>
+
+            <!-- Cat 5 Detail -->
+            <div style="margin-bottom: 12px; border: 1px solid #FA897B; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+              <div style="background-color: #FA897B; padding: 8px 12px; font-weight: 800; font-size: 12pt; color: #9A2C1E;">
+                5. ระหว่างเข้าตรวจ (${stats.auditing.length} ส่วนงาน - ${yrPct(stats.auditing.length)})
+              </div>
+              <div style="padding: 10px; background-color: #FFF0EE;">
+                ${renderCategoryListHTML(stats.auditing)}
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+  });
+
+  // Build Section 3 Page Blocks (Unstarted Units with Automatic Team Splitting & Repeated Purple Header on Continuation)
+  const section3PageBlocks = [];
+  activeYears.forEach(yr => {
     const stats = yearStatsMap[yr];
     const yrPct = (count) => ((count / stats.totalPlanned) * 100).toFixed(1) + "%";
+    const headerTitle = `📅 รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ ปีงบประมาณ พ.ศ. ${yr} (รวม ${stats.unstarted.length} ส่วนงาน - ${yrPct(stats.unstarted.length)})`;
 
-    return `
-      <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid; ${idx > 0 ? 'page-break-before: always; break-before: page;' : ''}">
-        <div style="background-color: #B889CF; color: #ffffff; padding: 10px 14px; font-weight: 800; font-size: 13pt;">
-          📅 รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ ปีงบประมาณ พ.ศ. ${yr} (รวม ${stats.unstarted.length} ส่วนงาน - ${yrPct(stats.unstarted.length)})
-        </div>
-        <div style="padding: 12px; background-color: #fdf8ff;">
-          ${renderUnstartedByTeamHTML(stats.unstartedByTeam, stats.unstarted.length, yrPct(stats.unstarted.length))}
-        </div>
-      </div>
-    `;
-  }).join('');
+    const t1 = stats.unstartedByTeam["1"] || [];
+    const t2 = stats.unstartedByTeam["2"] || [];
+    const t3 = stats.unstartedByTeam["3"] || [];
+    const t4 = stats.unstartedByTeam["4"] || [];
+    const totalCount = t1.length + t2.length + t3.length + t4.length;
 
-  // Theme color palette: primary theme #B889CF, headers #5e327a
-  const htmlContent = `
-    <div style="font-family: 'Sarabun', sans-serif; color: #1e293b; line-height: 1.4; font-size: 11pt; background: #ffffff; width: 100%; box-sizing: border-box;">
-      
-      <!-- ================= PAGE 1: หน้าสรุปภาพรวม ================= -->
-      <div style="padding: 16px 20px; page-break-after: always; break-after: page; box-sizing: border-box;">
-        
+    if (totalCount > 20) {
+      // Split into 2 clean pages:
+      // Page 1: Team 1 and Team 2
+      section3PageBlocks.push(`
+        <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 10px 14px; font-weight: 800; font-size: 13pt;">
+            ${headerTitle}
+          </div>
+          <div style="padding: 12px; background-color: #fdf8ff;">
+            ${renderTeamsListHTML({ "1": t1, "2": t2 })}
+          </div>
+        </div>
+      `);
+
+      // Page 2: Team 3 and Team 4 (with repeated purple header + (ต่อ))
+      section3PageBlocks.push(`
+        <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 10px 14px; font-weight: 800; font-size: 13pt;">
+            ${headerTitle} (ต่อ)
+          </div>
+          <div style="padding: 12px; background-color: #fdf8ff;">
+            ${renderTeamsListHTML({ "3": t3, "4": t4 })}
+          </div>
+        </div>
+      `);
+    } else {
+      // Fits in single page
+      section3PageBlocks.push(`
+        <div style="margin-bottom: 20px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 10px 14px; font-weight: 800; font-size: 13pt;">
+            ${headerTitle}
+          </div>
+          <div style="padding: 12px; background-color: #fdf8ff;">
+            ${renderTeamsListHTML({ "1": t1, "2": t2, "3": t3, "4": t4 })}
+          </div>
+        </div>
+      `);
+    }
+  });
+
+  // Calculate Total Exact Pages in Document
+  const totalExactPages = 1 + section2PageBlocks.length + section3PageBlocks.length;
+  let pageCounter = 1;
+
+  // Build Full HTML Document with exact page numbers
+  let pagesHTML = '';
+
+  // Page 1: Executive Summary
+  pagesHTML += `
+    <div style="padding: 16px 20px; page-break-after: always; break-after: page; box-sizing: border-box; min-height: 270mm; display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
         <!-- Header Title -->
         <div style="text-align: center; border-bottom: 3px solid #B889CF; padding-bottom: 10px; margin-bottom: 16px;">
           <h1 style="margin: 0; font-size: 18pt; font-weight: 800; color: #5e327a; line-height: 1.3; word-wrap: break-word;">
@@ -333,7 +494,6 @@ function generatePdfReport(options) {
           <div style="margin: 4px 0 0 0; font-size: 12pt; font-weight: 600; color: #6b3e80;">
             สำนักงานการตรวจสอบภายใน | ข้อมูล ณ วันที่ ${todayStr}
           </div>
-          <!-- Line 3 Filter Details: Fiscal Year Only -->
           <div style="margin: 6px 0 0 0; font-size: 12pt; font-weight: 700; color: #5e327a; background-color: #f6ecfc; display: inline-block; padding: 4px 18px; border-radius: 8px; border: 1px solid #B889CF;">
             ${yearText}
           </div>
@@ -351,42 +511,54 @@ function generatePdfReport(options) {
 
         <!-- Executive Summary Table -->
         ${tableHeaderHTML ? `<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 10.5pt; margin-bottom: 20px; table-layout: fixed;"><thead>${tableHeaderHTML}</thead><tbody>${tableBodyHTML}</tbody></table>` : ''}
-
-        <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: right; font-size: 10pt; color: #64748b;">
-          หน้า 1/3 (หน้าสรุปภาพรวม)
-        </div>
       </div>
 
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 8px; text-align: right; font-size: 10pt; color: #64748b;">
+        หน้า ${pageCounter++}/${totalExactPages} (หน้าสรุปภาพรวม)
+      </div>
+    </div>
+  `;
 
-      <!-- ================= PAGE 2: หน้าสถานะที่ดำเนินการและอยู่ระหว่างดำเนินการ ================= -->
-      <div style="padding: 16px 20px; page-break-after: always; break-after: page; box-sizing: border-box;">
-        
-        <h2 style="font-size: 16pt; font-weight: 800; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF;">
-          ส่วนที่ 2: รายละเอียดสถานะงานตรวจสอบที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์
-        </h2>
+  // Section 2 Pages
+  section2PageBlocks.forEach((blockHTML, bIdx) => {
+    pagesHTML += `
+      <div style="padding: 16px 20px; page-break-after: always; break-after: page; box-sizing: border-box; min-height: 270mm; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h2 style="font-size: 16pt; font-weight: 800; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF;">
+            ส่วนที่ 2: รายละเอียดสถานะงานตรวจสอบที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์${bIdx > 0 ? ' (ต่อ)' : ''}
+          </h2>
+          ${blockHTML}
+        </div>
 
-        ${section2HTML}
-
-        <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: right; font-size: 10pt; color: #64748b;">
-          หน้า 2/3 (รายชื่อส่วนงานที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์)
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 8px; text-align: right; font-size: 10pt; color: #64748b;">
+          หน้า ${pageCounter++}/${totalExactPages} (รายชื่อส่วนงานที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์${bIdx > 0 ? ' - ต่อ' : ''})
         </div>
       </div>
+    `;
+  });
 
+  // Section 3 Pages
+  section3PageBlocks.forEach((blockHTML, bIdx) => {
+    const isLast = (pageCounter === totalExactPages);
+    pagesHTML += `
+      <div style="padding: 16px 20px; ${!isLast ? 'page-break-after: always; break-after: page;' : ''} box-sizing: border-box; min-height: 270mm; display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <h2 style="font-size: 16pt; font-weight: 800; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF;">
+            ส่วนที่ 3: รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ (แยกตามงานตรวจสอบ)${bIdx > 0 ? ' (ต่อ)' : ''}
+          </h2>
+          ${blockHTML}
+        </div>
 
-      <!-- ================= PAGE 3: ส่วนงานที่ยังไม่ได้ดำเนินการ (ALWAYS NEW PAGE) ================= -->
-      <div style="padding: 16px 20px; box-sizing: border-box;">
-        
-        <h2 style="font-size: 16pt; font-weight: 800; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF;">
-          ส่วนที่ 3: รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ (แยกตามงานตรวจสอบ)
-        </h2>
-
-        ${section3HTML}
-
-        <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: right; font-size: 10pt; color: #64748b;">
-          หน้า 3/3 (ส่วนงานที่ยังไม่ได้ดำเนินการ)
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 8px; text-align: right; font-size: 10pt; color: #64748b;">
+          หน้า ${pageCounter++}/${totalExactPages} (ส่วนงานที่ยังไม่ได้ดำเนินการ${bIdx > 0 ? ' - ต่อ' : ''})
         </div>
       </div>
+    `;
+  });
 
+  const htmlContent = `
+    <div style="font-family: 'Sarabun', sans-serif; color: #1e293b; line-height: 1.4; font-size: 11pt; background: #ffffff; width: 100%; box-sizing: border-box;">
+      ${pagesHTML}
     </div>
   `;
 
@@ -395,14 +567,14 @@ function generatePdfReport(options) {
   element.innerHTML = htmlContent;
   document.body.appendChild(element);
 
-  // Configure html2pdf options (Landscape for Page 1 Multi-Year or Portrait for Single-Year)
+  // Configure html2pdf options
   const opt = {
-    margin: [8, 8, 8, 8],
+    margin: [6, 6, 6, 6],
     filename: `Internal_Audit_Report_${new Date().toISOString().slice(0,10)}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
     jsPDF: { unit: 'mm', format: 'a4', orientation: isMultiYear ? 'landscape' : 'portrait' },
-    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    pagebreak: { mode: ['css', 'legacy'] }
   };
 
   if (window.html2pdf) {
@@ -441,8 +613,7 @@ function renderCategoryListHTML(items) {
   `;
 }
 
-function renderUnstartedByTeamHTML(unstartedByTeam, totalCount, totalPct) {
-  const teamKeys = ["1", "2", "3", "4"];
+function renderTeamsListHTML(teamsMap) {
   const teamLabels = {
     "1": "งานตรวจสอบ 1",
     "2": "งานตรวจสอบ 2",
@@ -450,32 +621,26 @@ function renderUnstartedByTeamHTML(unstartedByTeam, totalCount, totalPct) {
     "4": "งานตรวจสอบอื่น"
   };
 
-  return `
-    <div style="margin-bottom: 14px; border: 1px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-      <div style="padding: 10px; background-color: #ffffff;">
-        ${teamKeys.map(key => {
-          const list = unstartedByTeam[key] || [];
-          const headerTitle = key === "4" ? `📌 งานตรวจสอบอื่น` : `📌 ${teamLabels[key]} (${list.length} ส่วนงาน)`;
-          return `
-            <div style="margin-bottom: 8px; padding: 8px 10px; background-color: #fdf8ff; border: 1px solid #e9d5ff; border-radius: 6px; page-break-inside: avoid; break-inside: avoid;">
-              <div style="font-weight: 800; font-size: 11.5pt; color: #5e327a; margin-bottom: 4px; border-bottom: 1px solid #f3e8ff; padding-bottom: 3px;">
-                ${headerTitle}
-              </div>
-              ${list.length === 0 ? `
-                <div style="color: #94a3b8; font-style: italic; font-size: 10.5pt;">- ไม่มีรายการ -</div>
-              ` : `
-                <ul style="margin: 0; padding-left: 18px; font-size: 10.5pt; color: #1e293b;">
-                  ${list.map(u => `
-                    <li style="margin-bottom: 3px; page-break-inside: avoid; break-inside: avoid;">
-                      <strong style="color: #5e327a; font-size: 12pt; font-weight: 800;">${u.name}</strong>
-                    </li>
-                  `).join('')}
-                </ul>
-              `}
-            </div>
-          `;
-        }).join('')}
+  return Object.keys(teamsMap).map(key => {
+    const list = teamsMap[key] || [];
+    const headerTitle = key === "4" ? `📌 งานตรวจสอบอื่น` : `📌 ${teamLabels[key]} (${list.length} ส่วนงาน)`;
+    return `
+      <div style="margin-bottom: 10px; padding: 8px 10px; background-color: #fdf8ff; border: 1px solid #e9d5ff; border-radius: 6px; page-break-inside: avoid; break-inside: avoid;">
+        <div style="font-weight: 800; font-size: 11.5pt; color: #5e327a; margin-bottom: 4px; border-bottom: 1px solid #f3e8ff; padding-bottom: 3px;">
+          ${headerTitle}
+        </div>
+        ${list.length === 0 ? `
+          <div style="color: #94a3b8; font-style: italic; font-size: 10.5pt;">- ไม่มีรายการ -</div>
+        ` : `
+          <ul style="margin: 0; padding-left: 18px; font-size: 10.5pt; color: #1e293b;">
+            ${list.map(u => `
+              <li style="margin-bottom: 3px; page-break-inside: avoid; break-inside: avoid;">
+                <strong style="color: #5e327a; font-size: 12pt; font-weight: 800;">${u.name}</strong>
+              </li>
+            `).join('')}
+          </ul>
+        `}
       </div>
-    </div>
-  `;
+    `;
+  }).join('');
 }
