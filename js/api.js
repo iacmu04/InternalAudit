@@ -17,13 +17,18 @@ const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxbS3-yGUYPS1Qk
 })();
 
 function getStoredApiUrl() {
+  const stored = localStorage.getItem("APPS_SCRIPT_URL");
+  if (stored && stored.includes("/macros/s/") && stored.endsWith("/exec")) {
+    return stored.trim();
+  }
   return DEFAULT_API_URL;
 }
 
 function setStoredApiUrl(url) {
-  // URL is now hardcoded - settings UI updates are informational only
-  if (url && url.trim().endsWith("/exec") && url.trim().length >= 80) {
+  if (url && url.includes("/macros/s/") && url.trim().endsWith("/exec")) {
     localStorage.setItem("APPS_SCRIPT_URL", url.trim());
+  } else {
+    localStorage.removeItem("APPS_SCRIPT_URL");
   }
 }
 
