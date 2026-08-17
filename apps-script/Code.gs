@@ -75,7 +75,7 @@ function doPost(e) {
     } else if (action === "submitExtension") {
       responseData = submitExtension(ss, contents.data);
     } else if (action === "processApproval") {
-      responseData = processApproval(ss, contents.id, contents.status, contents.comment, contents.userEmail, contents.userRole);
+      responseData = processApproval(ss, contents.id, contents.status, contents.comment, contents.userEmail, contents.userRole, contents.approvedDays);
     } else if (action === "cancelExtension") {
       responseData = cancelExtension(ss, contents.id, contents.userEmail);
     } else if (action === "resubmitExtension") {
@@ -385,9 +385,10 @@ function submitExtension(ss, data) {
   const nowStr = formatDate(new Date());
   
   // Columns A-N schema:
-  // A: Timestamp, B: Requestor, C: Email, D: Department, E: Start Date, F: End Date,
-  // G: Total number of days, H: Reason, I: Leader, J: LeaderStatus, K: LeaderDate,
-  // L: DeanStatus, M: DeanDate, N: Remarks
+  // A: Timestamp (1), B: Requestor (2), C: Email (3), D: Department (4), E: Start Date (5), F: End Date (6),
+  // G: Total number of days (7) -> Initially blank (""), calculated and saved ONLY when Dean approves
+  // H: Reason (8), I: Leader (9), J: LeaderStatus (10), K: LeaderDate (11),
+  // L: DeanStatus (12), M: DeanDate (13), N: Remarks (14)
   const newRow = [
     nowStr,
     data.requestorName || "",
@@ -395,7 +396,7 @@ function submitExtension(ss, data) {
     data.department || "",
     data.startDate || "",
     data.endDate || "",
-    data.totalDays || 0,
+    "", // Col G: Leave empty on submit, only filled when Dean approves
     data.reason || "",
     data.supervisorName || "",
     "รอพิจารณา",
@@ -409,7 +410,7 @@ function submitExtension(ss, data) {
   return { status: "success", message: "ส่งคำขอขยายเวลาลง Google Sheet เรียบร้อยแล้ว" };
 }
 
-function processApproval(ss, id, status, comment, userEmail, userRole) {
+function processApproval(ss, id, status, comment, userEmail, userRole, approvedDays) {
   if (!ss) ss = getSpreadsheet();
   const sheet = ss.getSheetByName("Delay");
   const values = sheet.getDataRange().getValues();
@@ -439,18 +440,30 @@ function processApproval(ss, id, status, comment, userEmail, userRole) {
     } else if (status === "rejected") {
       sheet.getRange(targetRow, 10).setValue("ตีกลับ");      // Col J: LeaderStatus
       sheet.getRange(targetRow, 11).setValue(nowStr);       // Col K: LeaderDate
+      sheet.getRange(targetRow, 12).setValue("-");          // Col L: DeanStatus
       actionResult = "ตีกลับคำขอ";
     }
   } 
   
-  if (userRole === "Dean" || (userRole === "Admin" && actionResult === "")) {
+  if (userRole === "Dean" || (userRole === "Admin" && (status === "approved" || status === "rejected") && (sheet.getRange(targetRow, 12).getValue() === "รออนุมัติ" || userRole === "Dean"))) {
     if (status === "approved") {
       sheet.getRange(targetRow, 12).setValue("อนุมัติ");     // Col L: DeanStatus
       sheet.getRange(targetRow, 13).setValue(nowStr);       // Col M: DeanDate
-      actionResult = "อนุมัติเรียบร้อย";
+      
+      // Calculate and save the approved days into Col G
+      let daysVal = (approvedDays !== undefined && approvedDays !== null && !isNaN(approvedDays) && approvedDays !== "") ? Number(approvedDays) : null;
+      if (daysVal === null) {
+        const startDateStr = values[targetRow - 1][4]; // Col E: Start Date
+        const endDateStr = values[targetRow - 1][5];   // Col F: End Date
+        const dept = values[targetRow - 1][3];         // Col D: Department
+        daysVal = calculateApprovedExtensionDays(ss, startDateStr, endDateStr, dept);
+      }
+      sheet.getRange(targetRow, 7).setValue(daysVal);       // Col G: Total number of days
+      actionResult = `อนุมัติเรียบร้อย (บันทึก ${daysVal} วันลงคอลัมน์ G)`;
     } else if (status === "rejected") {
       sheet.getRange(targetRow, 12).setValue("ไม่อนุมัติ");  // Col L: DeanStatus
       sheet.getRange(targetRow, 13).setValue(nowStr);       // Col M: DeanDate
+      sheet.getRange(targetRow, 7).setValue("");            // Col G: Clear if rejected
       actionResult = "ไม่อนุมัติ";
     }
   }
@@ -462,6 +475,66 @@ function processApproval(ss, id, status, comment, userEmail, userRole) {
   }
 
   return { status: "success", message: `ดำเนินการ ${actionResult} ใน Google Sheet เรียบร้อยแล้ว` };
+}
+
+function calculateApprovedExtensionDays(ss, startDateStr, endDateStr, deptName) {
+  if (!startDateStr || !endDateStr) return 0;
+  const start = new Date(startDateStr);
+  const end = new Date(endDateStr);
+  if (isNaN(start) || isNaN(end) || start > end) return 0;
+
+  // Load holidays
+  const holidaysSheet = ss.getSheetByName("Thai_Holidays") || ss.getSheetByName("Holidays");
+  const holidaySet = new Set();
+  if (holidaysSheet && holidaysSheet.getLastRow() >= 2) {
+    const hVals = holidaysSheet.getRange(2, 1, holidaysSheet.getLastRow() - 1, 1).getValues();
+    hVals.forEach(r => {
+      if (r[0]) {
+        const d = new Date(r[0]);
+        if (!isNaN(d)) {
+          holidaySet.add(formatDate(d));
+        }
+      }
+    });
+  }
+
+  // Load non-audit days for dept
+  const nonAuditSheet = ss.getSheetByName("Non_Audit_Days");
+  const nonAuditSet = new Set();
+  if (nonAuditSheet && nonAuditSheet.getLastRow() >= 2) {
+    const nVals = nonAuditSheet.getRange(2, 1, nonAuditSheet.getLastRow() - 1, 3).getValues();
+    const deptClean = String(deptName || "").trim().toLowerCase();
+    nVals.forEach(r => {
+      const nDate = r[0];
+      const nDept = String(r[2] || "").trim().toLowerCase();
+      if (nDept === deptClean || nDept === "ทั้งหมด" || !nDept) {
+        if (nDate) {
+          const d = new Date(nDate);
+          if (!isNaN(d)) {
+            nonAuditSet.add(formatDate(d));
+          }
+        }
+      }
+    });
+  }
+
+  let count = 0;
+  let curr = new Date(start);
+  curr.setHours(0,0,0,0);
+  const endLimit = new Date(end);
+  endLimit.setHours(0,0,0,0);
+
+  while (curr <= endLimit) {
+    const dayOfWeek = curr.getDay(); // 0 = Sun, 6 = Sat
+    const dateStr = formatDate(curr);
+
+    if (dayOfWeek !== 0 && dayOfWeek !== 6 && !holidaySet.has(dateStr) && !nonAuditSet.has(dateStr)) {
+      count++;
+    }
+    curr.setDate(curr.getDate() + 1);
+  }
+
+  return count;
 }
 
 function cancelExtension(ss, rowIndex) {

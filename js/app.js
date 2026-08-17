@@ -886,10 +886,33 @@ const app = createApp({
     };
 
     const processApproval = async (rowIndex, actionStatus) => {
+      let approvedDays = "";
+      const item = delayList.value.find(d => d._rowIndex === rowIndex);
+      
+      if (actionStatus === "approved" && (currentUser.value.role === "Dean" || currentUser.value.role === "Admin")) {
+        if (item) {
+          const fields = getDelayFields(item);
+          const sDate = fields.startDate || item["Start Date"] || item.startDate || item._col4 || item.col_4;
+          const eDate = fields.endDate || item["End Date"] || item.endDate || item._col5 || item.col_5;
+          const dept = fields.department;
+          
+          const calc = calculateActualAuditDays(
+            sDate,
+            eDate,
+            dept,
+            holidaysList.value,
+            nonAuditDaysList.value
+          );
+          approvedDays = (calc && calc.actualDays !== undefined) ? calc.actualDays : 0;
+          console.log(`⏱️ ผอ. อนุมัติคำขอแถวที่ ${rowIndex} (${dept}) -> คำนวณบันทึกลง Col G = ${approvedDays} วัน (เริ่ม: ${sDate} -> สิ้นสุด: ${eDate})`);
+        }
+      }
+
       const res = await API.postAction("processApproval", {
         id: rowIndex,
         status: actionStatus,
         comment: "",
+        approvedDays: approvedDays,
         userEmail: currentUser.value.email,
         userRole: currentUser.value.role
       });
@@ -905,6 +928,7 @@ const app = createApp({
           id: rowIndex,
           status: "rejected",
           comment: reason,
+          approvedDays: "",
           userEmail: currentUser.value.email,
           userRole: currentUser.value.role
         });
