@@ -6,14 +6,25 @@ const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
 
 const app = createApp({
   setup() {
-    // Current User & Auth State (Default to Admin user for demo)
-    const currentUser = ref({
-      email: "amornrath.f@gmail.com",
-      name: "Pui",
-      role: "Admin",
-      team: "ทุกทีม",
-      authorize: "all"
-    });
+    // Current User & Auth State (Persisted in localStorage)
+    const getStoredUser = () => {
+      try {
+        const saved = localStorage.getItem("CURRENT_USER");
+        if (saved) {
+          const u = JSON.parse(saved);
+          if (u && u.email) return u;
+        }
+      } catch (e) {}
+      return {
+        email: "amornrath.f@gmail.com",
+        name: "Pui",
+        role: "Admin",
+        team: "ทุกทีม",
+        authorize: "all"
+      };
+    };
+
+    const currentUser = ref(getStoredUser());
 
     // System Datasets
     const rawAuditList = ref([]);
@@ -130,15 +141,16 @@ const app = createApp({
             console.log("✅ loadData: masterLists[0] _col3 =", r0._col3, "| _col5 =", r0._col5);
           }
 
-          if (userList.value.length > 0 && !currentUser.value.email) {
-            const adminUser = userList.value.find(u => (u.Role || "").toLowerCase() === "admin") || userList.value[0];
-            if (adminUser && adminUser.Email) {
+          // Sync current user with latest info from Users sheet
+          if (userList.value.length > 0 && currentUser.value.email) {
+            const matched = userList.value.find(u => (u.Email || "").toLowerCase().trim() === currentUser.value.email.toLowerCase().trim());
+            if (matched) {
               currentUser.value = {
-                email: adminUser.Email,
-                name: adminUser.Name || adminUser.Email,
-                role: adminUser.Role || "Admin",
-                team: adminUser.Team || "ทุกทีม",
-                authorize: adminUser.Authorize || "all"
+                email: matched.Email,
+                name: matched.Name || matched.Email,
+                role: matched.Role || "User",
+                team: matched.Team || "ทุกทีม",
+                authorize: matched.Authorize || "all"
               };
             }
           }
@@ -961,6 +973,10 @@ const app = createApp({
         team: u.Team || "",
         authorize: u.Authorize || ""
       };
+      try {
+        localStorage.setItem("CURRENT_USER", JSON.stringify(currentUser.value));
+        console.log("👤 Switched user to:", currentUser.value.name, `(${currentUser.value.role})`);
+      } catch (e) {}
       showLoginModal.value = false;
     };
 

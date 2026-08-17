@@ -3,19 +3,29 @@
  */
 
 function getDelayStatus(item) {
-  if (!item) return "";
+  if (!item) return "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)";
   
+  // 1. Direct field checks
   const leaderStatus = String(item.LeaderStatus || item.leaderStatus || item["สถานะหัวหน้างาน"] || item._col9 || item.col_9 || "").trim();
   const deanStatus = String(item.DeanStatus || item.deanStatus || item["สถานะผู้อำนวยการ"] || item._col11 || item.col_11 || "").trim();
 
   if (deanStatus === "อนุมัติ" || deanStatus === "อนุมัติแล้ว") return "อนุมัติแล้ว";
   if (deanStatus === "ไม่อนุมัติ") return "ไม่อนุมัติ";
-  if (leaderStatus === "ตีกลับ") return "ตีกลับ";
-  if (leaderStatus === "ขอยกเลิก") return "ขอยกเลิก";
-  if (deanStatus === "รออนุมัติ" || leaderStatus === "ผ่านพิจารณา") return "รออนุมัติ (ค้างอยู่ที่ผู้อำนวยการ)";
-  if (leaderStatus === "รอพิจารณา" || !leaderStatus) return "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)";
+  if (leaderStatus === "ตีกลับ" || deanStatus === "ตีกลับ") return "ตีกลับ";
+  if (leaderStatus === "ขอยกเลิก" || deanStatus === "ขอยกเลิก") return "ขอยกเลิก";
+  if (deanStatus === "รออนุมัติ" || deanStatus.includes("รออนุมัติ") || leaderStatus === "ผ่านพิจารณา" || leaderStatus.includes("รออนุมัติ")) return "รออนุมัติ (ค้างอยู่ที่ผู้อำนวยการ)";
+  if (leaderStatus === "รอพิจารณา" || leaderStatus.includes("รอพิจารณา")) return "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)";
 
-  return deanStatus || leaderStatus || "รอพิจารณา";
+  // 2. Scan ALL values in the row to find any status text (handles shifted columns gracefully)
+  const allValues = Object.values(item).map(v => String(v || "").trim());
+  if (allValues.some(v => v === "อนุมัติ" || v === "อนุมัติแล้ว")) return "อนุมัติแล้ว";
+  if (allValues.some(v => v === "ไม่อนุมัติ")) return "ไม่อนุมัติ";
+  if (allValues.some(v => v.includes("รออนุมัติ") || v === "ผ่านพิจารณา")) return "รออนุมัติ (ค้างอยู่ที่ผู้อำนวยการ)";
+  if (allValues.some(v => v.includes("รอพิจารณา"))) return "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)";
+  if (allValues.some(v => v === "ตีกลับ")) return "ตีกลับ";
+  if (allValues.some(v => v === "ขอยกเลิก")) return "ขอยกเลิก";
+
+  return "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)";
 }
 
 function getDelayFields(item) {
@@ -34,7 +44,7 @@ function getDelayFields(item) {
       deanStatus: "-",
       deanDate: "",
       remarks: "",
-      status: "รอพิจารณา" 
+      status: "รอพิจารณา (ค้างอยู่ที่หัวหน้างาน)" 
     };
   }
 
@@ -53,6 +63,16 @@ function getDelayFields(item) {
   let remarks = item.Remarks || item.remarks || item["หมายเหตุ"] || item._col13 || item.col_13 || "";
   let status = getDelayStatus(item);
 
+  // If supervisor text contains status text (due to shifted columns in historical rows), clean it
+  if (String(supervisor).includes("รออนุมัติ") || String(supervisor).includes("รอพิจารณา") || String(supervisor).includes("ผ่านพิจารณา")) {
+    if (reason && (reason === "Pui" || reason.startsWith("Team") || reason.startsWith("ทีม"))) {
+      supervisor = reason;
+      reason = "";
+    } else {
+      supervisor = "หัวหน้างาน";
+    }
+  }
+
   return {
     department: department || "ไม่ระบุส่วนงาน",
     requestor: requestor || "ไม่ระบุผู้ขอ",
@@ -67,7 +87,7 @@ function getDelayFields(item) {
     deanStatus: deanStatus,
     deanDate: deanDate,
     remarks: remarks,
-    status: status || "รอพิจารณา"
+    status: status
   };
 }
 
@@ -101,12 +121,11 @@ function countPendingRequests(delayList) {
 
   if (Array.isArray(delayList)) {
     delayList.forEach(item => {
-      const fields = getDelayFields(item);
-      const status = fields.status;
+      const status = getDelayStatus(item);
 
-      if (status.includes('รอพิจารณา') || fields.leaderStatus === 'รอพิจารณา') {
+      if (status.includes('รอพิจารณา')) {
         supervisorCount++;
-      } else if (status.includes('รออนุมัติ') || fields.deanStatus === 'รออนุมัติ') {
+      } else if (status.includes('รออนุมัติ')) {
         directorCount++;
       }
     });
