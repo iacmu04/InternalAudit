@@ -486,11 +486,26 @@ function processApproval(ss, id, status, comment, userEmail, userRole, approvedD
         daysVal = calculateApprovedExtensionDays(ss, startDateStr, endDateStr, dept);
       }
       sheet.getRange(targetRow, 7).setValue(daysVal);       // Col G: Total number of days
-      actionResult = `อนุมัติเรียบร้อย (บันทึก ${daysVal} วันลงคอลัมน์ G)`;
+      
+      // Auto-update Main_Audit Col J (ระยะเวลาตรวจจริง) = Col I + Approved Extension Days
+      try {
+        const dept = values[targetRow - 1][3];
+        updateMainAuditActualDaysForDept(ss, dept);
+      } catch (syncErr) {
+        console.warn("Sync Main_Audit Col J error:", syncErr);
+      }
+
+      actionResult = `อนุมัติเรียบร้อย (บันทึก ${daysVal} วันลงคอลัมน์ G และอัปเดต Main_Audit คอลัมน์ J อัตโนมัติ)`;
     } else if (status === "rejected") {
       sheet.getRange(targetRow, 12).setValue("ไม่อนุมัติ");  // Col L: DeanStatus
       sheet.getRange(targetRow, 13).setValue(nowStr);       // Col M: DeanDate
       sheet.getRange(targetRow, 7).setValue("");            // Col G: Clear if rejected
+      
+      try {
+        const dept = values[targetRow - 1][3];
+        updateMainAuditActualDaysForDept(ss, dept);
+      } catch (syncErr) {}
+
       actionResult = "ไม่อนุมัติ";
     }
   }
@@ -502,6 +517,27 @@ function processApproval(ss, id, status, comment, userEmail, userRole, approvedD
   }
 
   return { status: "success", message: `ดำเนินการ ${actionResult} ใน Google Sheet เรียบร้อยแล้ว` };
+}
+
+function updateMainAuditActualDaysForDept(ss, deptName) {
+  if (!ss) ss = getSpreadsheet();
+  const mainSheet = ss.getSheetByName("Main_Audit");
+  if (!mainSheet) return;
+
+  const mainValues = mainSheet.getDataRange().getValues();
+  if (mainValues.length < 2) return;
+
+  const deptClean = String(deptName || "").trim().toLowerCase();
+  const approvedExtDays = getApprovedExtensionDaysForDept(ss, deptName);
+
+  for (let i = 1; i < mainValues.length; i++) {
+    const rowDept = String(mainValues[i][0] || "").trim().toLowerCase(); // Col A: ส่วนงาน
+    if (rowDept === deptClean) {
+      const plannedDays = parseInt(mainValues[i][8]) || 0; // Col I: ระยะเวลาตรวจสอบตามแผน
+      const totalActual = plannedDays + approvedExtDays;
+      mainSheet.getRange(i + 1, 10).setValue(totalActual); // Col J: ระยะเวลาตรวจจริง (วัน)
+    }
+  }
 }
 
 function calculateApprovedExtensionDays(ss, startDateStr, endDateStr, deptName) {
