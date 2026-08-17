@@ -818,16 +818,41 @@ const app = createApp({
       alert(res.message || "บันทึกข้อมูลเรียบร้อยแล้ว");
     };
 
+    // Delay Form Department Options filtered by selected fiscal year in delayForm
+    const delayDepartmentOptions = computed(() => {
+      const selectedYear = delayForm.value.fiscalYear || "2570";
+      const schema = parsedMasterListsSchema.value;
+      if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear]) {
+        const deptsForYear = schema.departmentsByYear[selectedYear];
+        if (deptsForYear && deptsForYear.length > 0) {
+          return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
+        }
+      }
+      return [];
+    });
+
+    const onDelayFiscalYearChange = () => {
+      const available = delayDepartmentOptions.value;
+      if (available.length > 0) {
+        delayForm.value.department = available[0];
+      } else {
+        delayForm.value.department = "";
+      }
+    };
+
     const openDelayModal = () => {
       isEditingDelay.value = false;
       editingDelayIndex.value = null;
+      const currentYr = selectedFiscalYears.value.find(y => y !== "ALL") || "2570";
       delayForm.value = {
-        department: departmentOptions.value[0] || "",
+        fiscalYear: currentYr,
+        department: "",
         startDate: "",
         endDate: "",
         reason: "",
         supervisorName: supervisorOptions.value[0] ? supervisorOptions.value[0].name : ""
       };
+      onDelayFiscalYearChange();
       showDelayModal.value = true;
     };
 
@@ -1240,7 +1265,9 @@ const app = createApp({
       team4Unstarted,
       fiscalYearOptions,
       formDepartmentOptions,
+      delayDepartmentOptions,
       onFiscalYearChange,
+      onDelayFiscalYearChange,
       onDepartmentChange,
       exportPdfReportAction,
       formatDateDMY,

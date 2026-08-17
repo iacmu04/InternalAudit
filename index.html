@@ -986,12 +986,21 @@
                     <input type="text" :value="currentUser.name + ' (' + currentUser.email + ')'" disabled class="w-full p-2.5 bg-slate-100 border rounded-xl text-slate-600 font-bold">
                 </div>
 
-                <div>
-                    <label class="font-black text-slate-800 block mb-1">ส่วนงานที่ต้องการขอขยายเวลา <span class="text-red-500">*</span></label>
-                    <select v-model="delayForm.department" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold">
-                        <option value="">-- เลือกส่วนงาน --</option>
-                        <option v-for="d in departmentOptions" :key="d" :value="d">{{ d }}</option>
-                    </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="font-black text-slate-800 block mb-1">ปีงบประมาณ <span class="text-red-500">*</span></label>
+                        <select v-model="delayForm.fiscalYear" @change="onDelayFiscalYearChange" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-purple-500/20">
+                            <option v-for="yr in fiscalYearOptions" :key="yr" :value="yr">พ.ศ. {{ yr }}</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="font-black text-slate-800 block mb-1">ส่วนงานที่ต้องการขอขยายเวลา <span class="text-red-500">*</span></label>
+                        <select v-model="delayForm.department" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold focus:ring-2 focus:ring-purple-500/20">
+                            <option value="">-- เลือกส่วนงาน --</option>
+                            <option v-for="d in delayDepartmentOptions" :key="d" :value="d">{{ d }}</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
