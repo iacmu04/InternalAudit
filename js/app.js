@@ -961,9 +961,99 @@ const app = createApp({
       showEditManagerModal.value = true;
     };
 
-    const openLoginModal = () => {
-      showLoginModal.value = true;
+    const GOOGLE_CLIENT_ID = "1032937309757-qdbtdlmrin42ah85cedoadj1l0td73ls.apps.googleusercontent.com";
+    const googleLoginError = ref("");
+
+    const parseJwt = (token) => {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null;
+      }
     };
+
+    const handleGoogleCallback = (response) => {
+      googleLoginError.value = "";
+      if (!response || !response.credential) {
+        googleLoginError.value = "ไม่ได้รับข้อมูลยืนยันตัวตนจาก Google";
+        return;
+      }
+
+      const payload = parseJwt(response.credential);
+      if (!payload || !payload.email) {
+        googleLoginError.value = "ไม่สามารถอ่านอีเมลจากบัญชี Google ได้";
+        return;
+      }
+
+      const googleEmail = payload.email.toLowerCase().trim();
+      const googleName = payload.name || payload.email;
+      console.log("🔐 Google Sign-In verified:", googleEmail, googleName);
+
+      // Match against userList
+      const matched = userList.value.find(u => (u.Email || "").toLowerCase().trim() === googleEmail);
+      if (matched) {
+        currentUser.value = {
+          email: matched.Email,
+          name: matched.Name || googleName,
+          role: matched.Role || "User",
+          team: matched.Team || "ทุกทีม",
+          authorize: matched.Authorize || "all"
+        };
+        try {
+          localStorage.setItem("CURRENT_USER", JSON.stringify(currentUser.value));
+        } catch (e) {}
+        showLoginModal.value = false;
+        alert(`เข้าสู่ระบบด้วย Google สำเร็จ!\nชื่อ: ${currentUser.value.name}\nสิทธิ์: ${currentUser.value.role}`);
+      } else {
+        googleLoginError.value = `อีเมล ${googleEmail} ไม่มีสิทธิ์เข้าใช้งานระบบตามที่ระบุในชีท Users กรุณาติดต่อผู้ดูแลระบบเพื่อเพิ่มอีเมลลงในชีท Users`;
+      }
+    };
+
+    const renderGoogleBtn = () => {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        try {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCallback,
+            auto_select: false
+          });
+          const btnEl = document.getElementById("googleSignInBtn");
+          if (btnEl) {
+            btnEl.innerHTML = "";
+            google.accounts.id.renderButton(btnEl, {
+              theme: "outline",
+              size: "large",
+              text: "signin_with",
+              shape: "pill",
+              locale: "th"
+            });
+          }
+        } catch (e) {
+          console.warn("Google Sign-In init error:", e);
+        }
+      }
+    };
+
+    const openLoginModal = () => {
+      googleLoginError.value = "";
+      showLoginModal.value = true;
+      nextTick(() => {
+        renderGoogleBtn();
+      });
+    };
+
+    watch(showLoginModal, (val) => {
+      if (val) {
+        nextTick(() => {
+          renderGoogleBtn();
+        });
+      }
+    });
 
     const selectUser = (u) => {
       currentUser.value = {
@@ -1081,6 +1171,7 @@ const app = createApp({
       editingRowIndex,
       delayForm,
       calculatedDelayDays,
+      googleLoginError,
       isEditingDelay,
       addNonAuditDateRow,
       removeNonAuditDateRow,

@@ -22,6 +22,8 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
     <!-- html2pdf.js for PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Google Identity Services (Google Sign-In) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="min-h-screen text-slate-800">
 
@@ -1147,6 +1149,24 @@
                 <button v-if="currentUser.email" @click="showLoginModal = false" class="text-slate-400 hover:text-slate-600">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
+            </div>
+
+            <!-- Official Google Sign-In Button Container -->
+            <div class="p-4 bg-indigo-50/60 rounded-xl border border-indigo-200 text-center space-y-2.5">
+                <div class="text-xs font-black text-indigo-950 flex items-center justify-center gap-1.5">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-indigo-600"></i>
+                    ลงชื่อเข้าใช้ด้วยบัญชี Google จริง (Gmail):
+                </div>
+                <div id="googleSignInBtn" class="flex justify-center min-h-[40px]"></div>
+                <div v-if="googleLoginError" class="text-[11px] font-bold text-red-600 bg-red-50 p-2 rounded-lg border border-red-200">
+                    {{ googleLoginError }}
+                </div>
+            </div>
+
+            <div class="relative flex py-1 items-center">
+                <div class="flex-grow border-t border-slate-200"></div>
+                <span class="flex-shrink mx-3 text-[10px] text-slate-400 font-bold uppercase">หรือเลือกสิทธิ์เพื่อทดสอบระบบ</span>
+                <div class="flex-grow border-t border-slate-200"></div>
             </div>
 
             <p class="text-xs text-slate-500 font-medium">
