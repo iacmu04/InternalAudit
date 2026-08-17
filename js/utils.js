@@ -216,16 +216,27 @@ function parseMasterListsSchema(rawRows) {
     };
   }
 
-  // Debug: Log first row structure
+  // Helper: get value from row trying multiple possible key names
+  function getVal(row, colIdx, ...altKeys) {
+    // Try _col{N} first (GViz CSV / new Code.gs format)
+    if (row[`_col${colIdx}`] !== undefined && row[`_col${colIdx}`] !== "") return row[`_col${colIdx}`];
+    // Try col_{N} (deployed Web App format for empty-header columns)
+    if (row[`col_${colIdx}`] !== undefined && row[`col_${colIdx}`] !== "") return row[`col_${colIdx}`];
+    // Try alternative named keys
+    for (const k of altKeys) {
+      if (k && row[k] !== undefined && row[k] !== "") return row[k];
+    }
+    return "";
+  }
+
+  // Debug first row
   const firstRow = rawRows[0];
   console.log("📋 First row keys:", Object.keys(firstRow));
-  console.log("📋 First row _col0:", firstRow._col0, "| _col1:", firstRow._col1, "| _col3:", firstRow._col3, "| _col5:", firstRow._col5);
-  console.log("📋 First row _headers:", firstRow._headers);
+  console.log("📋 Resolved first row: col_A=", getVal(firstRow, 0), "| col_B=", getVal(firstRow, 1), "| col_D=", getVal(firstRow, 3, "2569"), "| col_F=", getVal(firstRow, 5, "2570"));
 
-  // Iterate over raw rows directly — they should already have _col0.._colN from readSheetData or parseCSV
   rawRows.forEach(row => {
     // 1. Col A (Index 0): Team Options
-    const colA = String(row._col0 !== undefined ? row._col0 : "").trim();
+    const colA = String(getVal(row, 0)).trim();
     if (colA && !colA.startsWith("รายชื่อ") && colA !== "ทีม") {
       const cleanT = colA.replace(/^ทีม\s*/, "").trim();
       if (cleanT && cleanT.length <= 10 && !cleanT.match(/(คณะ|กอง|ศูนย์|สถาบัน|สำนักงาน|วิทยาลัย|ส่วนงาน|ภาควิชา)/i)) {
@@ -234,7 +245,7 @@ function parseMasterListsSchema(rawRows) {
     }
 
     // 2. Col B (Index 1): CTS Cycle Options
-    const colB = String(row._col1 !== undefined ? row._col1 : "").trim();
+    const colB = String(getVal(row, 1)).trim();
     if (colB && !colB.startsWith("รอบ") && !colB.startsWith("ครั้ง")) {
       const cleanC = colB.replace(/^ครั้งที่\s*/, "").replace(/^รอบที่\s*/, "").trim();
       if (cleanC && cleanC.match(/^\d+\/\d{4}$/)) {
@@ -243,15 +254,17 @@ function parseMasterListsSchema(rawRows) {
     }
 
     // 3. Col C (Index 2): Non-Audit Day Reasons / Types
-    const colC = String(row._col2 !== undefined ? row._col2 : "").trim();
+    const colC = String(getVal(row, 2, "ประเภทไม่ได้ออกตรวจ", "ประเภท/เหตุผล")).trim();
     if (colC && !colC.startsWith("ประเภท") && colC.length > 1 && !colC.match(/^\d/)) {
       nonAuditTypeSet.add(colC);
     }
   });
 
-  // Determine year pairs starting from Index 3 (Col D)
-  // Col D (index 3) = Dept for 2569, Col E (index 4) = Team for 2569
-  // Col F (index 5) = Dept for 2570, Col G (index 6) = Team for 2570
+  // Year-Department pairs
+  // Master_Lists structure:
+  //   Col D (idx 3) = Dept names for 2569,  Col E (idx 4) = Team for 2569
+  //   Col F (idx 5) = Dept names for 2570,  Col G (idx 6) = Team for 2570
+  //   Col H (idx 7) = Dept names for 2571,  Col I (idx 8) = Team for 2571
   const allColIndices = [
     { year: "2569", deptIdx: 3, teamIdx: 4 },
     { year: "2570", deptIdx: 5, teamIdx: 6 },
@@ -264,18 +277,20 @@ function parseMasterListsSchema(rawRows) {
     let count = 0;
 
     rawRows.forEach(row => {
-      const rawVal = row[`_col${pair.deptIdx}`];
-      const deptName = String(rawVal !== undefined ? rawVal : "").trim();
+      // Get dept name: try _col{N}, col_{N}, then year as key name (e.g., "2569", "2570")
+      const rawVal = getVal(row, pair.deptIdx, pair.year);
+      const deptName = String(rawVal).trim();
       
-      // Dept Name Validation: Must be non-empty, not a year, not a date, not a pure number, and at least 3 chars
+      // Validation: non-empty, at least 3 chars, not a pure year/number/date
       if (deptName && 
           deptName.length > 2 &&
           !deptName.match(/^\d{4}$/) && 
           !deptName.match(/^\d{4}-\d{2}-\d{2}$/) && 
           !deptName.match(/^\d+$/)) {
 
-        const rawTeam = row[`_col${pair.teamIdx}`];
-        const teamName = String(rawTeam !== undefined ? rawTeam : "1").replace(/^ทีม\s*/, "").trim() || "1";
+        // Get team: try _col{N}, col_{N}
+        const rawTeam = getVal(row, pair.teamIdx);
+        const teamName = String(rawTeam || "1").replace(/^ทีม\s*/, "").trim() || "1";
 
         if (!departmentsByYear[yearStr]) {
           departmentsByYear[yearStr] = [];
@@ -293,7 +308,7 @@ function parseMasterListsSchema(rawRows) {
 
     if (count > 0) {
       yearSet.add(yearStr);
-      console.log(`📋 Year ${yearStr}: Found ${count} departments from _col${pair.deptIdx}`);
+      console.log(`✅ Year ${yearStr}: Found ${count} departments`);
     }
   });
 
@@ -310,9 +325,8 @@ function parseMasterListsSchema(rawRows) {
   };
 
   console.log("📋 parseMasterListsSchema result:", { 
-    teams: result.teams.length, 
-    ctsCycles: result.ctsCycles.length, 
-    nonAuditTypes: result.nonAuditTypes.length,
+    teams: result.teams, 
+    ctsCycles: result.ctsCycles.length,
     deptYears: Object.keys(result.departmentsByYear).map(y => `${y}: ${result.departmentsByYear[y].length} depts`),
     years: result.years 
   });
