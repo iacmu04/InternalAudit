@@ -927,6 +927,12 @@ const app = createApp({
     };
 
     const exportPdfReportAction = () => {
+      const defaultVal = (selectedCtsCycle.value && selectedCtsCycle.value !== "ALL") ? selectedCtsCycle.value : "";
+      const userInput = prompt("กรุณาระบุเลขครั้งที่การประชุม คตส. (เช่น 1/2570 หรือกดตกลง/เว้นว่างไว้หากไม่ต้องการระบุ):", defaultVal);
+      if (userInput === null) {
+        return; // Aborted by user
+      }
+
       generatePdfReport({
         masterLists: masterLists.value,
         rawAuditList: rawAuditList.value,
@@ -937,7 +943,7 @@ const app = createApp({
         selectedFiscalYear: selectedFiscalYear.value,
         selectedTeam: selectedTeam.value,
         selectedPhase: selectedPhase.value,
-        selectedCtsCycle: selectedCtsCycle.value,
+        ctsMeetingNumber: userInput.trim(),
         totalPlannedUnitsCount: totalPlannedUnitsCount.value,
         completedUnitsCount: completedUnitsCount.value,
         overallCompletionRate: overallCompletionRate.value

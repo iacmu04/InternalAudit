@@ -475,12 +475,15 @@ function generatePdfReport(options) {
     }
   });
 
-  // CTS Meeting text
+  // CTS Meeting text (User Input on Export)
   let ctsText = "";
-  const cts = options.selectedCtsCycle || "ALL";
-  if (cts && cts !== "ALL") {
-    const cleanCts = cts.includes("ครั้งที่") ? cts : `ครั้งที่ ${cts}`;
-    ctsText = `การประชุมคณะกรรมการตรวจสอบ มหาวิทยาลัยเชียงใหม่ ${cleanCts}`;
+  const meetingNum = (options.ctsMeetingNumber !== undefined && options.ctsMeetingNumber !== null) 
+    ? String(options.ctsMeetingNumber).trim() 
+    : "";
+
+  if (meetingNum) {
+    const cleanNum = meetingNum.includes("ครั้งที่") ? meetingNum : `ครั้งที่ ${meetingNum}`;
+    ctsText = `การประชุมคณะกรรมการตรวจสอบ มหาวิทยาลัยเชียงใหม่ ${cleanNum}`;
   } else {
     ctsText = `การประชุมคณะกรรมการตรวจสอบ มหาวิทยาลัยเชียงใหม่`;
   }
