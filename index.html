@@ -1043,51 +1043,59 @@
     </div>
 
     <!-- Drawer 3: Extension Approval & Status Drawer -->
-    <div v-if="showApprovalDrawer" class="fixed inset-0 z-50 flex justify-end modal-backdrop">
-        <div class="bg-white max-w-xl w-full h-full p-6 shadow-2xl space-y-4 overflow-y-auto border-l border-slate-200">
+    <div v-if="showApprovalDrawer" class="fixed inset-0 z-50 flex justify-end modal-backdrop animate-in fade-in duration-150">
+        <div class="bg-white max-w-4xl w-full h-full p-6 shadow-2xl space-y-4 overflow-y-auto border-l border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
                 <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-                    <i data-lucide="check-square" class="w-5 h-5 text-purple-600"></i>
+                    <span class="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </span>
                     รายการขอขยายระยะเวลาทั้งหมด
                 </h3>
-                <button @click="showApprovalDrawer = false" class="text-slate-400 hover:text-slate-600">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button type="button" @click="showApprovalDrawer = false" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all" title="ปิดหน้าต่าง">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
                 </button>
             </div>
 
             <!-- Total Status Summary Bar -->
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs flex justify-around text-center shadow-2xs">
-                <div>
-                    <div class="text-slate-500 font-bold">รอพิจารณาโดยหัวหน้าทีม</div>
-                    <div class="text-xl font-black text-purple-600 mt-0.5">{{ pendingSupervisorCount }}</div>
+            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs shadow-2xs">
+                <div class="text-center border-r border-slate-200 pr-2">
+                    <div class="text-slate-500 font-bold text-[11px]">รอพิจารณาโดยหัวหน้าทีม</div>
+                    <div class="text-lg font-black text-purple-700 mt-0.5">{{ pendingSupervisorCount }} <span class="text-[10px] text-slate-400 font-normal">รายการ</span></div>
                 </div>
-                <div class="border-r border-slate-200"></div>
-                <div>
-                    <div class="text-slate-500 font-bold">รออนุมัติโดย ผอ.</div>
-                    <div class="text-xl font-black text-indigo-600 mt-0.5">{{ pendingDirectorCount }}</div>
+                <div class="text-center pl-2">
+                    <div class="text-slate-500 font-bold text-[11px]">รออนุมัติโดย ผอ.</div>
+                    <div class="text-lg font-black text-indigo-700 mt-0.5">{{ pendingDirectorCount }} <span class="text-[10px] text-slate-400 font-normal">รายการ</span></div>
                 </div>
             </div>
 
-            <!-- List of Extension Requests -->
+            <!-- List of Extension Requests (Compact Height & 2-Column Information Layout) -->
             <div class="space-y-3">
-                <div v-if="accessibleDelayList.length === 0" class="py-10 text-center text-slate-400 text-xs font-bold">
+                <div v-if="accessibleDelayList.length === 0" class="py-12 text-center text-slate-400 text-xs font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                     ไม่พบรายการคำขอขยายระยะเวลาที่คุณมีสิทธิ์เข้าถึง
                 </div>
 
-                <div v-for="item in accessibleDelayList" :key="item._rowIndex" class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2.5">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <div class="font-black text-slate-900 text-sm flex items-center gap-1.5">
-                                <span class="text-slate-500 font-medium">ส่วนงาน:</span>
-                                <span class="text-indigo-900 font-extrabold">{{ getDelayFields(item).department }}</span>
-                            </div>
-                            <div class="text-xs text-slate-600 font-semibold mt-1 flex items-center gap-1">
-                                <span class="text-slate-500 font-medium">ผู้ขอ:</span>
-                                <span class="font-bold text-slate-800">{{ getDelayFields(item).requestor }}</span>
-                                <span v-if="getDelayFields(item).email" class="text-slate-400 font-normal">({{ getDelayFields(item).email }})</span>
-                            </div>
+                <div v-for="item in accessibleDelayList" :key="item._rowIndex" 
+                     class="p-3.5 bg-slate-50/90 hover:bg-slate-50 rounded-2xl border border-slate-200/90 text-xs space-y-2.5 shadow-2xs transition-all">
+                    
+                    <!-- Header: ส่วนงาน + Status Badge -->
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-200/70">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0"
+                                  :class="{
+                                    'bg-purple-600': getDelayFields(item).status.includes('รอพิจารณา'),
+                                    'bg-indigo-600': getDelayFields(item).status.includes('รออนุมัติ'),
+                                    'bg-emerald-600': getDelayFields(item).status === 'อนุมัติแล้ว',
+                                    'bg-red-600': getDelayFields(item).status === 'ตีกลับ' || getDelayFields(item).status === 'ไม่อนุมัติ',
+                                    'bg-slate-400': getDelayFields(item).status === 'ขอยกเลิก'
+                                  }"></span>
+                            <span class="text-sm font-black text-indigo-950">{{ getDelayFields(item).department }}</span>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-[10px] font-black shrink-0"
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0"
                               :class="{
                                 'bg-purple-100 text-purple-900 border border-purple-300': getDelayFields(item).status.includes('รอพิจารณา'),
                                 'bg-indigo-100 text-indigo-900 border border-indigo-300': getDelayFields(item).status.includes('รออนุมัติ'),
@@ -1099,46 +1107,79 @@
                         </span>
                     </div>
 
-                    <div class="text-slate-700 bg-white p-3 rounded-xl border border-slate-200 font-semibold space-y-1">
-                        <div><strong>ช่วงวันที่ขอขยาย:</strong> {{ formatDateDMY(item['Start Date'] || item.startDate) }} ถึง {{ formatDateDMY(item['End Date'] || item.endDate) }}</div>
-                        <div><strong>จำนวนวันที่ขอขยาย (สุทธิ):</strong> 
-                            <span v-if="calculateExtensionDays(item)" class="font-black text-purple-700">
-                                {{ calculateExtensionDays(item).actualDays }} วันทำการ
-                            </span>
-                            <span v-if="calculateExtensionDays(item) && (calculateExtensionDays(item).weekendDays > 0 || calculateExtensionDays(item).holidayDays > 0 || calculateExtensionDays(item).nonAuditDays > 0)" class="text-[10px] text-slate-500 ml-1">
-                                (หักเสาร์-อาทิตย์ {{ calculateExtensionDays(item).weekendDays }} วัน, หยุดนักขัตฤกษ์ {{ calculateExtensionDays(item).holidayDays }} วัน, ลา/ภารกิจอื่น {{ calculateExtensionDays(item).nonAuditDays }} วัน)
-                            </span>
+                    <!-- Details Box (Compact 2-Column Grid Rows) -->
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 text-[11.5px] space-y-2">
+                        <!-- Row 1: ผู้ขอ & หัวหน้างาน (2 คอลัมน์) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pb-1.5 border-b border-slate-100">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <span class="text-slate-500 font-semibold shrink-0">👤 ผู้ขอ:</span>
+                                <span class="font-bold text-slate-900">{{ getDelayFields(item).requestor }}</span>
+                                <span v-if="getDelayFields(item).email" class="text-slate-400 font-normal truncate">({{ getDelayFields(item).email }})</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 truncate">
+                                <span class="text-slate-500 font-semibold shrink-0">👔 หัวหน้างานรับผิดชอบ:</span>
+                                <span class="font-bold text-slate-900 truncate">{{ getDelayFields(item).supervisor }}</span>
+                            </div>
                         </div>
-                        <div><strong>เหตุผล:</strong> {{ item.Reason || item.reason }}</div>
-                        <div class="text-slate-500 text-[11px]"><strong>หัวหน้างานรับผิดชอบ:</strong> {{ getDelayFields(item).supervisor }}</div>
-                        <div v-if="item.Remarks" class="text-purple-800 font-black pt-1 border-t border-slate-100"><strong>ข้อความตีกลับ:</strong> {{ item.Remarks }}</div>
+
+                        <!-- Row 2: ช่วงวันที่ & จำนวนวันสุทธิ (2 คอลัมน์) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pb-1.5 border-b border-slate-100 items-start">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-slate-500 font-semibold shrink-0">📅 ช่วงวันที่ขอขยาย:</span>
+                                <span class="font-bold text-slate-800">{{ formatDateDMY(item['Start Date'] || item.startDate) }} ถึง {{ formatDateDMY(item['End Date'] || item.endDate) }}</span>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-slate-500 font-semibold shrink-0">⏱️ จำนวนวันที่ขอขยาย (สุทธิ):</span>
+                                    <span v-if="calculateExtensionDays(item)" class="font-black text-purple-800 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                                        {{ calculateExtensionDays(item).actualDays }} วันทำการ
+                                    </span>
+                                </div>
+                                <div v-if="calculateExtensionDays(item) && (calculateExtensionDays(item).weekendDays > 0 || calculateExtensionDays(item).holidayDays > 0 || calculateExtensionDays(item).nonAuditDays > 0)" class="text-[10px] text-slate-400 mt-0.5">
+                                    (หักเสาร์-อาทิตย์ {{ calculateExtensionDays(item).weekendDays }} วัน, หยุดนักขัตฤกษ์ {{ calculateExtensionDays(item).holidayDays }} วัน, ไม่ได้ตรวจ {{ calculateExtensionDays(item).nonAuditDays }} วัน)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: เหตุผล (เต็มแถว ไม่ต้องแบ่งคอลัมน์) -->
+                        <div class="flex items-start gap-1.5 text-slate-700">
+                            <span class="text-slate-500 font-semibold shrink-0">📝 เหตุผล:</span>
+                            <span class="font-medium text-slate-800 leading-relaxed">{{ item.Reason || item.reason || '-' }}</span>
+                        </div>
+
+                        <!-- Row 4: ข้อความตีกลับ (ถ้ามี) -->
+                        <div v-if="item.Remarks" class="text-red-700 bg-red-50 p-2 rounded-lg border border-red-200 text-[11px] font-bold flex items-start gap-1.5">
+                            <span>💬 ข้อความตีกลับ/หมายเหตุ:</span>
+                            <span class="font-normal">{{ item.Remarks }}</span>
+                        </div>
                     </div>
 
-                    <div class="flex justify-end gap-2 pt-1">
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap justify-end items-center gap-2 pt-0.5">
                         <template v-if="(item.Email || item.email) === currentUser.email && getDelayFields(item).status.includes('ตีกลับ')">
-                            <button @click="editAndResubmitDelay(item)" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-xl">
-                                แก้ไขแล้วส่งใหม่
+                            <button @click="editAndResubmitDelay(item)" class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition-all shadow-2xs">
+                                ✏️ แก้ไขแล้วส่งใหม่
                             </button>
-                            <button @click="cancelDelayRequest(item._rowIndex)" class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl">
-                                ขอยกเลิกคำขอ
+                            <button @click="cancelDelayRequest(item._rowIndex)" class="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs transition-all">
+                                ✕ ขอยกเลิกคำขอ
                             </button>
                         </template>
 
                         <template v-if="(currentUser.role === 'Leader' || currentUser.role === 'Admin') && getDelayFields(item).status.includes('รอพิจารณา')">
-                            <button @click="processApproval(item._rowIndex, 'approved')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-2xs">
-                                ผ่านพิจารณาเสนอ ผอ.
+                            <button @click="processApproval(item._rowIndex, 'approved')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-2xs transition-all">
+                                ✓ ผ่านพิจารณาเสนอ ผอ.
                             </button>
-                            <button @click="promptReject(item._rowIndex)" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-2xs">
-                                ตีกลับคำขอ
+                            <button @click="promptReject(item._rowIndex)" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs shadow-2xs transition-all">
+                                ✕ ตีกลับคำขอ
                             </button>
                         </template>
 
                         <template v-if="(currentUser.role === 'Dean' || currentUser.role === 'Admin') && getDelayFields(item).status.includes('รออนุมัติ')">
-                            <button @click="processApproval(item._rowIndex, 'approved')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-2xs">
-                                อนุมัติการขยายเวลา
+                            <button @click="processApproval(item._rowIndex, 'approved')" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-2xs transition-all">
+                                ✓ อนุมัติการขยายเวลา
                             </button>
-                            <button @click="promptReject(item._rowIndex)" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-2xs">
-                                ไม่อนุมัติ
+                            <button @click="promptReject(item._rowIndex)" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs shadow-2xs transition-all">
+                                ✕ ไม่อนุมัติ
                             </button>
                         </template>
                     </div>
