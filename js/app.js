@@ -512,9 +512,29 @@ const app = createApp({
       })).sort((a,b) => a.teamName.localeCompare(b.teamName));
     });
 
-    // Accessible delay list by current user role
+    // Accessible delay list by current user role, sorted: pending items first (Leader/Dean approval), then newest
     const accessibleDelayList = computed(() => {
-      return filterDelayListByRole(delayList.value, currentUser.value);
+      const list = filterDelayListByRole(delayList.value, currentUser.value);
+      
+      const getPriority = (item) => {
+        const s = getDelayStatus(item);
+        if (s.includes("รอพิจารณา")) return 1; // Pending leader consideration
+        if (s.includes("รออนุมัติ")) return 2;  // Pending director approval
+        if (s.includes("ตีกลับ")) return 3;    // Rejected / needs edit
+        if (s.includes("ขอยกเลิก")) return 4;
+        if (s === "อนุมัติแล้ว") return 5;     // Approved
+        if (s === "ไม่อนุมัติ") return 6;     // Disapproved
+        return 7;
+      };
+
+      return [...list].sort((a, b) => {
+        const pA = getPriority(a);
+        const pB = getPriority(b);
+        if (pA !== pB) return pA - pB;
+        const rowA = Number(a._rowIndex) || 0;
+        const rowB = Number(b._rowIndex) || 0;
+        return rowB - rowA;
+      });
     });
 
     // Extension Request Summary Counts (Global & Accessible)

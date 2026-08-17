@@ -574,30 +574,114 @@
     </div>
 
     <!-- Section 4: ตารางแสดงรายละเอียดการตรวจสอบแต่ละส่วนงาน -->
-    <section class="glass-card rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden mt-6">
-        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50/70">
+    <section class="glass-card rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden mt-6 space-y-0">
+        <!-- Section Header -->
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50/70">
             <div>
                 <h2 class="text-base font-black text-slate-900 flex items-center gap-2">
-                    <i data-lucide="table" class="w-5 h-5 text-indigo-600"></i>
+                    <span class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </span>
                     4. ตารางแสดงรายละเอียดการตรวจสอบแต่ละส่วนงาน
                 </h2>
                 <p class="text-xs text-slate-500 mt-0.5 font-medium">
                     แสดงวันตรวจจริง, ระยะเวลารายงานอธิการบดี, และการเสนอ คตส.
                 </p>
             </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <div class="flex items-center gap-1.5 mr-2">
-                    <label class="text-xs text-slate-600 font-medium">รอบประชุม คตส.:</label>
-                    <select v-model="selectedCtsCycle" class="py-1.5 px-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl text-slate-800 font-bold">
-                        <option value="ALL">ทุกรอบประชุม</option>
-                        <option v-for="c in ctsCycleOptions" :key="'tbl-'+c" :value="c">{{ c.includes('ครั้งที่') ? c : 'ครั้งที่ ' + c }}</option>
-                    </select>
-                </div>
-                <span class="text-xs font-bold text-slate-600">แสดงผล {{ filteredUnits.length }} รายการ</span>
-                <button @click="openAuditModal()" class="px-3.5 py-1.5 text-xs font-bold btn-action-primary rounded-xl shadow-2xs">
-                    + เพิ่มรายการ
+            
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs">
+                    แสดงผล <strong class="text-indigo-700 font-black">{{ filteredUnits.length }}</strong> รายการ
+                </span>
+                <button @click="openAuditModal()" class="px-3.5 py-1.5 text-xs font-bold btn-action-primary rounded-xl shadow-2xs flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    + เพิ่มข้อมูลการตรวจสอบ
                 </button>
             </div>
+        </div>
+
+        <!-- Section 4 Interactive Filter Bar (ปี, ทีม, สถานะ, รอบประชุม คตส., พิมพ์ค้นหาส่วนงาน) -->
+        <div class="p-4 bg-slate-50/90 border-b border-slate-200 flex flex-wrap items-center gap-3 text-xs">
+            <div class="flex items-center gap-1 text-xs font-black text-slate-600 uppercase tracking-wider mr-1">
+                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                </svg>
+                กรองข้อมูลตาราง:
+            </div>
+
+            <!-- Filter: Year Buttons -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-slate-600 font-medium">ปีงบประมาณ:</span>
+                <div class="flex items-center gap-1 flex-wrap">
+                    <button type="button" 
+                            @click="toggleYearButton('ALL')" 
+                            :class="isYearSelected('ALL') ? 'bg-purple-700 text-white font-black shadow-xs ring-2 ring-purple-400/50' : 'bg-white hover:bg-purple-50 text-slate-700 font-bold border border-slate-200'" 
+                            class="px-2.5 py-1 text-xs rounded-xl transition-all flex items-center gap-1">
+                        <span v-if="isYearSelected('ALL')">✓</span>
+                        <span>ทุกปี</span>
+                    </button>
+                    <button v-for="yr in yearButtonList" 
+                            :key="'sec4-'+yr" 
+                            type="button" 
+                            @click="toggleYearButton(yr)" 
+                            :class="isYearSelected(yr) ? 'bg-purple-700 text-white font-black shadow-xs ring-2 ring-purple-400/50' : 'bg-white hover:bg-purple-50 text-slate-700 font-bold border border-slate-200'" 
+                            class="px-2.5 py-1 text-xs rounded-xl transition-all flex items-center gap-1">
+                        <span v-if="isYearSelected(yr)">✓</span>
+                        <span>{{ yr }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter: Team -->
+            <div class="flex items-center gap-1.5">
+                <label class="text-slate-600 font-medium">ทีม:</label>
+                <select v-model="selectedTeam" class="py-1.5 px-2.5 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500/20">
+                    <option value="ALL">ทุกทีม</option>
+                    <option v-for="team in teamList" :key="'sec4-team-'+team" :value="team">{{ team.includes('ทีม') ? team : 'ทีม ' + team }}</option>
+                </select>
+            </div>
+
+            <!-- Filter: Phase -->
+            <div class="flex items-center gap-1.5">
+                <label class="text-slate-600 font-medium">สถานะหลัก:</label>
+                <select v-model="selectedPhase" class="py-1.5 px-2.5 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500/20">
+                    <option value="ALL">ทุกสถานะหลัก</option>
+                    <option value="1.1">1.1 ก่อนเข้าตรวจ</option>
+                    <option value="1.2">1.2 ระหว่างการตรวจสอบ</option>
+                    <option value="1.3">1.3 รายงานผลการตรวจสอบ</option>
+                    <option value="1.4">1.4 ชี้แจงผลการดำเนินงาน</option>
+                    <option value="COMPLETED">เสร็จสมบูรณ์แล้ว</option>
+                </select>
+            </div>
+
+            <!-- Filter: CTS Cycle -->
+            <div class="flex items-center gap-1.5">
+                <label class="text-slate-600 font-medium">รอบประชุม คตส.:</label>
+                <select v-model="selectedCtsCycle" class="py-1.5 px-2.5 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-indigo-500/20">
+                    <option value="ALL">ทุกรอบประชุม</option>
+                    <option v-for="c in ctsCycleOptions" :key="'sec4-cts-'+c" :value="c">{{ c.includes('ครั้งที่') ? c : 'ครั้งที่ ' + c }}</option>
+                </select>
+            </div>
+
+            <!-- Filter: Search Query -->
+            <div class="relative flex-1 min-w-[200px]">
+                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" v-model="searchQuery" placeholder="พิมพ์ค้นหาส่วนงาน..." 
+                       class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-xl font-semibold focus:ring-2 focus:ring-indigo-500/20 transition-all">
+            </div>
+
+            <button v-if="hasActiveFilters" @click="resetFilters" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 py-1.5 px-2.5 bg-white border border-indigo-100 hover:bg-indigo-50 rounded-xl transition-all shadow-2xs">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                ล้างตัวกรอง
+            </button>
         </div>
 
         <div class="overflow-x-auto">
