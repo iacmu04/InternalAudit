@@ -475,6 +475,16 @@ function generatePdfReport(options) {
     }
   });
 
+  // CTS Meeting text
+  let ctsText = "";
+  const cts = options.selectedCtsCycle || "ALL";
+  if (cts && cts !== "ALL") {
+    const cleanCts = cts.includes("ครั้งที่") ? cts : `ครั้งที่ ${cts}`;
+    ctsText = `การประชุมคณะกรรมการตรวจสอบ มหาวิทยาลัยเชียงใหม่ ${cleanCts}`;
+  } else {
+    ctsText = `การประชุมคณะกรรมการตรวจสอบ มหาวิทยาลัยเชียงใหม่`;
+  }
+
   // Calculate Total Exact Pages in Document
   const totalExactPages = 1 + section2PageBlocks.length + section3PageBlocks.length;
   let pageCounter = 1;
@@ -489,13 +499,16 @@ function generatePdfReport(options) {
         <!-- Header Title -->
         <div style="text-align: center; border-bottom: 3px solid #B889CF; padding-bottom: 10px; margin-bottom: 16px;">
           <h1 style="margin: 0; font-size: 18pt; font-weight: 800; color: #5e327a; line-height: 1.3; word-wrap: break-word;">
-            รายงานสรุปสถานะการติดตามงานตรวจสอบภายใน
+            สรุปผลการปฏิบัติงานตามแผนการตรวจสอบ
           </h1>
           <div style="margin: 4px 0 0 0; font-size: 12pt; font-weight: 600; color: #6b3e80;">
             สำนักงานการตรวจสอบภายใน | ข้อมูล ณ วันที่ ${todayStr}
           </div>
           <div style="margin: 6px 0 0 0; font-size: 12pt; font-weight: 700; color: #5e327a; background-color: #f6ecfc; display: inline-block; padding: 4px 18px; border-radius: 8px; border: 1px solid #B889CF;">
             ${yearText}
+          </div>
+          <div style="margin: 6px 0 0 0; font-size: 11.5pt; font-weight: 700; color: #5e327a;">
+            ${ctsText}
           </div>
         </div>
 
