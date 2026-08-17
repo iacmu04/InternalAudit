@@ -4,7 +4,7 @@
  */
 
 const SPREADSHEET_ID = "1DsRayuheR7DUA-Zd4S8tCffAsl5C_o4s078HcJc0rKw";
-const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbx-ZrpKcAGH8b9MZ9qJWXvN6Zc_gewDScPCn66QXhxJSFC8Pw9fn9TiPdoS4sXQFsKM/exec";
+const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbxbS3-yGUYPS1QkyWXoG_UFh5gxeMXYhX7KUpZjPFGDJz58c5UvRHUXx_Q9F6UuODY/exec";
 
 // Auto-migration: Clear any stale/incorrect URLs from localStorage on startup
 // This ensures all users get the correct hardcoded DEFAULT_API_URL
