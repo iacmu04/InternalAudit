@@ -676,6 +676,59 @@ const app = createApp({
         formDataToSend["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] = cLast["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || c0["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || "";
       }
 
+      // ═══════════════════════════════════════════════════════════
+      // Calculate duration fields and include in data to save to Google Sheet
+      // ═══════════════════════════════════════════════════════════
+      const auditStartDate = formDataToSend["วันที่เริ่มตรวจสอบ"];
+      const auditEndDate = formDataToSend["วันที่สิ้นสุดการตรวจสอบ"];
+      const auditCloseDate = formDataToSend["วันที่ปิดตรวจ"];
+      const presidentReportDate = formDataToSend["วันที่เสนออธิการบดี_รายงาน"];
+      const ctsReportDate = formDataToSend["วันที่เสนอ_คตส"];
+
+      // 1. ระยะเวลาตรวจสอบตามแผน (Col I): Business days from start to end
+      //    Minus weekends, Thai holidays, and non-audit days for this department
+      if (auditStartDate && auditEndDate) {
+        const plannedCalc = calculateActualAuditDays(
+          auditStartDate, auditEndDate, deptName, 
+          holidaysList.value, nonAuditDaysList.value
+        );
+        if (plannedCalc && plannedCalc.actualDays >= 0) {
+          formDataToSend["ระยะเวลาตรวจสอบตามแผน"] = plannedCalc.actualDays;
+          console.log("📊 ระยะเวลาตรวจสอบตามแผน =", plannedCalc.actualDays, "วัน (ลบ สุดสัปดาห์:", plannedCalc.weekendDays, ", วันหยุด:", plannedCalc.holidayDays, ", วันไม่ตรวจ:", plannedCalc.nonAuditDays, ")");
+        }
+      }
+
+      // 2. ระยะเวลาตรวจจริง (Col J): Same calculation as planned
+      //    Minus weekends, Thai holidays, and non-audit days for this department
+      if (auditStartDate && auditEndDate) {
+        const actualCalc = calculateActualAuditDays(
+          auditStartDate, auditEndDate, deptName,
+          holidaysList.value, nonAuditDaysList.value
+        );
+        if (actualCalc && actualCalc.actualDays >= 0) {
+          formDataToSend["ระยะเวลาตรวจจริง (วัน)"] = actualCalc.actualDays;
+          console.log("📊 ระยะเวลาตรวจจริง =", actualCalc.actualDays, "วัน");
+        }
+      }
+
+      // 3. ระยะเวลาเสนออธิการบดี (Col M): Calendar days from close date to president report date
+      if (auditCloseDate && presidentReportDate) {
+        const durPresident = dateDiffInDays(auditCloseDate, presidentReportDate);
+        if (durPresident !== null && durPresident >= 0) {
+          formDataToSend["ระยะเวลาเสนออธิการบดี"] = durPresident;
+          console.log("📊 ระยะเวลาเสนออธิการบดี =", durPresident, "วัน");
+        }
+      }
+
+      // 4. ระยะเวลาเสนอ คตส. (Col P): Calendar days from close date to CTS report date
+      if (auditCloseDate && ctsReportDate) {
+        const durCts = dateDiffInDays(auditCloseDate, ctsReportDate);
+        if (durCts !== null && durCts >= 0) {
+          formDataToSend["ระยะเวลาเสนอ_คตส"] = durCts;
+          console.log("📊 ระยะเวลาเสนอ_คตส =", durCts, "วัน");
+        }
+      }
+
       let res;
       if (editingRowIndex.value) {
         res = await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: formDataToSend });
