@@ -176,6 +176,59 @@ function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holi
 }
 
 /**
+ * Format & normalize CTS cycle value to "ครั้ง/ปี" e.g. "5/2569", "1/2570"
+ * Handles date conversion anomalies caused by Google Sheets automatic date formatting
+ */
+function formatCtsCycle(val) {
+  if (!val) return "";
+  let str = String(val).trim();
+  if (!str || str === "-" || str === "ALL") return "";
+
+  // Strip prefix "ครั้งที่ " or "รอบที่ "
+  str = str.replace(/^(ครั้งที่|รอบที่|ครั้ง|รอบ)\s*/i, "").trim();
+
+  // If already standard "5/2569" or "1/2570"
+  if (/^\d+\/\d{4}$/.test(str)) {
+    return str;
+  }
+
+  // Handle GViz Date format: "Date(2026,4,1)" or "Date(2569,4,1)"
+  const gvizMatch = str.match(/Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)/);
+  if (gvizMatch) {
+    let yr = parseInt(gvizMatch[1]);
+    let mo = parseInt(gvizMatch[2]) + 1; // 0-indexed
+    let dy = parseInt(gvizMatch[3]);
+    if (yr < 2400) yr += 543;
+    const cycleNum = dy === 1 ? mo : (mo === 1 ? dy : mo);
+    return `${cycleNum}/${yr}`;
+  }
+
+  // Handle ISO date format: "2569-05-01" or "2026-05-01"
+  const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    let yr = parseInt(isoMatch[1]);
+    let mo = parseInt(isoMatch[2]);
+    let dy = parseInt(isoMatch[3]);
+    if (yr < 2400) yr += 543;
+    const cycleNum = dy === 1 ? mo : (mo === 1 ? dy : mo);
+    return `${cycleNum}/${yr}`;
+  }
+
+  // Handle slash date format: "01/05/2569" or "5/1/2569"
+  const slashDateMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (slashDateMatch) {
+    let p1 = parseInt(slashDateMatch[1]);
+    let p2 = parseInt(slashDateMatch[2]);
+    let yr = parseInt(slashDateMatch[3]);
+    if (yr < 2400) yr += 543;
+    const cycleNum = p1 === 1 ? p2 : p1;
+    return `${cycleNum}/${yr}`;
+  }
+
+  return str;
+}
+
+/**
  * Calculate difference in days between two dates
  */
 function dateDiffInDays(startDateStr, endDateStr) {
@@ -247,7 +300,7 @@ function parseMasterListsSchema(rawRows) {
     // 2. Col B (Index 1): CTS Cycle Options
     const colB = String(getVal(row, 1)).trim();
     if (colB && !colB.startsWith("รอบ") && !colB.startsWith("ครั้ง")) {
-      const cleanC = colB.replace(/^ครั้งที่\s*/, "").replace(/^รอบที่\s*/, "").trim();
+      const cleanC = formatCtsCycle(colB);
       if (cleanC && cleanC.match(/^\d+\/\d{4}$/)) {
         ctsSet.add(cleanC);
       }

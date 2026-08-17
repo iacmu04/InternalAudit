@@ -31,14 +31,14 @@ function createInitialAuditFormState() {
 function populateAuditFormFromRow(row, existingNonAuditList = []) {
   const form = createInitialAuditFormState();
   Object.keys(form).forEach(key => {
-    if (key !== "nonAuditDays" && key !== "clarifications" && row[key]) {
+    if (key !== "nonAuditDays" && key !== "clarifications" && key !== "ครั้งที่ประชุม_คตส" && key !== "ปีงบประมาณ" && key !== "ทีม" && key !== "ส่วนงาน" && row[key]) {
       form[key] = formatDateDMY(row[key]);
     }
   });
   form["ส่วนงาน"] = row["ส่วนงาน"] || "";
   form["ปีงบประมาณ"] = row["ปีงบประมาณ"] || "2570";
   form["ทีม"] = String(row["ทีม"] || "1");
-  form["ครั้งที่ประชุม_คตส"] = row["ครั้งที่ประชุม_คตส"] || "";
+  form["ครั้งที่ประชุม_คตส"] = formatCtsCycle(row["ครั้งที่ประชุม_คตส"] || row["รอบประชุม_คตส"] || row._col16 || "");
 
   // Load clarifications array or single fields
   if (Array.isArray(row.clarifications) && row.clarifications.length > 0) {

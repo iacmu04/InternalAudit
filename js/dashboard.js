@@ -158,7 +158,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     // 2.5 Calculate Duration: Closed Audit (Col K) -> Report to Audit Committee (Col O)
     const dateN = getRowDateVal(row, "วันที่เสนอ_คตส", 14);
     let ctsDuration = dateDiffInDays(dateJ, dateN);
-    const ctsCycle = row["ครั้งที่ประชุม_คตส"] || row._col16 || "";
+    const ctsCycle = formatCtsCycle(row["ครั้งที่ประชุม_คตส"] || row["รอบประชุม_คตส"] || row._col16 || "");
 
     // 2.6 Warning calculation: if CTS submission is >= 50 days (or pending & today - dateJ >= 50)
     let isWarning = false;

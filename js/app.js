@@ -172,8 +172,27 @@ const app = createApp({
 
     const ctsCycleOptions = computed(() => {
       const raw = (parsedMasterListsSchema.value && parsedMasterListsSchema.value.ctsCycles) || [];
-      const filtered = raw.filter(c => c && !c.match(/(คณะ|กอง|ศูนย์|สถาบัน|สำนักงาน|วิทยาลัย|ส่วนงาน)/i));
-      return filtered.length > 0 ? filtered : ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569", "1/2570", "2/2570"];
+      const set = new Set();
+      raw.forEach(c => {
+        const fmt = formatCtsCycle(c);
+        if (fmt && fmt.match(/^\d+\/\d{4}$/)) set.add(fmt);
+      });
+      if (Array.isArray(rawAuditList.value)) {
+        rawAuditList.value.forEach(row => {
+          const rawCts = row["ครั้งที่ประชุม_คตส"] || row["รอบประชุม_คตส"] || row._col16;
+          const fmt = formatCtsCycle(rawCts);
+          if (fmt && fmt.match(/^\d+\/\d{4}$/)) set.add(fmt);
+        });
+      }
+      const list = Array.from(set);
+      if (list.length > 0) {
+        return list.sort((a, b) => {
+          const [ca, ya] = a.split('/').map(Number);
+          const [cb, yb] = b.split('/').map(Number);
+          return (ya || 0) !== (yb || 0) ? (ya || 0) - (yb || 0) : (ca || 0) - (cb || 0);
+        });
+      }
+      return ["1/2569", "2/2569", "3/2569", "4/2569", "5/2569", "1/2570", "2/2570"];
     });
     const nonAuditReasonOptions = computed(() => (parsedMasterListsSchema.value && parsedMasterListsSchema.value.nonAuditTypes) || []);
     const fiscalYearOptions = computed(() => {
@@ -296,7 +315,11 @@ const app = createApp({
       }
 
       if (selectedCtsCycle.value !== "ALL") {
-        list = list.filter(u => u.raw["ครั้งที่ประชุม_คตส"] === selectedCtsCycle.value || u.raw["รอบประชุม_คตส"] === selectedCtsCycle.value || String(u.ctsCycle) === selectedCtsCycle.value);
+        const targetCycle = formatCtsCycle(selectedCtsCycle.value);
+        list = list.filter(u => {
+          const uCycle = formatCtsCycle(u.ctsCycle || (u.raw ? (u.raw["ครั้งที่ประชุม_คตส"] || u.raw["รอบประชุม_คตส"] || u.raw._col16) : ""));
+          return uCycle === targetCycle;
+        });
       }
 
       if (searchQuery.value.trim() !== "") {
