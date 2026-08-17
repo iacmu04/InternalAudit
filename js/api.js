@@ -111,6 +111,17 @@ class API {
         const json = JSON.parse(text);
         if (json && json.status === "success" && json.mainAudit) {
           console.log("✅ Data loaded from Apps Script Web App successfully");
+          
+          // Always ensure Master_Lists has exact column indices _col0.._col6 for Depts and Teams
+          // Col D (idx 3) = 2569 Dept, Col E (idx 4) = 2569 Team, Col F (idx 5) = 2570 Dept, Col G (idx 6) = 2570 Team
+          if (!json.masterLists || json.masterLists.length === 0 || json.masterLists[0]._col5 === undefined || json.masterLists[0]._col6 === undefined) {
+            console.log("🔄 Fetching live Master_Lists via GViz CSV to get exact team columns (Col E for 2569, Col G for 2570)...");
+            const liveMaster = await fetchLiveSheetCSV("Master_Lists");
+            if (liveMaster && liveMaster.length > 0) {
+              json.masterLists = liveMaster;
+            }
+          }
+          
           return json;
         }
       } catch (err) {

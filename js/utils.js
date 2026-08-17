@@ -308,7 +308,7 @@ function parseMasterListsSchema(rawRows) {
 
     if (count > 0) {
       yearSet.add(yearStr);
-      console.log(`✅ Year ${yearStr}: Found ${count} departments`);
+      console.log(`✅ Year ${yearStr}: Found ${count} departments (sample:`, departmentsByYear[yearStr].slice(0, 3), `)`);
     }
   });
 
