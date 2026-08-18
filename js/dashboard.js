@@ -21,13 +21,13 @@ const PHASE_STRUCTURE = {
   "1.4": [
     { code: "Q", title: "หน่วยรับตรวจชี้แจง", col: "วันที่หน่วยรับตรวจชี้แจง" },
     { code: "R", title: "เสนออธิการบดี (ชี้แจง)", col: "วันที่เสนออธิการบดี_ชี้แจง" },
-    { code: "S", title: "เสร็จสมบูรณ์", col: "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์" }
+    { code: "S", title: "เสร็จสมบูรณ์ (แจ้งชี้แจงหน่วยรับตรวจแล้ว)", col: "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์" }
   ]
 };
 
 // Sequence for right-to-left status resolution: S -> R -> Q -> N -> M -> K -> J -> H -> G -> F -> E -> D
 const STATUS_PRIORITY_ORDER = [
-  { phase: "1.4", sub: "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์", colIdx: 19, title: "เสร็จสมบูรณ์", isComplete: true },
+  { phase: "1.4", sub: "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์", colIdx: 19, title: "เสร็จสมบูรณ์ (แจ้งชี้แจงหน่วยรับตรวจแล้ว)", isComplete: true },
   { phase: "1.4", sub: "วันที่เสนออธิการบดี_ชี้แจง", colIdx: 18, title: "ชี้แจงผล:เสนออธิการบดี" },
   { phase: "1.4", sub: "วันที่หน่วยรับตรวจชี้แจง", colIdx: 17, title: "ชี้แจงผล:หน่วยรับตรวจชี้แจง" },
   { phase: "1.3", sub: "วันที่เสนอ_คตส", colIdx: 14, title: "รายงานผล:เสนอ คตส." },
@@ -101,7 +101,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       // Merge non-empty fields into the existing object so no entered data is lost
       const existing = deduplicatedRowsMap[key];
       Object.keys(row).forEach(k => {
-        if (row[k] && String(row[k]).trim() !== "" && row[k] !== "-" && (!existing[k] || existing[k] === "-" || existing[k] === "")) {
+        if (row[k] && String(row[k]).trim() !== "" && row[k] !== "-" && (!existing[k] || existing[k] === "" || existing[k] === "-")) {
           existing[k] = row[k];
         }
       });
@@ -112,7 +112,8 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
 
   const uniqueRows = Object.values(deduplicatedRowsMap);
 
-  const processedUnits = uniqueRows.map((row, idx) => {
+  const processedUnits = [];
+  uniqueRows.forEach((row, idx) => {
     const deptName = row._deptName || row["ส่วนงาน"] || `ส่วนงาน ${idx + 1}`;
     const deptClean = String(deptName).trim().toLowerCase();
     const fiscalYear = row._fiscalYear || String(row["ปีงบประมาณ"] || row["ปี"] || row._col1 || "2570").trim();
@@ -126,7 +127,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
 
     for (let item of STATUS_PRIORITY_ORDER) {
       const val = getRowDateVal(row, item.sub, item.colIdx);
-      if (val && val !== "-") {
+      if (val && val !== "-" && String(val).trim() !== "") {
         latestStatusObj = item;
         latestDateVal = formatThaiDateShort(val);
         latestPhase = item.phase;
@@ -138,9 +139,9 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       }
     }
 
+    // If row has NO recorded dates in any audit steps, it has not started yet (handled in unstartedUnits)
     if (!latestStatusObj) {
-      latestStatusObj = { phase: "1.1", sub: "วันที่มอบหมายงาน", title: "ก่อนเข้าตรวจ:มอบหมายงาน" };
-      latestDateVal = "-";
+      return;
     }
 
     // 2.3 Calculate Planned Audit Days (Col I) and Actual Audit Days (Col J = Col I + Approved Extension Days)
@@ -184,7 +185,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       }
     }
 
-    return {
+    processedUnits.push({
       id: row._rowIndex || idx + 1,
       name: deptName,
       fiscalYear: fiscalYear,
@@ -206,7 +207,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       ctsCycle: ctsCycle,
       isWarning: isWarning,
       raw: row
-    };
+    });
   });
 
   return {

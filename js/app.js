@@ -383,12 +383,22 @@ const app = createApp({
         }
       }
 
-      // Check recorded audit units in rawAuditList to exclude ones that have already started/been recorded
+      // Check recorded audit units in rawAuditList to exclude ones that have already started/been recorded with actual dates
       const recordedDeptsSet = new Set();
       rawAuditList.value.forEach(r => {
-        const dept = String(r["ส่วนงาน"] || "").trim();
-        const rYear = String(r["ปีงบประมาณ"] || "").trim();
-        if (dept) {
+        const dept = String(r["ส่วนงาน"] || r._col0 || "").trim();
+        const rYear = String(r["ปีงบประมาณ"] || r["ปี"] || r._col1 || "").trim();
+        
+        let hasAnyDate = false;
+        for (let item of STATUS_PRIORITY_ORDER) {
+          const v = getRowDateVal(r, item.sub, item.colIdx);
+          if (v && v !== "-" && String(v).trim() !== "") {
+            hasAnyDate = true;
+            break;
+          }
+        }
+
+        if (dept && hasAnyDate) {
           if (!isAllYears) {
             if (activeYears.includes(rYear)) {
               recordedDeptsSet.add(`${dept}_${rYear}`);
@@ -1200,11 +1210,29 @@ const app = createApp({
 
     const warningDeptsList = computed(() => {
       const units = dashboardResult.value.units || [];
-      return units.filter(u => u.isWarning || (u.ctsDuration !== null && u.ctsDuration >= 50)).map(u => ({
-        name: u.name,
-        team: u.team,
-        daysSinceClose: u.ctsDuration !== null ? u.ctsDuration : (dateDiffInDays(u.raw['วันที่ปิดตรวจ'], new Date()) || 50)
-      }));
+      // Only show departments where audit is closed (Col K/10) BUT NOT YET submitted to CTS (Col O/14 วันที่เสนอ_คตส is empty), and elapsed >= 50 days
+      return units.filter(u => {
+        const raw = u.raw || {};
+        const dateN = raw["วันที่เสนอ_คตส"] || raw["วันที่เสนอ คตส."] || raw._col14 || "";
+        const hasDateN = dateN && String(dateN).trim() !== "" && dateN !== "-";
+        
+        // Exclude departments that have already been submitted to CTS
+        if (hasDateN) return false;
+        
+        const dateJ = raw["วันที่ปิดตรวจ"] || raw._col10 || "";
+        if (!dateJ || String(dateJ).trim() === "" || dateJ === "-") return false;
+        
+        const daysSinceClose = dateDiffInDays(dateJ, new Date());
+        return daysSinceClose !== null && daysSinceClose >= 50;
+      }).map(u => {
+        const dateJ = (u.raw && (u.raw["วันที่ปิดตรวจ"] || u.raw._col10)) || "";
+        const daysSinceClose = dateDiffInDays(dateJ, new Date()) || 50;
+        return {
+          name: u.name,
+          team: u.team,
+          daysSinceClose: daysSinceClose
+        };
+      });
     });
 
     // Watchers to trigger Chart re-render

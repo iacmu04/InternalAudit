@@ -435,7 +435,7 @@
                                  class="p-2.5 text-xs rounded-xl border transition-all hover:shadow-2xs"
                                  :class="u.isCompleted ? 'completed-unit-card font-bold' : 'bg-slate-50 border-slate-200 text-slate-800'">
                                 <div class="flex items-center justify-between gap-1">
-                                    <span class="font-black dept-name-pill inline-block">{{ u.name }}</span>
+                                    <span class="font-black inline-block" :class="u.isCompleted ? 'dept-name-pill-completed' : 'dept-name-pill'">{{ u.name }}</span>
                                     <i v-if="u.isCompleted" data-lucide="check-circle-2" class="w-4.5 h-4.5 shrink-0 text-teal-600"></i>
                                 </div>
                                 <div class="text-[10px] mt-1 flex justify-between items-center font-medium">
@@ -709,7 +709,7 @@
                         
                         <td class="py-3.5 px-4 font-bold text-slate-900">
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="dept-name-pill inline-block text-xs">{{ u.name }}</span>
+                                <span class="inline-block text-xs" :class="u.isCompleted ? 'dept-name-pill-completed' : 'dept-name-pill'">{{ u.name }}</span>
                                 <span v-if="u.isWarning" class="inline-block w-2.5 h-2.5 rounded-full bg-red-600 dot-pulse" title="เตือนใกล้ครบ/เกินกำหนดเสนอ คตส."></span>
                             </div>
                             <span class="block text-[10px] font-medium text-purple-700 mt-1">ทีม {{ u.team }} | ปี {{ u.fiscalYear }}</span>
