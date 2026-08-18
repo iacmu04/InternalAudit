@@ -27,18 +27,18 @@ const PHASE_STRUCTURE = {
 
 // Sequence for right-to-left status resolution: S -> R -> Q -> N -> M -> K -> J -> H -> G -> F -> E -> D
 const STATUS_PRIORITY_ORDER = [
-  { phase: "1.4", sub: "แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์", title: "เสร็จสมบูรณ์", isComplete: true },
-  { phase: "1.4", sub: "วันที่เสนออธิการบดี_ชี้แจง", title: "ชี้แจงผล:เสนออธิการบดี" },
-  { phase: "1.4", sub: "วันที่หน่วยรับตรวจชี้แจง", title: "ชี้แจงผล:หน่วยรับตรวจชี้แจง" },
-  { phase: "1.3", sub: "วันที่เสนอ_คตส", title: "รายงานผล:เสนอ คตส." },
-  { phase: "1.3", sub: "วันที่แจ้งหน่วยรับตรวจ_รายงาน", title: "รายงานผล:แจ้งหน่วยรับตรวจ" },
-  { phase: "1.3", sub: "วันที่เสนออธิการบดี_รายงาน", title: "รายงานผล:เสนออธิการบดี" },
-  { phase: "1.2", sub: "วันที่ปิดตรวจ", title: "ระหว่างตรวจสอบ:ประชุมปิดตรวจ" },
-  { phase: "1.2", sub: "วันที่สิ้นสุดการตรวจสอบ", title: "ระหว่างตรวจสอบ:สิ้นสุดการตรวจสอบ" },
-  { phase: "1.2", sub: "วันที่เริ่มตรวจสอบ", title: "ระหว่างตรวจสอบ:เปิดตรวจ/เริ่มตรวจสอบ" },
-  { phase: "1.1", sub: "วันที่อนุมัติแผน", title: "ก่อนเข้าตรวจ:อนุมัติแผน" },
-  { phase: "1.1", sub: "วันที่แจ้งเข้าตรวจ", title: "ก่อนเข้าตรวจ:แจ้งเข้าตรวจ" },
-  { phase: "1.1", sub: "วันที่มอบหมายงาน", title: "ก่อนเข้าตรวจ:มอบหมายงาน" }
+  { phase: "1.4", sub: "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์", colIdx: 19, title: "เสร็จสมบูรณ์", isComplete: true },
+  { phase: "1.4", sub: "วันที่เสนออธิการบดี_ชี้แจง", colIdx: 18, title: "ชี้แจงผล:เสนออธิการบดี" },
+  { phase: "1.4", sub: "วันที่หน่วยรับตรวจชี้แจง", colIdx: 17, title: "ชี้แจงผล:หน่วยรับตรวจชี้แจง" },
+  { phase: "1.3", sub: "วันที่เสนอ_คตส", colIdx: 14, title: "รายงานผล:เสนอ คตส." },
+  { phase: "1.3", sub: "วันที่แจ้งหน่วยรับตรวจ_รายงาน", colIdx: 13, title: "รายงานผล:แจ้งหน่วยรับตรวจ" },
+  { phase: "1.3", sub: "วันที่เสนออธิการบดี_รายงาน", colIdx: 11, title: "รายงานผล:เสนออธิการบดี" },
+  { phase: "1.2", sub: "วันที่ปิดตรวจ", colIdx: 10, title: "ระหว่างตรวจสอบ:ประชุมปิดตรวจ" },
+  { phase: "1.2", sub: "วันที่สิ้นสุดการตรวจสอบ", colIdx: 7, title: "ระหว่างตรวจสอบ:สิ้นสุดการตรวจสอบ" },
+  { phase: "1.2", sub: "วันที่เริ่มตรวจสอบ", colIdx: 6, title: "ระหว่างตรวจสอบ:เปิดตรวจ/เริ่มตรวจสอบ" },
+  { phase: "1.1", sub: "วันที่อนุมัติแผน", colIdx: 5, title: "ก่อนเข้าตรวจ:อนุมัติแผน" },
+  { phase: "1.1", sub: "วันที่แจ้งเข้าตรวจ", colIdx: 4, title: "ก่อนเข้าตรวจ:แจ้งเข้าตรวจ" },
+  { phase: "1.1", sub: "วันที่มอบหมายงาน", colIdx: 3, title: "ก่อนเข้าตรวจ:มอบหมายงาน" }
 ];
 
 // Helper to safely get field value from row trying key names, column indices, and normalized keys
@@ -49,9 +49,21 @@ function getRowDateVal(row, subKey, colIdx) {
     if (row[`_col${colIdx}`] && String(row[`_col${colIdx}`]).trim() !== "" && row[`_col${colIdx}`] !== "-") return String(row[`_col${colIdx}`]).trim();
     if (row[`col_${colIdx}`] && String(row[`col_${colIdx}`]).trim() !== "" && row[`col_${colIdx}`] !== "-") return String(row[`col_${colIdx}`]).trim();
   }
-  const cleanTarget = subKey.replace(/[\s_]/g, "").toLowerCase();
+
+  // Robust matching for completed column (Col T: วันที่แจ้งหน่วยรับตรวจ (เสร็จสมบูรณ์))
+  if (subKey.includes("เสร็จสมบูรณ์") || subKey.includes("แจ้งหน่วยรับตรวจ")) {
+    for (const k of Object.keys(row)) {
+      if (k.includes("เสร็จสมบูรณ์") || (k.includes("แจ้ง") && (k.includes("ชี้แจง") || k.includes("เสร็จ")))) {
+        const v = row[k];
+        if (v && String(v).trim() !== "" && v !== "-") return String(v).trim();
+      }
+    }
+  }
+
+  const cleanTarget = subKey.replace(/[\s_()（）]/g, "").toLowerCase();
   for (const k of Object.keys(row)) {
-    if (k.replace(/[\s_]/g, "").toLowerCase() === cleanTarget) {
+    const cleanK = k.replace(/[\s_()（）]/g, "").toLowerCase();
+    if (cleanK === cleanTarget || cleanK.includes(cleanTarget) || cleanTarget.includes(cleanK)) {
       const v = row[k];
       if (v && String(v).trim() !== "" && v !== "-") return String(v).trim();
     }
@@ -113,7 +125,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     let isCompleted = false;
 
     for (let item of STATUS_PRIORITY_ORDER) {
-      const val = getRowDateVal(row, item.sub);
+      const val = getRowDateVal(row, item.sub, item.colIdx);
       if (val && val !== "-") {
         latestStatusObj = item;
         latestDateVal = formatThaiDateShort(val);
