@@ -96,6 +96,12 @@ const app = createApp({
     const showLoginModal = ref(false);
     const showEditManagerModal = ref(false);
     const showConfigModal = ref(false);
+    const showPdfModal = ref(false);
+
+    const pdfExportForm = reactive({
+      ctsMeetingNumber: "",
+      includeStatusDetails: true
+    });
 
     // Google Apps Script API Connection
     const apiUrlInput = ref(API.getApiUrl());
@@ -960,12 +966,16 @@ const app = createApp({
     };
 
     const exportPdfReportAction = () => {
-      const defaultVal = (selectedCtsCycle.value && selectedCtsCycle.value !== "ALL") ? selectedCtsCycle.value : "";
-      const userInput = prompt("กรุณาระบุเลขครั้งที่การประชุม คตส. (เช่น 1/2570 หรือกดตกลง/เว้นว่างไว้หากไม่ต้องการระบุ):", defaultVal);
-      if (userInput === null) {
-        return; // Aborted by user
-      }
+      pdfExportForm.ctsMeetingNumber = (selectedCtsCycle.value && selectedCtsCycle.value !== "ALL") ? selectedCtsCycle.value : "";
+      pdfExportForm.includeStatusDetails = true;
+      showPdfModal.value = true;
+      nextTick(() => {
+        if (window.lucide) lucide.createIcons();
+      });
+    };
 
+    const confirmGeneratePdf = () => {
+      showPdfModal.value = false;
       generatePdfReport({
         masterLists: masterLists.value,
         rawAuditList: rawAuditList.value,
@@ -973,10 +983,12 @@ const app = createApp({
         parsedSchema: parsedMasterListsSchema.value,
         filteredUnits: filteredUnits.value,
         unstartedUnitsList: unstartedUnitsList.value,
+        selectedFiscalYears: selectedFiscalYears.value,
         selectedFiscalYear: selectedFiscalYear.value,
         selectedTeam: selectedTeam.value,
         selectedPhase: selectedPhase.value,
-        ctsMeetingNumber: userInput.trim(),
+        ctsMeetingNumber: pdfExportForm.ctsMeetingNumber.trim(),
+        includeStatusDetails: pdfExportForm.includeStatusDetails,
         totalPlannedUnitsCount: totalPlannedUnitsCount.value,
         completedUnitsCount: completedUnitsCount.value,
         overallCompletionRate: overallCompletionRate.value
@@ -1250,7 +1262,7 @@ const app = createApp({
       });
     });
 
-    watch([filteredUnits, showApprovalDrawer, showAuditModal, showDelayModal, showConfigModal, showEditManagerModal], () => {
+    watch([filteredUnits, showApprovalDrawer, showAuditModal, showDelayModal, showConfigModal, showEditManagerModal, showPdfModal], () => {
       nextTick(() => {
         if (window.lucide) lucide.createIcons();
       });
@@ -1305,6 +1317,9 @@ const app = createApp({
       showLoginModal,
       showEditManagerModal,
       showConfigModal,
+      showPdfModal,
+      pdfExportForm,
+      confirmGeneratePdf,
       apiUrlInput,
       isApiConnected,
       openConfigModal,

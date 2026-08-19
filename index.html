@@ -1446,6 +1446,58 @@
         </div>
     </div>
 
+    <!-- Modal 6: PDF Export Options Modal -->
+    <div v-if="showPdfModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-purple-100 space-y-5">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                <h3 class="text-base font-black text-purple-950 flex items-center gap-2">
+                    <span class="p-2 bg-purple-100 text-purple-800 rounded-xl">📄</span>
+                    ตัวเลือกการส่งออกรายงาน PDF
+                </h3>
+                <button @click="showPdfModal = false" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-all">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- 1. CTS Meeting Cycle input -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-800 mb-1.5">
+                        ครั้งที่การประชุม คตส.
+                    </label>
+                    <input type="text" v-model="pdfExportForm.ctsMeetingNumber" placeholder="เช่น 5/2569 หรือเว้นว่างได้" 
+                           class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl font-bold focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-all">
+                    <p class="text-[11px] text-slate-400 mt-1">
+                        * ระบุหรือไม่ระบุก็ได้ หากเว้นว่างจะแสดงเป็น "การประชุมคณะกรรมการตรวจสอบ มหาวิทยาลัยเชียงใหม่"
+                    </p>
+                </div>
+
+                <!-- 2. Option to include or exclude status details -->
+                <div class="p-3.5 bg-purple-50/70 border border-purple-200/80 rounded-2xl">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" v-model="pdfExportForm.includeStatusDetails" class="mt-0.5 w-4 h-4 text-purple-600 rounded-md border-slate-300 focus:ring-purple-500">
+                        <div>
+                            <span class="text-xs font-black text-purple-950 block">แสดงรายละเอียดสถานะด้านหลังชื่อส่วนงาน</span>
+                            <span class="text-[11px] text-slate-500 block mt-0.5">
+                                (เช่น วันที่และขั้นตอนล่าสุดสีเทา หากไม่เลือกจะแสดงเฉพาะชื่อส่วนงานอย่างเดียว)
+                            </span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button type="button" @click="showPdfModal = false" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">
+                    ยกเลิก
+                </button>
+                <button type="button" @click="confirmGeneratePdf" class="px-5 py-2 text-xs font-black text-white bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 rounded-xl shadow-md transition-all flex items-center gap-1.5">
+                    <i data-lucide="file-down" class="w-4 h-4"></i>
+                    <span>ดาวน์โหลด PDF</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <!-- Application Modules -->
