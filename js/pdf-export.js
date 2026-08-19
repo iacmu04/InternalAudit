@@ -569,13 +569,24 @@ function generatePdfReport(options) {
   });
 
   const htmlContent = `
-    <div style="font-family: 'Sarabun', 'Noto Sans Thai', 'TH Sarabun New', Tahoma, sans-serif; color: #1e293b; line-height: 1.5; font-size: 11pt; background: #ffffff; width: 100%; box-sizing: border-box; letter-spacing: 0px; -webkit-font-smoothing: antialiased;">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap');
+      .pdf-report-root, .pdf-report-root * {
+        font-family: 'Sarabun', 'TH Sarabun New', 'TH Sarabun PSK', 'Angsana New', 'Cordia New', sans-serif !important;
+      }
+    </style>
+    <div class="pdf-report-root" style="color: #1e293b; line-height: 1.5; font-size: 11pt; background: #ffffff; width: 100%; box-sizing: border-box; letter-spacing: 0px; -webkit-font-smoothing: antialiased;">
       ${pagesHTML}
     </div>
   `;
 
   // Create temporary container
   const element = document.createElement("div");
+  element.style.position = "absolute";
+  element.style.left = "-9999px";
+  element.style.top = "0";
+  element.style.width = isMultiYear ? "297mm" : "210mm";
+  element.style.background = "#ffffff";
   element.innerHTML = htmlContent;
   document.body.appendChild(element);
 
@@ -594,35 +605,45 @@ function generatePdfReport(options) {
     pagebreak: { mode: ['css', 'legacy'] }
   };
 
-  const executePdfSave = () => {
-    if (window.html2pdf) {
-      window.html2pdf().set(opt).from(element).save().then(() => {
-        if (element.parentNode) document.body.removeChild(element);
-      }).catch(err => {
-        console.error("PDF generation failed:", err);
-        if (element.parentNode) document.body.removeChild(element);
-      });
-    } else {
-      // Print fallback
-      const printWin = window.open('', '_blank');
-      printWin.document.write(`<html><head><title>Audit Report</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet"></head><body>${htmlContent}</body></html>`);
-      printWin.document.close();
-      printWin.focus();
-      setTimeout(() => {
-        printWin.print();
-        if (element.parentNode) document.body.removeChild(element);
-      }, 500);
+  const executePdfSave = async () => {
+    try {
+      if (document.fonts) {
+        await Promise.all([
+          document.fonts.load("400 11pt Sarabun"),
+          document.fonts.load("600 12pt Sarabun"),
+          document.fonts.load("700 12pt Sarabun"),
+          document.fonts.load("700 15pt Sarabun"),
+          document.fonts.load("700 18pt Sarabun")
+        ]);
+        await document.fonts.ready;
+      }
+    } catch (e) {
+      console.warn("Font preloading note:", e);
     }
+
+    setTimeout(() => {
+      if (window.html2pdf) {
+        window.html2pdf().set(opt).from(element).save().then(() => {
+          if (element.parentNode) document.body.removeChild(element);
+        }).catch(err => {
+          console.error("PDF generation failed:", err);
+          if (element.parentNode) document.body.removeChild(element);
+        });
+      } else {
+        // Print fallback
+        const printWin = window.open('', '_blank');
+        printWin.document.write(`<html><head><title>Audit Report</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet"></head><body>${htmlContent}</body></html>`);
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => {
+          printWin.print();
+          if (element.parentNode) document.body.removeChild(element);
+        }, 500);
+      }
+    }, 250);
   };
 
-  // Wait for Google Fonts to be fully ready before rendering to prevent corrupted Thai font glyphs
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => {
-      setTimeout(executePdfSave, 150);
-    });
-  } else {
-    setTimeout(executePdfSave, 300);
-  }
+  executePdfSave();
 }
 
 function renderCategoryListHTML(items, includeStatusDetails = true) {
