@@ -498,37 +498,37 @@ function generatePdfReport(options) {
 
   // Page 1: Executive Summary
   pagesHTML += `
-    <div style="padding: 14px 18px 18px 18px; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid;">
+    <div style="padding: 14px 18px 18px 18px; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
       <!-- Header Title -->
       <div style="text-align: center; border-bottom: 3px solid #B889CF; padding-bottom: 10px; margin-bottom: 16px;">
-        <h1 style="margin: 0; font-size: 18pt; font-weight: 700; color: #5e327a; line-height: 1.5; letter-spacing: 0px; word-wrap: break-word;">
+        <div style="margin: 0; font-size: 16pt; font-weight: bold; color: #5e327a; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           สรุปผลการปฏิบัติงานตามแผนการตรวจสอบ
-        </h1>
-        <div style="margin: 4px 0 0 0; font-size: 12pt; font-weight: 600; color: #6b3e80; line-height: 1.4;">
+        </div>
+        <div style="margin: 4px 0 0 0; font-size: 11pt; font-weight: bold; color: #6b3e80; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           สำนักงานการตรวจสอบภายใน | ข้อมูล ณ วันที่ ${todayStr}
         </div>
-        <div style="margin: 6px 0 0 0; font-size: 12pt; font-weight: 700; color: #5e327a; background-color: #f6ecfc; display: inline-block; padding: 4px 18px; border-radius: 8px; border: 1px solid #B889CF; line-height: 1.4;">
+        <div style="margin: 6px 0 0 0; font-size: 11pt; font-weight: bold; color: #5e327a; background-color: #f6ecfc; display: inline-block; padding: 4px 18px; border-radius: 8px; border: 1px solid #B889CF; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ${yearText}
         </div>
-        <div style="margin: 6px 0 0 0; font-size: 11.5pt; font-weight: 700; color: #5e327a; line-height: 1.4;">
+        <div style="margin: 6px 0 0 0; font-size: 11pt; font-weight: bold; color: #5e327a; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ${ctsText}
         </div>
       </div>
 
       <!-- Section 1 Title -->
       <div style="margin-bottom: 14px;">
-        <h2 style="font-size: 15pt; font-weight: 700; color: #5e327a; margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
+        <div style="font-size: 14pt; font-weight: bold; color: #5e327a; margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ส่วนที่ 1: หน้าสรุปภาพรวม (Executive Summary)
-        </h2>
-        <p style="font-size: 11pt; color: #64748b; margin: 0; line-height: 1.4;">
+        </div>
+        <p style="font-size: 10.5pt; color: #64748b; margin: 0; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           สรุปสัดส่วนการดำเนินงานจำแนกตามสถานะเปรียบเทียบกับจำนวนหน่วยรับตรวจตามแผนประจำปี ${isMultiYear ? `(เปรียบเทียบแยกตามปีงบประมาณ ${activeYears.join(', ')})` : ''}
         </p>
       </div>
 
       <!-- Executive Summary Table -->
-      ${tableHeaderHTML ? `<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 10.5pt; margin-bottom: 16px; table-layout: fixed;"><thead>${tableHeaderHTML}</thead><tbody>${tableBodyHTML}</tbody></table>` : ''}
+      ${tableHeaderHTML ? `<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 10pt; margin-bottom: 16px; table-layout: fixed; font-family: 'Tahoma', 'Sarabun', sans-serif !important;"><thead>${tableHeaderHTML}</thead><tbody>${tableBodyHTML}</tbody></table>` : ''}
 
-      <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9.5pt; color: #64748b;">
+      <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
         หน้า ${pageCounter++}/${totalExactPages} (หน้าสรุปภาพรวม)
       </div>
     </div>
@@ -537,14 +537,14 @@ function generatePdfReport(options) {
   // Section 2 Pages (Explicit page-break-before on every Section 2 block, header without (ต่อ))
   section2PageBlocks.forEach((blockHTML, bIdx) => {
     pagesHTML += `
-      <div style="padding: 14px 18px 18px 18px; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid;">
-        <h2 style="font-size: 15pt; font-weight: 700; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
+      <div style="padding: 14px 18px 18px 18px; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
+        <div style="font-size: 14pt; font-weight: bold; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ส่วนที่ 2: รายละเอียดสถานะงานตรวจสอบที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์
-        </h2>
+        </div>
         
         ${blockHTML}
 
-        <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9.5pt; color: #64748b;">
+        <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           หน้า ${pageCounter++}/${totalExactPages} (รายชื่อส่วนงานที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์${bIdx > 0 ? ' - ต่อ' : ''})
         </div>
       </div>
@@ -554,14 +554,14 @@ function generatePdfReport(options) {
   // Section 3 Pages (Explicit page-break-before on every Section 3 block, header without (ต่อ))
   section3PageBlocks.forEach((blockHTML, bIdx) => {
     pagesHTML += `
-      <div style="padding: 14px 18px 18px 18px; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid;">
-        <h2 style="font-size: 15pt; font-weight: 700; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
+      <div style="padding: 14px 18px 18px 18px; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
+        <div style="font-size: 14pt; font-weight: bold; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ส่วนที่ 3: รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ (แยกตามงานตรวจสอบ)
-        </h2>
+        </div>
         
         ${blockHTML}
 
-        <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9.5pt; color: #64748b;">
+        <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           หน้า ${pageCounter++}/${totalExactPages} (ส่วนงานที่ยังไม่ได้ดำเนินการ${bIdx > 0 ? ' - ต่อ' : ''})
         </div>
       </div>
@@ -569,7 +569,12 @@ function generatePdfReport(options) {
   });
 
   const htmlContent = `
-    <div style="font-family: 'Tahoma', 'Sarabun', sans-serif; color: #1e293b; line-height: 1.5; font-size: 10pt; background: #ffffff; width: 100%; box-sizing: border-box;">
+    <style>
+      .pdf-export-container, .pdf-export-container * {
+        font-family: 'Tahoma', 'Sarabun', sans-serif !important;
+      }
+    </style>
+    <div class="pdf-export-container" style="font-family: 'Tahoma', 'Sarabun', sans-serif !important; color: #1e293b; line-height: 1.5; font-size: 10pt; background: #ffffff; width: 100%; box-sizing: border-box;">
       ${pagesHTML}
     </div>
   `;
