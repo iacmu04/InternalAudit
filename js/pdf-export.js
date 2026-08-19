@@ -584,7 +584,12 @@ function generatePdfReport(options) {
     margin: [6, 6, 6, 6],
     filename: `Internal_Audit_Report_${new Date().toISOString().slice(0,10)}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, scrollY: 0, letterRendering: true },
+    html2canvas: { 
+      scale: 2, 
+      useCORS: true, 
+      scrollY: 0,
+      logging: false
+    },
     jsPDF: { unit: 'mm', format: 'a4', orientation: isMultiYear ? 'landscape' : 'portrait' },
     pagebreak: { mode: ['css', 'legacy'] }
   };
