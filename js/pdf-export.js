@@ -128,13 +128,13 @@ function generatePdfReport(options) {
   if (isMultiYear) {
     tableHeaderHTML = `
       <tr style="background-color: #B889CF; color: #ffffff;">
-        <th style="padding: 8px 10px; border: 1px solid #a372bb; font-size: 10.5pt; text-align: left; vertical-align: middle; width: 34%;">สถานะการดำเนินงาน</th>
+        <th style="padding: 8px 10px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; font-size: 10.5pt; text-align: left; vertical-align: middle; width: 34%; font-weight: bold;">สถานะการดำเนินงาน</th>
         ${activeYears.map(yr => `
-          <th style="padding: 8px 4px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%;">จำนวนส่วนงาน<br>${yr}</th>
-          <th style="padding: 8px 4px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%;">สัดส่วน (%)<br>${yr}</th>
+          <th style="padding: 8px 4px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%; font-weight: bold;">จำนวนส่วนงาน<br>${yr}</th>
+          <th style="padding: 8px 4px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%; font-weight: bold;">สัดส่วน (%)<br>${yr}</th>
         `).join('')}
-        <th style="padding: 8px 4px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%;">จำนวนรวม<br>(${activeYears.length} ปี)</th>
-        <th style="padding: 8px 4px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%;">สัดส่วนรวม<br>(%)</th>
+        <th style="padding: 8px 4px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%; font-weight: bold;">จำนวนรวม<br>(${activeYears.length} ปี)</th>
+        <th style="padding: 8px 4px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%; font-weight: bold;">สัดส่วนรวม<br>(%)</th>
       </tr>
     `;
 
@@ -205,11 +205,11 @@ function generatePdfReport(options) {
 
     tableHeaderHTML = `
       <tr style="background-color: #B889CF; color: #ffffff;">
-        <th style="padding: 10px 14px; border: 1px solid #a372bb; font-size: 11pt; text-align: left; vertical-align: middle;">สถานะการดำเนินงาน</th>
-        <th style="padding: 10px 8px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; width: 170px; font-size: 11pt; white-space: nowrap;">
+        <th style="padding: 10px 14px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; font-size: 11.5pt; text-align: left; vertical-align: middle; font-weight: bold;">สถานะการดำเนินงาน</th>
+        <th style="padding: 10px 8px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; width: 160px; font-size: 11.5pt; white-space: nowrap; font-weight: bold;">
           <div style="text-align: center; margin: 0 auto; width: 100%;">จำนวน (ส่วนงาน)</div>
         </th>
-        <th style="padding: 10px 8px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; width: 130px; font-size: 11pt; white-space: nowrap;">
+        <th style="padding: 10px 8px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; width: 130px; font-size: 11.5pt; white-space: nowrap; font-weight: bold;">
           <div style="text-align: center; margin: 0 auto; width: 100%;">สัดส่วน (%)</div>
         </th>
       </tr>
@@ -217,34 +217,34 @@ function generatePdfReport(options) {
 
     tableBodyHTML = `
       <tr style="background-color: #f6ecfc;">
-        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; font-weight: 800; font-size: 11pt; color: #5e327a; line-height: 1.3;">1. จำนวนหน่วยรับตรวจทั้งหมด ตามแผนการตรวจสอบประจำปี</td>
-        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; font-size: 12pt; color: #5e327a;">${stats.totalPlanned}</td>
-        <td style="padding: 10px 12px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; font-size: 12pt; color: #6b3e80;">100.0%</td>
+        <td style="padding: 10px 14px; border: 1px solid #d4b2e6; font-weight: bold; font-size: 11pt; color: #5e327a; line-height: 1.3;">1. จำนวนหน่วยรับตรวจทั้งหมด ตามแผนการตรวจสอบประจำปี</td>
+        <td style="padding: 10px 8px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: bold; font-size: 12pt; color: #5e327a;">${stats.totalPlanned}</td>
+        <td style="padding: 10px 8px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: bold; font-size: 12pt; color: #6b3e80;">100.0%</td>
       </tr>
       <tr style="background-color: #f0fdf4;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #166534; line-height: 1.3;">2. ดำเนินการเสร็จสมบูรณ์</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534; font-size: 12pt;">${stats.completed.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534; font-size: 12pt;">${yrPct(stats.completed.length)}</td>
+        <td style="padding: 9px 14px; border: 1px solid #cbd5e1; font-weight: bold; color: #166534; line-height: 1.3; font-size: 11pt;">2. ดำเนินการเสร็จสมบูรณ์</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #166534; font-size: 12pt;">${stats.completed.length}</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #166534; font-size: 12pt;">${yrPct(stats.completed.length)}</td>
       </tr>
       <tr style="background-color: #f7fee7;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #3f6212; line-height: 1.3;">3. ระหว่างสรุปปิดตรวจ</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #3f6212; font-size: 12pt;">${stats.closingSummary.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #3f6212; font-size: 12pt;">${yrPct(stats.closingSummary.length)}</td>
+        <td style="padding: 9px 14px; border: 1px solid #cbd5e1; font-weight: bold; color: #3f6212; line-height: 1.3; font-size: 11pt;">3. ระหว่างสรุปปิดตรวจ</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #3f6212; font-size: 12pt;">${stats.closingSummary.length}</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #3f6212; font-size: 12pt;">${yrPct(stats.closingSummary.length)}</td>
       </tr>
       <tr style="background-color: #fefce8;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #854d0e; line-height: 1.3;">4. ระหว่างร่างรายงาน</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #854d0e; font-size: 12pt;">${stats.draftingReport.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #854d0e; font-size: 12pt;">${yrPct(stats.draftingReport.length)}</td>
+        <td style="padding: 9px 14px; border: 1px solid #cbd5e1; font-weight: bold; color: #854d0e; line-height: 1.3; font-size: 11pt;">4. ระหว่างร่างรายงาน</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #854d0e; font-size: 12pt;">${stats.draftingReport.length}</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #854d0e; font-size: 12pt;">${yrPct(stats.draftingReport.length)}</td>
       </tr>
       <tr style="background-color: #fff1f2;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #9f1239; line-height: 1.3;">5. ระหว่างเข้าตรวจ</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #9f1239; font-size: 12pt;">${stats.auditing.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #9f1239; font-size: 12pt;">${yrPct(stats.auditing.length)}</td>
+        <td style="padding: 9px 14px; border: 1px solid #cbd5e1; font-weight: bold; color: #9f1239; line-height: 1.3; font-size: 11pt;">5. ระหว่างเข้าตรวจ</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #9f1239; font-size: 12pt;">${stats.auditing.length}</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #9f1239; font-size: 12pt;">${yrPct(stats.auditing.length)}</td>
       </tr>
       <tr style="background-color: #f8fafc;">
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; font-weight: 700; color: #475569; line-height: 1.3;">6. ยังไม่ได้ดำเนินการ</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #475569; font-size: 12pt;">${stats.unstarted.length}</td>
-        <td style="padding: 9px 12px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #475569; font-size: 12pt;">${yrPct(stats.unstarted.length)}</td>
+        <td style="padding: 9px 14px; border: 1px solid #cbd5e1; font-weight: bold; color: #475569; line-height: 1.3; font-size: 11pt;">6. ยังไม่ได้ดำเนินการ</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #475569; font-size: 12pt;">${stats.unstarted.length}</td>
+        <td style="padding: 9px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #475569; font-size: 12pt;">${yrPct(stats.unstarted.length)}</td>
       </tr>
     `;
   }
@@ -575,10 +575,10 @@ function generatePdfReport(options) {
   const htmlContent = `
     <style>
       .pdf-export-container, .pdf-export-container * {
-        font-family: 'Tahoma', 'Sarabun', sans-serif !important;
+        font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
       }
     </style>
-    <div class="pdf-export-container" style="font-family: 'Tahoma', 'Sarabun', sans-serif !important; color: #1e293b; line-height: 1.5; font-size: 10pt; background: #ffffff; width: 100%; box-sizing: border-box;">
+    <div class="pdf-export-container" style="font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important; color: #1e293b; line-height: 1.5; font-size: 11pt; background: #ffffff; width: 100%; box-sizing: border-box;">
       ${pagesHTML}
     </div>
   `;
@@ -599,7 +599,7 @@ function generatePdfReport(options) {
       scrollY: 0,
       logging: false
     },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: isMultiYear ? 'landscape' : 'portrait' },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     pagebreak: { mode: ['css', 'legacy'] }
   };
 
