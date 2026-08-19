@@ -2,7 +2,7 @@
  * Main Vue 3 Application Controller
  */
 
-const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
+const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
 
 const app = createApp({
   setup() {
