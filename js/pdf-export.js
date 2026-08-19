@@ -205,9 +205,13 @@ function generatePdfReport(options) {
 
     tableHeaderHTML = `
       <tr style="background-color: #B889CF; color: #ffffff;">
-        <th style="padding: 10px 12px; border: 1px solid #a372bb; font-size: 12pt; text-align: left; vertical-align: middle;">สถานะการดำเนินงาน</th>
-        <th style="padding: 10px 12px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; width: 150px; font-size: 12pt;">จำนวน (ส่วนงาน)</th>
-        <th style="padding: 10px 12px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; width: 120px; font-size: 12pt;">สัดส่วน (%)</th>
+        <th style="padding: 10px 14px; border: 1px solid #a372bb; font-size: 11pt; text-align: left; vertical-align: middle;">สถานะการดำเนินงาน</th>
+        <th style="padding: 10px 8px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; width: 170px; font-size: 11pt; white-space: nowrap;">
+          <div style="text-align: center; margin: 0 auto; width: 100%;">จำนวน (ส่วนงาน)</div>
+        </th>
+        <th style="padding: 10px 8px; border: 1px solid #a372bb; text-align: center !important; vertical-align: middle !important; width: 130px; font-size: 11pt; white-space: nowrap;">
+          <div style="text-align: center; margin: 0 auto; width: 100%;">สัดส่วน (%)</div>
+        </th>
       </tr>
     `;
 
