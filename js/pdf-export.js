@@ -501,23 +501,23 @@ function generatePdfReport(options) {
     <div style="padding: 14px 18px 18px 18px; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid;">
       <!-- Header Title -->
       <div style="text-align: center; border-bottom: 3px solid #B889CF; padding-bottom: 10px; margin-bottom: 16px;">
-        <h1 style="margin: 0; font-size: 18pt; font-weight: 800; color: #5e327a; line-height: 1.4; word-wrap: break-word;">
+        <h1 style="margin: 0; font-size: 18pt; font-weight: 700; color: #5e327a; line-height: 1.5; letter-spacing: 0px; word-wrap: break-word;">
           สรุปผลการปฏิบัติงานตามแผนการตรวจสอบ
         </h1>
-        <div style="margin: 4px 0 0 0; font-size: 12pt; font-weight: 600; color: #6b3e80;">
+        <div style="margin: 4px 0 0 0; font-size: 12pt; font-weight: 600; color: #6b3e80; line-height: 1.4;">
           สำนักงานการตรวจสอบภายใน | ข้อมูล ณ วันที่ ${todayStr}
         </div>
-        <div style="margin: 6px 0 0 0; font-size: 12pt; font-weight: 700; color: #5e327a; background-color: #f6ecfc; display: inline-block; padding: 4px 18px; border-radius: 8px; border: 1px solid #B889CF;">
+        <div style="margin: 6px 0 0 0; font-size: 12pt; font-weight: 700; color: #5e327a; background-color: #f6ecfc; display: inline-block; padding: 4px 18px; border-radius: 8px; border: 1px solid #B889CF; line-height: 1.4;">
           ${yearText}
         </div>
-        <div style="margin: 6px 0 0 0; font-size: 11.5pt; font-weight: 700; color: #5e327a;">
+        <div style="margin: 6px 0 0 0; font-size: 11.5pt; font-weight: 700; color: #5e327a; line-height: 1.4;">
           ${ctsText}
         </div>
       </div>
 
       <!-- Section 1 Title -->
       <div style="margin-bottom: 14px;">
-        <h2 style="font-size: 15pt; font-weight: 800; color: #5e327a; margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
+        <h2 style="font-size: 15pt; font-weight: 700; color: #5e327a; margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
           ส่วนที่ 1: หน้าสรุปภาพรวม (Executive Summary)
         </h2>
         <p style="font-size: 11pt; color: #64748b; margin: 0; line-height: 1.4;">
@@ -534,11 +534,11 @@ function generatePdfReport(options) {
     </div>
   `;
 
-  // Section 2 Pages (Explicit page-break-before on every Section 2 block)
+  // Section 2 Pages (Explicit page-break-before on every Section 2 block, header without (ต่อ))
   section2PageBlocks.forEach((blockHTML, bIdx) => {
     pagesHTML += `
       <div style="padding: 14px 18px 18px 18px; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid;">
-        <h2 style="font-size: 15pt; font-weight: 800; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
+        <h2 style="font-size: 15pt; font-weight: 700; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
           ส่วนที่ 2: รายละเอียดสถานะงานตรวจสอบที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์
         </h2>
         
@@ -551,11 +551,11 @@ function generatePdfReport(options) {
     `;
   });
 
-  // Section 3 Pages (Explicit page-break-before on every Section 3 block)
+  // Section 3 Pages (Explicit page-break-before on every Section 3 block, header without (ต่อ))
   section3PageBlocks.forEach((blockHTML, bIdx) => {
     pagesHTML += `
       <div style="padding: 14px 18px 18px 18px; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid;">
-        <h2 style="font-size: 15pt; font-weight: 800; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
+        <h2 style="font-size: 15pt; font-weight: 700; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.5;">
           ส่วนที่ 3: รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ (แยกตามงานตรวจสอบ)
         </h2>
         
@@ -569,7 +569,7 @@ function generatePdfReport(options) {
   });
 
   const htmlContent = `
-    <div style="font-family: 'Sarabun', sans-serif; color: #1e293b; line-height: 1.5; font-size: 11pt; background: #ffffff; width: 100%; box-sizing: border-box;">
+    <div style="font-family: 'Sarabun', 'Noto Sans Thai', 'TH Sarabun New', Tahoma, sans-serif; color: #1e293b; line-height: 1.5; font-size: 11pt; background: #ffffff; width: 100%; box-sizing: border-box; letter-spacing: 0px; -webkit-font-smoothing: antialiased;">
       ${pagesHTML}
     </div>
   `;
@@ -584,28 +584,39 @@ function generatePdfReport(options) {
     margin: [6, 6, 6, 6],
     filename: `Internal_Audit_Report_${new Date().toISOString().slice(0,10)}.pdf`,
     image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+    html2canvas: { scale: 2, useCORS: true, scrollY: 0, letterRendering: true },
     jsPDF: { unit: 'mm', format: 'a4', orientation: isMultiYear ? 'landscape' : 'portrait' },
     pagebreak: { mode: ['css', 'legacy'] }
   };
 
-  if (window.html2pdf) {
-    window.html2pdf().set(opt).from(element).save().then(() => {
-      document.body.removeChild(element);
-    }).catch(err => {
-      console.error("PDF generation failed:", err);
-      document.body.removeChild(element);
+  const executePdfSave = () => {
+    if (window.html2pdf) {
+      window.html2pdf().set(opt).from(element).save().then(() => {
+        if (element.parentNode) document.body.removeChild(element);
+      }).catch(err => {
+        console.error("PDF generation failed:", err);
+        if (element.parentNode) document.body.removeChild(element);
+      });
+    } else {
+      // Print fallback
+      const printWin = window.open('', '_blank');
+      printWin.document.write(`<html><head><title>Audit Report</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet"></head><body>${htmlContent}</body></html>`);
+      printWin.document.close();
+      printWin.focus();
+      setTimeout(() => {
+        printWin.print();
+        if (element.parentNode) document.body.removeChild(element);
+      }, 500);
+    }
+  };
+
+  // Wait for Google Fonts to be fully ready before rendering to prevent corrupted Thai font glyphs
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+      setTimeout(executePdfSave, 150);
     });
   } else {
-    // Print fallback
-    const printWin = window.open('', '_blank');
-    printWin.document.write(`<html><head><title>Audit Report</title><link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet"></head><body>${htmlContent}</body></html>`);
-    printWin.document.close();
-    printWin.focus();
-    setTimeout(() => {
-      printWin.print();
-      document.body.removeChild(element);
-    }, 500);
+    setTimeout(executePdfSave, 300);
   }
 }
 
