@@ -156,11 +156,44 @@ function readSheetData(sheet) {
 
 function formatDate(date) {
   if (!date) return "";
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  if (date instanceof Date) {
+    if (isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  const str = String(date).trim();
+  if (!str) return "";
+
+  // Check if already YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    let y = parseInt(isoMatch[1]);
+    if (y > 2400) y -= 543; // Convert BE to CE
+    const m = String(isoMatch[2]).padStart(2, "0");
+    const d = String(isoMatch[3]).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  // Check if DD/MM/YYYY
+  const dmyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmyMatch) {
+    const d = String(dmyMatch[1]).padStart(2, "0");
+    const m = String(dmyMatch[2]).padStart(2, "0");
+    let y = parseInt(dmyMatch[3]);
+    if (y > 2400) y -= 543;
+    return `${y}-${m}-${d}`;
+  }
+
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  return str;
 }
 
 function checkUserPermission(ss, email) {
@@ -362,8 +395,18 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
   if (!deptName) return;
   
   ensureSheets(ss);
-  const sheet = ss.getSheetByName("Non_Audit_Days");
-  if (!sheet) return;
+  let sheet = ss.getSheetByName("Non_Audit_Days");
+  if (!sheet) {
+    sheet = ss.insertSheet("Non_Audit_Days");
+    sheet.appendRow(["วันที่", "ประเภท", "ส่วนงาน", "สาเหตุ/หมายเหตุ"]);
+  }
+
+  // If passed as string, parse it
+  if (typeof nonAuditDays === "string") {
+    try {
+      nonAuditDays = JSON.parse(nonAuditDays);
+    } catch(e) {}
+  }
 
   const deptTarget = String(deptName).trim().toLowerCase();
   const lastRow = sheet.getLastRow();
@@ -374,20 +417,20 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
   if (lastRow >= 1) {
     headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h).trim());
   }
-  if (headers.length === 0 || !headers.includes("ส่วนงาน")) {
+  if (headers.length === 0 || !headers.some(h => h.includes("ส่วนงาน") || h.toLowerCase().includes("department"))) {
     headers = ["วันที่", "ประเภท", "ส่วนงาน", "สาเหตุ/หมายเหตุ"];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 
   // Find column index of "ส่วนงาน" (0-indexed)
-  let deptColIdx = headers.findIndex(h => h === "ส่วนงาน" || h.toLowerCase() === "department");
+  let deptColIdx = headers.findIndex(h => h.includes("ส่วนงาน") || h.toLowerCase().includes("department"));
   if (deptColIdx === -1) deptColIdx = 2;
 
   // 1. Delete existing rows for this department (from bottom to top)
   if (lastRow >= 2) {
-    const dataVals = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    const dataVals = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
     for (let i = dataVals.length - 1; i >= 0; i--) {
-      const rDept = String(dataVals[i][deptColIdx] || "").trim().toLowerCase();
+      const rDept = String(dataVals[i][deptColIdx] || dataVals[i][2] || dataVals[i][0] || "").trim().toLowerCase();
       if (rDept === deptTarget) {
         sheet.deleteRow(i + 2);
       }
@@ -401,15 +444,16 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
       const rawDate = entry.date || entry["วันที่"] || "";
       if (!rawDate) return;
       
-      const dateStr = formatDate(rawDate) || rawDate;
-      const reason = entry.reason || entry["ประเภท"] || entry["สาเหตุ/หมายเหตุ"] || "";
-      const details = entry.details || entry["รายละเอียด"] || reason || "";
+      const dateStr = formatDate(rawDate) || String(rawDate);
+      const reason = entry.reason || entry["ประเภท"] || entry["สาเหตุ/หมายเหตุ"] || "ติดประชุมมหาวิทยาลัย";
+      const details = entry.details || entry["รายละเอียด"] || entry["สาเหตุ/หมายเหตุ"] || reason;
 
       const rowValues = headers.map(h => {
-        if (h === "วันที่" || h.toLowerCase() === "date") return dateStr;
-        if (h === "ส่วนงาน" || h.toLowerCase() === "department") return deptName;
-        if (h === "ประเภท" || h.toLowerCase() === "type") return reason;
-        if (h === "สาเหตุ/หมายเหตุ" || h === "รายละเอียด" || h.toLowerCase() === "reason" || h.toLowerCase() === "details") return details;
+        const hNorm = h.toLowerCase().trim();
+        if (hNorm.includes("วันที่") || hNorm === "date") return dateStr;
+        if (hNorm.includes("ส่วนงาน") || hNorm === "department") return deptName;
+        if (hNorm.includes("ประเภท") || hNorm === "type") return reason;
+        if (hNorm.includes("สาเหตุ") || hNorm.includes("หมายเหตุ") || hNorm.includes("รายละเอียด") || hNorm === "reason" || hNorm === "details") return details;
         return "";
       });
 

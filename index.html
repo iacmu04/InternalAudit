@@ -1014,7 +1014,7 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                 <div>
                                     <label class="text-[11px] text-slate-700 font-bold block mb-1">วันที่ไม่ได้เข้าตรวจ</label>
-                                    <input type="text" v-model="entry.date" placeholder="วัน/เดือน/ปี (เช่น 11/02/2569)" class="flatpickr-date w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-semibold text-xs">
+                                    <input type="text" v-model="entry.date" @input="entry.date = $event.target.value" @change="entry.date = $event.target.value" placeholder="วัน/เดือน/ปี (เช่น 11/02/2569)" class="flatpickr-date w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-semibold text-xs">
                                 </div>
 
                                 <div>

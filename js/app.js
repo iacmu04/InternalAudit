@@ -584,6 +584,26 @@ const app = createApp({
     const pendingSupervisorCount = computed(() => pendingCounts.value.supervisorCount);
     const pendingDirectorCount = computed(() => pendingCounts.value.directorCount);
 
+    // Robust Flatpickr initializer that triggers Vue v-model updates
+    const initFlatpickrDatepickers = () => {
+      nextTick(() => {
+        if (window.flatpickr) {
+          flatpickr(".flatpickr-date", {
+            dateFormat: "d/m/Y",
+            allowInput: true,
+            locale: "th",
+            onChange: function(selectedDates, dateStr, instance) {
+              if (instance && instance.input) {
+                instance.input.value = dateStr;
+                instance.input.dispatchEvent(new Event("input", { bubbles: true }));
+                instance.input.dispatchEvent(new Event("change", { bubbles: true }));
+              }
+            }
+          });
+        }
+      });
+    };
+
     // Dynamic Non_Audit_Days functions inside Audit Form
     const addNonAuditDateRow = () => {
       if (!auditForm.value.nonAuditDays) {
@@ -594,15 +614,7 @@ const app = createApp({
         reason: nonAuditReasonOptions.value[0] || "ติดประชุมมหาวิทยาลัย",
         details: ""
       });
-      nextTick(() => {
-        if (window.flatpickr) {
-          flatpickr(".flatpickr-date", {
-            dateFormat: "d/m/Y",
-            allowInput: true,
-            locale: "th"
-          });
-        }
-      });
+      initFlatpickrDatepickers();
     };
 
     const removeNonAuditDateRow = (index) => {
@@ -659,15 +671,7 @@ const app = createApp({
         "วันที่เสนออธิการบดี_ชี้แจง": "",
         "วันที่แจ้งหน่วยรับตรวจ_ชี้แจง": ""
       });
-      nextTick(() => {
-        if (window.flatpickr) {
-          flatpickr(".flatpickr-date", {
-            dateFormat: "d/m/Y",
-            allowInput: true,
-            locale: "th"
-          });
-        }
-      });
+      initFlatpickrDatepickers();
     };
 
     const removeClarificationItem = (index) => {
@@ -693,15 +697,7 @@ const app = createApp({
       }
       newDepartmentInput.value = "";
       showAuditModal.value = true;
-      nextTick(() => {
-        if (window.flatpickr) {
-          flatpickr(".flatpickr-date", {
-            dateFormat: "d/m/Y",
-            allowInput: true,
-            locale: "th"
-          });
-        }
-      });
+      initFlatpickrDatepickers();
     };
 
     const submitAuditForm = async () => {
