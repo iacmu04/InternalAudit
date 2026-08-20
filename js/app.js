@@ -771,6 +771,35 @@ const app = createApp({
         formDataToSend["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] = cLast["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || c0["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || "";
       }
 
+      // Normalize nonAuditDays array
+      const normalizedNonAuditDays = [];
+      if (Array.isArray(auditForm.value.nonAuditDays)) {
+        auditForm.value.nonAuditDays.forEach(entry => {
+          if (entry && entry.date) {
+            let isoDate = entry.date;
+            const d = parseDate(entry.date);
+            if (d) isoDate = formatISODate(d);
+
+            normalizedNonAuditDays.push({
+              "ส่วนงาน": deptName,
+              department: deptName,
+              "วันที่": isoDate,
+              date: isoDate,
+              "ประเภท": entry.reason || "ติดประชุมมหาวิทยาลัย",
+              reason: entry.reason || "ติดประชุมมหาวิทยาลัย",
+              "สาเหตุ/หมายเหตุ": entry.details || entry.reason || "ติดประชุมมหาวิทยาลัย",
+              "รายละเอียด": entry.details || ""
+            });
+          }
+        });
+      }
+      formDataToSend.nonAuditDays = normalizedNonAuditDays;
+
+      // Effective combined list for immediate accurate calculation
+      const effectiveNonAuditList = nonAuditDaysList.value
+        .filter(item => String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase() !== deptName.trim().toLowerCase())
+        .concat(normalizedNonAuditDays);
+
       // ═══════════════════════════════════════════════════════════
       // Calculate duration fields according to user specifications:
       // 1. ระยะเวลาตรวจสอบตามแผน (Col I): วันที่เริ่ม (G) -> วันที่สิ้นสุด (H) ลบ เสาร์-อาทิตย์, วันหยุด (Thai_Holidays), วันไม่ตรวจ (Non_Audit_Days)
@@ -789,7 +818,7 @@ const app = createApp({
       if (auditStartDate && auditEndDate) {
         const plannedCalc = calculateActualAuditDays(
           auditStartDate, auditEndDate, deptName, 
-          holidaysList.value, nonAuditDaysList.value
+          holidaysList.value, effectiveNonAuditList
         );
         if (plannedCalc && plannedCalc.actualDays >= 0) {
           plannedDays = plannedCalc.actualDays;
@@ -855,22 +884,7 @@ const app = createApp({
       if (!handleApiResponse(res)) return;
 
       // Update local nonAuditDaysList for calculation
-      if (Array.isArray(auditForm.value.nonAuditDays)) {
-        // Filter out existing entries for this department
-        const updatedList = nonAuditDaysList.value.filter(item => String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase() !== deptName.trim().toLowerCase());
-        auditForm.value.nonAuditDays.forEach(entry => {
-          if (entry.date) {
-            updatedList.push({
-              "ส่วนงาน": deptName,
-              "วันที่": entry.date,
-              "ประเภท": entry.reason,
-              "สาเหตุ/หมายเหตุ": entry.reason,
-              "รายละเอียด": entry.details
-            });
-          }
-        });
-        nonAuditDaysList.value = updatedList;
-      }
+      nonAuditDaysList.value = effectiveNonAuditList;
 
       showAuditModal.value = false;
       await loadData();

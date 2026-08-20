@@ -61,12 +61,12 @@ function populateAuditFormFromRow(row, existingNonAuditList = []) {
   if (Array.isArray(existingNonAuditList) && form["ส่วนงาน"]) {
     const deptClean = String(form["ส่วนงาน"]).trim().toLowerCase();
     form.nonAuditDays = existingNonAuditList.filter(item => {
-      const itemDept = String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase();
+      const itemDept = String(item["ส่วนงาน"] || item.department || item._col2 || item._col1 || "").trim().toLowerCase();
       return itemDept === deptClean;
     }).map(item => ({
-      date: formatDateDMY(item["วันที่"] || item.date),
-      reason: item["ประเภท"] || item["สาเหตุ/หมายเหตุ"] || item.reason || "",
-      details: item["รายละเอียด"] || item.details || ""
+      date: formatDateDMY(item["วันที่"] || item.date || item._col0),
+      reason: item["ประเภท"] || item.reason || item["สาเหตุ/หมายเหตุ"] || item._col1 || "ติดประชุมมหาวิทยาลัย",
+      details: item["รายละเอียด"] || item.details || item["สาเหตุ/หมายเหตุ"] || item._col3 || ""
     }));
   }
 

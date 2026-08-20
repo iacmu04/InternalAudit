@@ -84,6 +84,9 @@ function doPost(e) {
       responseData = addDepartmentToMaster(ss, contents.departmentName);
     } else if (action === "deleteAuditEntry") {
       responseData = deleteAuditEntry(ss, contents.rowIndex);
+    } else if (action === "saveNonAuditDays") {
+      saveNonAuditDaysForDept(ss, contents.departmentName || contents.data && contents.data["ส่วนงาน"], contents.nonAuditDays || contents.data && contents.data.nonAuditDays);
+      responseData = { status: "success", message: "บันทึกวันที่ไม่ได้ปฏิบัติงานเรียบร้อยแล้ว" };
     } else {
       responseData = { status: "error", message: "Unknown action: " + action };
     }
@@ -260,6 +263,11 @@ function saveAuditEntry(ss, data) {
     addDepartmentToMaster(ss, data["ส่วนงาน"]);
   }
 
+  // Save non-audit days if provided
+  if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
+    saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
+  }
+
   return { status: "success", message: "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
 }
 
@@ -326,6 +334,11 @@ function updateAuditEntry(ss, rowIndex, data) {
   const rowValues = headers.map(h => data[h] !== undefined ? data[h] : "");
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);
 
+  // Save non-audit days if provided
+  if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
+    saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
+  }
+
   return { status: "success", message: "แก้ไขข้อมูลใน Google Sheet เรียบร้อยแล้ว" };
 }
 
@@ -334,10 +347,75 @@ function deleteAuditEntry(ss, rowIndex) {
   const sheet = ss.getSheetByName("Main_Audit");
   const row = parseInt(rowIndex);
   if (row >= 2 && row <= sheet.getLastRow()) {
+    const deptName = sheet.getRange(row, 1).getValue(); // Col A: ส่วนงาน
     sheet.deleteRow(row);
+    if (deptName) {
+      saveNonAuditDaysForDept(ss, deptName, []);
+    }
     return { status: "success", message: "ลบรายการออกจาก Google Sheet เรียบร้อยแล้ว" };
   }
   return { status: "error", message: "ไม่พบตำแหน่งแถวที่ต้องการลบ" };
+}
+
+function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
+  if (!ss) ss = getSpreadsheet();
+  if (!deptName) return;
+  
+  ensureSheets(ss);
+  const sheet = ss.getSheetByName("Non_Audit_Days");
+  if (!sheet) return;
+
+  const deptTarget = String(deptName).trim().toLowerCase();
+  const lastRow = sheet.getLastRow();
+  const lastCol = Math.max(sheet.getLastColumn(), 4);
+
+  // Read existing headers or initialize
+  let headers = [];
+  if (lastRow >= 1) {
+    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h).trim());
+  }
+  if (headers.length === 0 || !headers.includes("ส่วนงาน")) {
+    headers = ["วันที่", "ประเภท", "ส่วนงาน", "สาเหตุ/หมายเหตุ"];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+
+  // Find column index of "ส่วนงาน" (0-indexed)
+  let deptColIdx = headers.findIndex(h => h === "ส่วนงาน" || h.toLowerCase() === "department");
+  if (deptColIdx === -1) deptColIdx = 2;
+
+  // 1. Delete existing rows for this department (from bottom to top)
+  if (lastRow >= 2) {
+    const dataVals = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    for (let i = dataVals.length - 1; i >= 0; i--) {
+      const rDept = String(dataVals[i][deptColIdx] || "").trim().toLowerCase();
+      if (rDept === deptTarget) {
+        sheet.deleteRow(i + 2);
+      }
+    }
+  }
+
+  // 2. Append new rows
+  if (Array.isArray(nonAuditDays) && nonAuditDays.length > 0) {
+    nonAuditDays.forEach(entry => {
+      if (!entry) return;
+      const rawDate = entry.date || entry["วันที่"] || "";
+      if (!rawDate) return;
+      
+      const dateStr = formatDate(rawDate) || rawDate;
+      const reason = entry.reason || entry["ประเภท"] || entry["สาเหตุ/หมายเหตุ"] || "";
+      const details = entry.details || entry["รายละเอียด"] || reason || "";
+
+      const rowValues = headers.map(h => {
+        if (h === "วันที่" || h.toLowerCase() === "date") return dateStr;
+        if (h === "ส่วนงาน" || h.toLowerCase() === "department") return deptName;
+        if (h === "ประเภท" || h.toLowerCase() === "type") return reason;
+        if (h === "สาเหตุ/หมายเหตุ" || h === "รายละเอียด" || h.toLowerCase() === "reason" || h.toLowerCase() === "details") return details;
+        return "";
+      });
+
+      sheet.appendRow(rowValues);
+    });
+  }
 }
 
 function getApprovedExtensionDaysForDept(ss, deptName) {
