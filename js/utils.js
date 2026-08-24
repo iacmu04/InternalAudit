@@ -107,16 +107,93 @@ function formatISODate(dateStr) {
 /**
  * Calculate actual audit days between startDate and endDate
  */
+/**
+ * Universal extractor for Non_Audit_Days row: handles any column ordering or missing header labels
+ */
+function extractNonAuditRow(item) {
+  if (!item) return { date: null, department: "", reason: "", details: "" };
+
+  let dateVal = null;
+  let deptVal = "";
+  let reasonVal = "";
+  let detailsVal = "";
+
+  const knownReasons = [
+    "ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาป่วย/กิจ/พักร้อน", "ลาป่วย/ลากิจ/ลาพักผ่อน",
+    "ติดประชุมมหาวิทยาลัย", "ติดประชุม", "ประชุม", "อบรม", "สัมมนา", "อบรม/สัมมนา",
+    "วันหยุดนักขัตฤกษ์", "วันหยุด", "ติดภารกิจ", "ติดภารกิจอื่น"
+  ];
+
+  // 1. Check known keys first
+  if (item["วันที่"] || item.date) {
+    dateVal = parseDate(item["วันที่"] || item.date);
+  }
+  if (item["ส่วนงาน"] || item.department) {
+    deptVal = String(item["ส่วนงาน"] || item.department).trim();
+  }
+  if (item["ประเภท"] || item.reason) {
+    reasonVal = String(item["ประเภท"] || item.reason).trim();
+  }
+  if (item["สาเหตุ/หมายเหตุ"] || item["รายละเอียด"] || item.details) {
+    detailsVal = String(item["สาเหตุ/หมายเหตุ"] || item["รายละเอียด"] || item.details).trim();
+  }
+
+  // 2. Scan all column keys (_col0, _col1, etc. or header strings) to extract missing values
+  const allKeys = Object.keys(item).filter(k => !k.startsWith("_row") && !k.startsWith("_headers"));
+  for (const k of allKeys) {
+    const val = String(item[k] !== undefined ? item[k] : "").trim();
+    if (!val) continue;
+
+    // Check if valid date
+    if (!dateVal) {
+      const pDate = parseDate(val);
+      if (pDate && !isNaN(pDate.getTime())) {
+        dateVal = pDate;
+        continue;
+      }
+    }
+
+    // Check if known reason
+    if (!reasonVal && (k.includes("ประเภท") || k.includes("เหตุผล") || knownReasons.some(r => val.includes(r)))) {
+      reasonVal = val;
+      continue;
+    }
+
+    // Check if department (longer text, not a date, not a standard reason)
+    if (!deptVal && (k.includes("ส่วนงาน") || k.toLowerCase().includes("dept") || (!knownReasons.some(r => val.includes(r)) && !parseDate(val) && val.length >= 3))) {
+      deptVal = val;
+      continue;
+    }
+  }
+
+  // 3. Last fallback
+  if (!deptVal) deptVal = String(item._col3 || item._col2 || item._col1 || item._col0 || "").trim();
+  if (!dateVal) dateVal = parseDate(item._col1 || item._col0 || item._col2);
+  if (!reasonVal) reasonVal = String(item._col2 || item._col1 || "ติดประชุมมหาวิทยาลัย").trim();
+
+  return {
+    date: dateVal,
+    department: deptVal,
+    reason: reasonVal,
+    details: detailsVal || reasonVal
+  };
+}
+
+/**
+ * Calculate actual audit days between startDate and endDate
+ */
 function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holidaysList, nonAuditDaysList) {
   const start = parseDate(startDateStr);
   const end = parseDate(endDateStr);
 
-  if (!start || !end || start > end) return 0;
+  if (!start || !end || start > end) {
+    return { actualDays: 0, weekendDays: 0, holidayDays: 0, nonAuditDays: 0 };
+  }
 
   const holidayTimeSet = new Set();
   if (Array.isArray(holidaysList)) {
     holidaysList.forEach(h => {
-      const hDate = parseDate(h["วันที่"] || h.date || h);
+      const hDate = parseDate(h["วันที่"] || h.date || h._col0 || h);
       if (hDate) {
         hDate.setHours(0,0,0,0);
         holidayTimeSet.add(hDate.getTime());
@@ -128,13 +205,15 @@ function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holi
   if (Array.isArray(nonAuditDaysList) && departmentName) {
     const deptClean = String(departmentName).trim().toLowerCase();
     nonAuditDaysList.forEach(item => {
-      const itemDept = String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase();
-      if (itemDept === deptClean || itemDept === "ทั้งหมด" || !itemDept) {
-        const nDate = parseDate(item["วันที่"] || item.date || item);
-        if (nDate) {
-          nDate.setHours(0,0,0,0);
-          nonAuditTimeSet.add(nDate.getTime());
-        }
+      const extracted = extractNonAuditRow(item);
+      if (!extracted || !extracted.date) return;
+
+      const itemDept = extracted.department.trim().toLowerCase();
+      // Match department name flexibly (exact, contains, or wildcard)
+      if (itemDept === deptClean || itemDept === "ทั้งหมด" || !itemDept || deptClean.includes(itemDept) || itemDept.includes(deptClean)) {
+        const nDate = new Date(extracted.date);
+        nDate.setHours(0,0,0,0);
+        nonAuditTimeSet.add(nDate.getTime());
       }
     });
   }

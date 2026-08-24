@@ -168,13 +168,27 @@ class API {
       };
     });
 
+    const nonAuditDays = nonAuditRaw.map(r => {
+      const extracted = typeof extractNonAuditRow === "function" ? extractNonAuditRow(r) : null;
+      if (extracted && extracted.date) {
+        return {
+          ...r,
+          "วันที่": formatISODate(extracted.date),
+          "ส่วนงาน": extracted.department || r["ส่วนงาน"] || r.department || "",
+          "ประเภท": extracted.reason || r["ประเภท"] || r.reason || "",
+          "สาเหตุ/หมายเหตุ": extracted.details || r["สาเหตุ/หมายเหตุ"] || r["รายละเอียด"] || extracted.reason || ""
+        };
+      }
+      return r;
+    });
+
     return {
       status: "success",
       mainAudit: mainAudit,
       masterLists: masterLists,
       users: users,
       holidays: holidaysRaw,
-      nonAuditDays: nonAuditRaw,
+      nonAuditDays: nonAuditDays,
       delay: delayRaw
     };
   }
