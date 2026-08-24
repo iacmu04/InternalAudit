@@ -179,6 +179,16 @@ function extractNonAuditRow(item) {
   };
 }
 
+function normalizeDeptString(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[–—−]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 /**
  * Calculate actual audit days between startDate and endDate
  */
@@ -203,12 +213,12 @@ function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holi
 
   const nonAuditTimeSet = new Set();
   if (Array.isArray(nonAuditDaysList) && departmentName) {
-    const deptClean = String(departmentName).trim().toLowerCase();
+    const deptClean = normalizeDeptString(departmentName);
     nonAuditDaysList.forEach(item => {
       const extracted = extractNonAuditRow(item);
       if (!extracted || !extracted.date) return;
 
-      const itemDept = extracted.department.trim().toLowerCase();
+      const itemDept = normalizeDeptString(extracted.department);
       // Match department name flexibly (exact, contains, or wildcard)
       if (itemDept === deptClean || itemDept === "ทั้งหมด" || !itemDept || deptClean.includes(itemDept) || itemDept.includes(deptClean)) {
         const nDate = new Date(extracted.date);
