@@ -144,7 +144,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       return;
     }
 
-    // 2.3 Calculate Planned Audit Days (Col I) and Actual Audit Days (Col J = Col I + Approved Extension Days)
+    // 2.3 Dynamic Calculation: Planned Audit Days (Col I) and Actual Audit Days (Col J = Col I + Approved Extension Days)
     const startDateG = getRowDateVal(row, "วันที่เริ่มตรวจสอบ", 6);
     const endDateH = getRowDateVal(row, "วันที่สิ้นสุดการตรวจสอบ", 7);
     
@@ -156,12 +156,19 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       nonAuditDaysList
     );
 
-    const savedPlanned = (row["ระยะเวลาตรวจสอบตามแผน"] !== undefined && row["ระยะเวลาตรวจสอบตามแผน"] !== "") ? parseInt(row["ระยะเวลาตรวจสอบตามแผน"]) : NaN;
-    const plannedDays = (startDateG && endDateH && auditCalc && auditCalc.actualDays >= 0) ? auditCalc.actualDays : (!isNaN(savedPlanned) ? savedPlanned : 0);
     const approvedExtensionDays = deptExtensionDaysMap[deptClean] || 0;
 
-    const savedActual = (row["ระยะเวลาตรวจจริง (วัน)"] !== undefined && row["ระยะเวลาตรวจจริง (วัน)"] !== "") ? parseInt(row["ระยะเวลาตรวจจริง (วัน)"]) : (row["ระยะเวลาตรวจจริง"] !== undefined && row["ระยะเวลาตรวจจริง"] !== "") ? parseInt(row["ระยะเวลาตรวจจริง"]) : NaN;
-    const totalActualAuditDays = (startDateG && endDateH && auditCalc && auditCalc.actualDays >= 0) ? Math.max(plannedDays + approvedExtensionDays, 0) : (!isNaN(savedActual) ? savedActual : Math.max(plannedDays + approvedExtensionDays, 0));
+    // Dynamic planned days (Col I): Always recalculate from dates, holidays, and non-audit days
+    let plannedDays = 0;
+    if (startDateG && endDateH && auditCalc && auditCalc.actualDays >= 0) {
+      plannedDays = auditCalc.actualDays;
+    } else {
+      const savedPlanned = (row["ระยะเวลาตรวจสอบตามแผน"] !== undefined && row["ระยะเวลาตรวจสอบตามแผน"] !== "") ? parseInt(row["ระยะเวลาตรวจสอบตามแผน"]) : 0;
+      plannedDays = !isNaN(savedPlanned) ? savedPlanned : 0;
+    }
+
+    // Dynamic actual audit days (Col J): Col I + Approved Extension Days
+    const totalActualAuditDays = Math.max(plannedDays + approvedExtensionDays, 0);
 
     // 2.4 Calculate Duration: Closed Audit (Col K) -> Report to President (Col L)
     const dateJ = getRowDateVal(row, "วันที่ปิดตรวจ", 10);
