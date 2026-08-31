@@ -246,8 +246,15 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
         clarifyDueDateFormatted = formatThaiDateShort(clarifyDueDateObj);
 
         const pClarifyDate = clarifyDateFromUnit ? parseDate(clarifyDateFromUnit) : null;
+        var clarifyDuration = null;
+        var isClarifiedOverdue = false;
+
         if (pClarifyDate) {
           isClarified = true;
+          clarifyDuration = dateDiffInDays(reportDateToUnit, clarifyDateFromUnit);
+          if (clarifyDuration !== null && clarifyDuration > 30) {
+            isClarifiedOverdue = true;
+          }
         } else {
           const now = new Date();
           now.setHours(0,0,0,0);
@@ -290,6 +297,8 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       clarifyDueDateObj: clarifyDueDateObj,
       reportDateToUnit: reportDateToUnit,
       clarifyDateFromUnit: clarifyDateFromUnit,
+      clarifyDuration: clarifyDuration,
+      isClarifiedOverdue: isClarifiedOverdue,
       daysSinceReport: daysSinceReport,
       isClarifyWarning: isClarifyWarning,
       isClarifyOverdue: isClarifyOverdue,

@@ -944,6 +944,19 @@ const app = createApp({
         formDataToSend["ครบกำหนดชี้แจง"] = "";
       }
 
+      // 6. คำนวณ ระยะเวลาชี้แจง (Col V) เมื่อมีการกรอก วันที่แจ้งหน่วยรับตรวจ_รายงาน (Col N) และ วันที่หน่วยรับตรวจชี้แจง (Col R)
+      const clarifyDateFromUnit = formDataToSend["วันที่หน่วยรับตรวจชี้แจง"];
+      if (reportDateToUnit && clarifyDateFromUnit) {
+        const durClarify = dateDiffInDays(reportDateToUnit, clarifyDateFromUnit);
+        if (durClarify !== null && durClarify >= 0) {
+          formDataToSend["ระยะเวลาชี้แจง (วัน)"] = durClarify;
+          formDataToSend["ระยะเวลาชี้แจง"] = durClarify;
+          formDataToSend["ระยะเวลาได้รับชี้แจง"] = durClarify;
+          formDataToSend["ระยะเวลาการชี้แจง"] = durClarify;
+          console.log(`📊 6. ระยะเวลาชี้แจง (Col V) = ${durClarify} วัน (แจ้งหน่วยตรวจ: ${reportDateToUnit} -> ชี้แจง: ${clarifyDateFromUnit})`);
+        }
+      }
+
       let res;
       if (editingRowIndex.value) {
         res = await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: formDataToSend });

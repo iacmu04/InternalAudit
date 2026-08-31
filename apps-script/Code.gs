@@ -308,11 +308,30 @@ function saveAuditEntry(ss, data) {
     data["ครบกำหนดชี้แจง (30 วัน)"] = "";
   }
 
+  // Auto-calculate Col V (ระยะเวลาชี้แจง (วัน)) from Col N and Col R
+  const clarifyDateR = data["วันที่หน่วยรับตรวจชี้แจง"];
+  let durClarify = -1;
+  if (data["ระยะเวลาชี้แจง (วัน)"] !== undefined && data["ระยะเวลาชี้แจง (วัน)"] !== "") {
+    durClarify = Number(data["ระยะเวลาชี้แจง (วัน)"]);
+  } else if (data["ระยะเวลาชี้แจง"] !== undefined && data["ระยะเวลาชี้แจง"] !== "") {
+    durClarify = Number(data["ระยะเวลาชี้แจง"]);
+  } else if (reportDateN && clarifyDateR) {
+    durClarify = calculateDaysDiff(reportDateN, clarifyDateR);
+  }
+  if (durClarify >= 0) {
+    data["ระยะเวลาชี้แจง (วัน)"] = durClarify;
+    data["ระยะเวลาชี้แจง"] = durClarify;
+    data["ระยะเวลาได้รับชี้แจง"] = durClarify;
+    data["ระยะเวลาการชี้แจง"] = durClarify;
+  }
+
   const row = headers.map((h, colIdx) => {
     if (data[h] !== undefined && data[h] !== null) return data[h];
     const hNorm = h.toLowerCase().trim();
     if (hNorm.includes("ครบกำหนดชี้แจง")) return data["ครบกำหนดชี้แจง 30 วัน"] || "";
     if (colIdx === 20 && data["ครบกำหนดชี้แจง 30 วัน"]) return data["ครบกำหนดชี้แจง 30 วัน"];
+    if (hNorm.includes("ระยะเวลาชี้แจง") || hNorm.includes("ระยะเวลาได้รับชี้แจง")) return data["ระยะเวลาชี้แจง (วัน)"] || "";
+    if (colIdx === 21 && data["ระยะเวลาชี้แจง (วัน)"]) return data["ระยะเวลาชี้แจง (วัน)"];
     return "";
   });
   sheet.appendRow(row);
@@ -334,7 +353,7 @@ function updateAuditEntry(ss, rowIndex, data) {
   const sheet = ss.getSheetByName("Main_Audit");
   if (!rowIndex || rowIndex < 2) return { status: "error", message: "Invalid row index" };
 
-  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 21)).getValues()[0].map(h => String(h).trim());
+  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 22)).getValues()[0].map(h => String(h).trim());
 
   const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
 
@@ -410,11 +429,30 @@ function updateAuditEntry(ss, rowIndex, data) {
     data["ครบกำหนดชี้แจง (30 วัน)"] = "";
   }
 
+  // Auto-calculate Col V (ระยะเวลาชี้แจง (วัน)) from Col N and Col R
+  const clarifyDateR = data["วันที่หน่วยรับตรวจชี้แจง"];
+  let durClarify = -1;
+  if (data["ระยะเวลาชี้แจง (วัน)"] !== undefined && data["ระยะเวลาชี้แจง (วัน)"] !== "") {
+    durClarify = Number(data["ระยะเวลาชี้แจง (วัน)"]);
+  } else if (data["ระยะเวลาชี้แจง"] !== undefined && data["ระยะเวลาชี้แจง"] !== "") {
+    durClarify = Number(data["ระยะเวลาชี้แจง"]);
+  } else if (reportDateN && clarifyDateR) {
+    durClarify = calculateDaysDiff(reportDateN, clarifyDateR);
+  }
+  if (durClarify >= 0) {
+    data["ระยะเวลาชี้แจง (วัน)"] = durClarify;
+    data["ระยะเวลาชี้แจง"] = durClarify;
+    data["ระยะเวลาได้รับชี้แจง"] = durClarify;
+    data["ระยะเวลาการชี้แจง"] = durClarify;
+  }
+
   const rowValues = headers.map((h, colIdx) => {
     if (data[h] !== undefined && data[h] !== null) return data[h];
     const hNorm = h.toLowerCase().trim();
     if (hNorm.includes("ครบกำหนดชี้แจง")) return data["ครบกำหนดชี้แจง 30 วัน"] || "";
     if (colIdx === 20 && data["ครบกำหนดชี้แจง 30 วัน"]) return data["ครบกำหนดชี้แจง 30 วัน"];
+    if (hNorm.includes("ระยะเวลาชี้แจง") || hNorm.includes("ระยะเวลาได้รับชี้แจง")) return data["ระยะเวลาชี้แจง (วัน)"] || "";
+    if (colIdx === 21 && data["ระยะเวลาชี้แจง (วัน)"]) return data["ระยะเวลาชี้แจง (วัน)"];
     return "";
   });
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);

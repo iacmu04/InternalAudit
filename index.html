@@ -818,8 +818,11 @@
                                     {{ u.clarifyDueDate }}
                                 </div>
                                 <div v-if="u.isClarified">
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                        <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i> ชี้แจงแล้ว
+                                    <span v-if="u.isClarifiedOverdue" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-100 text-red-800 border border-red-300">
+                                        <i data-lucide="alert-circle" class="w-3 h-3 text-red-600"></i> ชี้แจงแล้ว ({{ u.clarifyDuration }} วัน)
+                                    </span>
+                                    <span v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                        <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i> ชี้แจงแล้ว<span v-if="u.clarifyDuration !== null"> ({{ u.clarifyDuration }} วัน)</span>
                                     </span>
                                 </div>
                                 <div v-else-if="u.isClarifyOverdue">
