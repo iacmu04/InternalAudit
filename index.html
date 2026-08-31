@@ -726,11 +726,7 @@
                         <th class="py-3.5 px-3 min-w-[240px]">สถานะล่าสุด</th>
                         <th class="py-3.5 px-3 text-center min-w-[130px]">วันตรวจจริง</th>
                         <th class="py-3.5 px-3 text-center min-w-[130px]">ปิดตรวจ &rarr; อธิการบดี</th>
-                        <th class="py-3.5 px-3 text-center min-w-[140px]">ปิดตรวจ &rarr; คตส.</th>
-                        <th class="py-3.5 px-3 text-center min-w-[110px] whitespace-nowrap leading-snug">
-                            <div class="text-slate-600 font-bold">"เตือน"</div>
-                            <div class="text-slate-900 font-black">รายงาน คตส.</div>
-                        </th>
+                        <th class="py-3.5 px-3 text-center min-w-[150px]">ปิดตรวจ &rarr; คตส.</th>
                         <!-- Highlighted Column: ครบกำหนดชี้แจง 30 วัน -->
                         <th class="py-3.5 px-3 text-center min-w-[155px] bg-amber-100/90 text-amber-950 font-black border-x border-amber-300 shadow-2xs leading-snug">
                             <div class="text-[11px] text-amber-800 font-bold">ครบกำหนดชี้แจง</div>
@@ -741,7 +737,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs">
                     <tr v-if="filteredUnits.length === 0">
-                        <td colspan="9" class="py-10 text-center text-slate-400 font-bold">ไม่พบข้อมูลส่วนงานตามเงื่อนไขที่เลือก</td>
+                        <td colspan="8" class="py-10 text-center text-slate-400 font-bold">ไม่พบข้อมูลส่วนงานตามเงื่อนไขที่เลือก</td>
                     </tr>
                     <tr v-for="(u, index) in filteredUnits" :key="u.id" 
                         class="hover:bg-slate-50 transition-colors"
@@ -782,6 +778,7 @@
                             <span v-else class="text-slate-300">-</span>
                         </td>
 
+                        <!-- ปิดตรวจ -> คตส. (รวมรอบประชุม + จำนวนวัน + กระพริบเตือนเมื่อ >= 50 วัน) -->
                         <td class="py-3.5 px-3 text-center">
                             <div class="space-y-1">
                                 <div class="text-xs font-bold text-slate-800">
@@ -791,26 +788,25 @@
                                     <span v-else class="text-slate-300">-</span>
                                 </div>
                                 <div>
-                                    <span v-if="u.ctsDuration !== null" 
-                                          class="inline-block text-xs font-black px-2.5 py-0.5 rounded-lg"
-                                          :class="u.ctsDuration > 60 ? 'bg-red-600 text-white shadow-xs' : 'bg-indigo-50 text-indigo-800 border border-indigo-200'">
+                                    <!-- เกิน 60 วัน: แถบสีแดงชัดเจน -->
+                                    <span v-if="u.ctsDuration !== null && u.ctsDuration > 60" 
+                                          class="inline-block text-xs font-black px-2.5 py-0.5 rounded-lg bg-red-600 text-white shadow-xs">
+                                        {{ u.ctsDuration }} วัน
+                                    </span>
+                                    <!-- เกิน 50 วันแต่ไม่เกิน 60 วัน: แถบสีส้มกระพริบเตือน -->
+                                    <span v-else-if="u.isWarning" 
+                                          class="inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-lg bg-amber-500 text-white shadow-xs animate-pulse">
+                                        <i data-lucide="alert-triangle" class="w-3 h-3 text-white"></i>
+                                        {{ u.ctsDuration }} วัน (เตือน &ge; 50 วัน)
+                                    </span>
+                                    <!-- ปกติ (ไม่เกิน 50 วัน): แถบสีน้ำเงิน/ม่วงตามปกติ -->
+                                    <span v-else-if="u.ctsDuration !== null" 
+                                          class="inline-block text-xs font-black px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
                                         {{ u.ctsDuration }} วัน
                                     </span>
                                     <span v-else class="text-slate-300">-</span>
                                 </div>
                             </div>
-                        </td>
-
-                        <td class="py-3.5 px-3 text-center">
-                            <span v-if="u.ctsDuration !== null && u.ctsDuration > 60" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-red-100 text-red-800 border border-red-200 whitespace-nowrap">
-                                <i data-lucide="x-circle" class="w-3.5 h-3.5 text-red-600"></i> เกิน 60 วัน
-                            </span>
-                            <span v-else-if="u.isWarning" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-red-100 text-red-800 border border-red-300 dot-pulse whitespace-nowrap">
-                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-red-600"></i> เตือน &ge; 50 วัน
-                            </span>
-                            <span v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap">
-                                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> ปกติ
-                            </span>
                         </td>
 
                         <!-- Highlighted Cell: ครบกำหนดชี้แจง 30 วัน -->
