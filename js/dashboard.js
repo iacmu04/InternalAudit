@@ -223,6 +223,44 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       }
     }
 
+    // 2.7 Clarification Due Date (Col U: 30 days from Col N วันที่แจ้งหน่วยรับตรวจ_รายงาน)
+    // and Clarification Alert (if elapsed >= 20 days and Col R วันที่หน่วยรับตรวจชี้แจง is empty)
+    const reportDateToUnit = getRowDateVal(row, "วันที่แจ้งหน่วยรับตรวจ_รายงาน", 13);
+    const clarifyDateFromUnit = getRowDateVal(row, "วันที่หน่วยรับตรวจชี้แจง", 17);
+    
+    let clarifyDueDateFormatted = "-";
+    let clarifyDueDateObj = null;
+    let daysSinceReport = null;
+    let isClarifyWarning = false; // >= 20 days without clarification
+    let isClarifyOverdue = false; // > 30 days without clarification
+    let isClarified = false;      // Unit has submitted clarification
+
+    if (reportDateToUnit) {
+      const pReportDate = parseDate(reportDateToUnit);
+      if (pReportDate) {
+        clarifyDueDateObj = new Date(pReportDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+        clarifyDueDateFormatted = formatThaiDateShort(clarifyDueDateObj);
+
+        const pClarifyDate = clarifyDateFromUnit ? parseDate(clarifyDateFromUnit) : null;
+        if (pClarifyDate) {
+          isClarified = true;
+        } else {
+          const now = new Date();
+          now.setHours(0,0,0,0);
+          const rDate = new Date(pReportDate);
+          rDate.setHours(0,0,0,0);
+          daysSinceReport = Math.floor((now - rDate) / (24 * 60 * 60 * 1000));
+          
+          if (daysSinceReport >= 20) {
+            isClarifyWarning = true;
+          }
+          if (daysSinceReport > 30) {
+            isClarifyOverdue = true;
+          }
+        }
+      }
+    }
+
     processedUnits.push({
       id: row._rowIndex || idx + 1,
       name: deptName,
@@ -244,6 +282,14 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       ctsDuration: ctsDuration,
       ctsCycle: ctsCycle,
       isWarning: isWarning,
+      clarifyDueDate: clarifyDueDateFormatted,
+      clarifyDueDateObj: clarifyDueDateObj,
+      reportDateToUnit: reportDateToUnit,
+      clarifyDateFromUnit: clarifyDateFromUnit,
+      daysSinceReport: daysSinceReport,
+      isClarifyWarning: isClarifyWarning,
+      isClarifyOverdue: isClarifyOverdue,
+      isClarified: isClarified,
       raw: row
     });
   });

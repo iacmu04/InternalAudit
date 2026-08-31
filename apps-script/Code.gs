@@ -289,7 +289,32 @@ function saveAuditEntry(ss, data) {
     data["ระยะเวลาเสนอรายงานคตส."] = durCts;
   }
 
-  const row = headers.map(h => data[h] !== undefined ? data[h] : "");
+  // Auto-calculate Col U (ครบกำหนดชี้แจง 30 วัน) from Col N (วันที่แจ้งหน่วยรับตรวจ_รายงาน)
+  const reportDateN = data["วันที่แจ้งหน่วยรับตรวจ_รายงาน"] || data["วันที่แจ้งหน่วยรับตรวจ (รายงาน)"];
+  if (reportDateN) {
+    const dN = parseDateFromStr(reportDateN);
+    if (dN) {
+      const dueD = new Date(dN.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const dueStr = formatDate(dueD);
+      data["ครบกำหนดชี้แจง 30 วัน"] = dueStr;
+      data["ครบกำหนดชี้แจง_30วัน"] = dueStr;
+      data["ครบกำหนดชี้แจง"] = dueStr;
+      data["ครบกำหนดชี้แจง (30 วัน)"] = dueStr;
+    }
+  } else {
+    data["ครบกำหนดชี้แจง 30 วัน"] = "";
+    data["ครบกำหนดชี้แจง_30วัน"] = "";
+    data["ครบกำหนดชี้แจง"] = "";
+    data["ครบกำหนดชี้แจง (30 วัน)"] = "";
+  }
+
+  const row = headers.map((h, colIdx) => {
+    if (data[h] !== undefined && data[h] !== null) return data[h];
+    const hNorm = h.toLowerCase().trim();
+    if (hNorm.includes("ครบกำหนดชี้แจง")) return data["ครบกำหนดชี้แจง 30 วัน"] || "";
+    if (colIdx === 20 && data["ครบกำหนดชี้แจง 30 วัน"]) return data["ครบกำหนดชี้แจง 30 วัน"];
+    return "";
+  });
   sheet.appendRow(row);
 
   if (data["ส่วนงาน"]) {
@@ -309,7 +334,7 @@ function updateAuditEntry(ss, rowIndex, data) {
   const sheet = ss.getSheetByName("Main_Audit");
   if (!rowIndex || rowIndex < 2) return { status: "error", message: "Invalid row index" };
 
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
+  const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 21)).getValues()[0].map(h => String(h).trim());
 
   const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
 
@@ -366,7 +391,32 @@ function updateAuditEntry(ss, rowIndex, data) {
     data["ระยะเวลาเสนอรายงานคตส."] = durCts;
   }
 
-  const rowValues = headers.map(h => data[h] !== undefined ? data[h] : "");
+  // Auto-calculate Col U (ครบกำหนดชี้แจง 30 วัน) from Col N (วันที่แจ้งหน่วยรับตรวจ_รายงาน)
+  const reportDateN = data["วันที่แจ้งหน่วยรับตรวจ_รายงาน"] || data["วันที่แจ้งหน่วยรับตรวจ (รายงาน)"];
+  if (reportDateN) {
+    const dN = parseDateFromStr(reportDateN);
+    if (dN) {
+      const dueD = new Date(dN.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const dueStr = formatDate(dueD);
+      data["ครบกำหนดชี้แจง 30 วัน"] = dueStr;
+      data["ครบกำหนดชี้แจง_30วัน"] = dueStr;
+      data["ครบกำหนดชี้แจง"] = dueStr;
+      data["ครบกำหนดชี้แจง (30 วัน)"] = dueStr;
+    }
+  } else {
+    data["ครบกำหนดชี้แจง 30 วัน"] = "";
+    data["ครบกำหนดชี้แจง_30วัน"] = "";
+    data["ครบกำหนดชี้แจง"] = "";
+    data["ครบกำหนดชี้แจง (30 วัน)"] = "";
+  }
+
+  const rowValues = headers.map((h, colIdx) => {
+    if (data[h] !== undefined && data[h] !== null) return data[h];
+    const hNorm = h.toLowerCase().trim();
+    if (hNorm.includes("ครบกำหนดชี้แจง")) return data["ครบกำหนดชี้แจง 30 วัน"] || "";
+    if (colIdx === 20 && data["ครบกำหนดชี้แจง 30 วัน"]) return data["ครบกำหนดชี้แจง 30 วัน"];
+    return "";
+  });
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);
 
   // Save non-audit days if provided
@@ -790,4 +840,28 @@ function ensureSheets(ss) {
       }
     }
   });
+}
+
+function parseDateFromStr(dateStr) {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+  const str = String(dateStr).trim();
+  if (!str) return null;
+
+  const ymdMatch = str.match(/^(\d{4})[-\/\s\.](\d{1,2})[-\/\s\.](\d{1,2})/);
+  if (ymdMatch) {
+    let yr = parseInt(ymdMatch[1]);
+    if (yr > 2400) yr -= 543;
+    return new Date(yr, parseInt(ymdMatch[2]) - 1, parseInt(ymdMatch[3]));
+  }
+
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+  if (dmyMatch) {
+    let yr = parseInt(dmyMatch[3]);
+    if (yr > 2400) yr -= 543;
+    return new Date(yr, parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]));
+  }
+
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
 }

@@ -926,6 +926,24 @@ const app = createApp({
         }
       }
 
+      // 5. คำนวณ ครบกำหนดชี้แจง 30 วัน (Col U) เมื่อมีการกรอก วันที่แจ้งหน่วยรับตรวจ_รายงาน (Col N)
+      const reportDateToUnit = formDataToSend["วันที่แจ้งหน่วยรับตรวจ_รายงาน"];
+      if (reportDateToUnit) {
+        const pReportDate = parseDate(reportDateToUnit);
+        if (pReportDate) {
+          const dueDateObj = new Date(pReportDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+          const dueDateDMY = formatDateDMY(dueDateObj);
+          formDataToSend["ครบกำหนดชี้แจง 30 วัน"] = dueDateDMY;
+          formDataToSend["ครบกำหนดชี้แจง_30วัน"] = dueDateDMY;
+          formDataToSend["ครบกำหนดชี้แจง"] = dueDateDMY;
+          console.log(`📊 5. ครบกำหนดชี้แจง 30 วัน (Col U) = ${dueDateDMY} (แจ้งหน่วยตรวจ: ${reportDateToUnit} + 30 วัน)`);
+        }
+      } else {
+        formDataToSend["ครบกำหนดชี้แจง 30 วัน"] = "";
+        formDataToSend["ครบกำหนดชี้แจง_30วัน"] = "";
+        formDataToSend["ครบกำหนดชี้แจง"] = "";
+      }
+
       let res;
       if (editingRowIndex.value) {
         res = await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: formDataToSend });
@@ -1313,6 +1331,18 @@ const app = createApp({
       });
     });
 
+    const clarifyWarningDeptsList = computed(() => {
+      const units = dashboardResult.value.units || [];
+      return units.filter(u => u.isClarifyWarning || u.isClarifyOverdue).map(u => ({
+        name: u.name,
+        team: u.team,
+        clarifyDueDate: u.clarifyDueDate,
+        daysSinceReport: u.daysSinceReport,
+        isClarifyOverdue: u.isClarifyOverdue,
+        isClarifyWarning: u.isClarifyWarning
+      }));
+    });
+
     // Watchers to trigger Chart re-render
     watch(phaseChartStats, (newStats) => {
       nextTick(() => {
@@ -1416,6 +1446,7 @@ const app = createApp({
       dateDiffInDays,
       calculateExtensionDays,
       warningDeptsList,
+      clarifyWarningDeptsList,
       unstartedUnitsList,
       team1Unstarted,
       team2Unstarted,
