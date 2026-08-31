@@ -203,6 +203,24 @@ function isSameDepartment(d1, d2) {
 }
 
 /**
+ * Count total unique non-audit days recorded for a department
+ */
+function countNonAuditDaysForDepartment(deptName, nonAuditDaysList) {
+  if (!Array.isArray(nonAuditDaysList) || !deptName) return 0;
+  const uniqueDates = new Set();
+  nonAuditDaysList.forEach(item => {
+    const extracted = extractNonAuditRow(item);
+    if (!extracted || !extracted.date) return;
+    if (isSameDepartment(extracted.department, deptName)) {
+      const d = new Date(extracted.date);
+      d.setHours(0,0,0,0);
+      uniqueDates.add(d.getTime());
+    }
+  });
+  return uniqueDates.size;
+}
+
+/**
  * Calculate actual audit days between startDate and endDate
  */
 function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holidaysList, nonAuditDaysList) {

@@ -814,39 +814,46 @@ const app = createApp({
       if (auditStartDate && auditEndDate) {
         const plannedCalc = calculateActualAuditDays(
           auditStartDate, auditEndDate, deptName, 
-          holidaysList.value, effectiveNonAuditList
+          holidaysList.value, []
         );
         if (plannedCalc && plannedCalc.actualDays >= 0) {
           plannedDays = plannedCalc.actualDays;
           formDataToSend["ระยะเวลาตรวจสอบตามแผน"] = plannedDays;
-          console.log(`📊 1. ระยะเวลาตรวจสอบตามแผน (Col I) = ${plannedDays} วัน (หักเสาร์-อาทิตย์: ${plannedCalc.weekendDays}, วันหยุด: ${plannedCalc.holidayDays}, วันไม่ตรวจ: ${plannedCalc.nonAuditDays})`);
+          console.log(`📊 1. ระยะเวลาตรวจสอบตามแผน (Col I) = ${plannedDays} วัน (หักเสาร์-อาทิตย์: ${plannedCalc.weekendDays}, วันหยุด: ${plannedCalc.holidayDays})`);
         }
       }
 
-      // 2. ดึงจำนวนวันที่ขอขยายระยะเวลาที่ได้รับอนุมัติในชีท Delay (Col G) สำหรับส่วนงานนี้
+      // 2. นับวันไม่เข้าตรวจจริงสำหรับส่วนงานนี้
+      const nonAuditCount = typeof countNonAuditDaysForDepartment === "function"
+        ? countNonAuditDaysForDepartment(deptName, effectiveNonAuditList)
+        : 0;
+
+      // 3. ดึงจำนวนวันที่ขอขยายระยะเวลาที่ได้รับอนุมัติในชีท Delay (Col G) สำหรับส่วนงานนี้
       let approvedExtensionDays = 0;
       if (Array.isArray(delayList.value) && deptName) {
-        const deptClean = String(deptName).trim().toLowerCase();
         delayList.value.forEach(item => {
-          const itemDept = String(item.Department || item.department || item["ส่วนงาน"] || item._col3 || "").trim().toLowerCase();
+          const itemDept = String(item.Department || item.department || item["ส่วนงาน"] || item._col3 || "").trim();
           const deanStatus = String(item.DeanStatus || item.status || item.Status || item._col11 || "").trim();
-          const leaderStatus = String(item.LeaderStatus || item._col9 || "").trim();
+          const leaderStatus = String(item.LeaderStatus || item._col9 || item._col8 || "").trim();
           
-          if (itemDept === deptClean && (deanStatus.includes("อนุมัติ") || deanStatus.includes("อนุมัติแล้ว") || (deanStatus === "-" && (leaderStatus.includes("อนุมัติ") || leaderStatus.includes("ผ่านพิจารณา"))))) {
+          const isApproved = deanStatus.includes("อนุมัติ") || deanStatus.includes("อนุมัติแล้ว") || 
+            ((deanStatus === "-" || !deanStatus) && (leaderStatus.includes("อนุมัติ") || leaderStatus.includes("ผ่านพิจารณา")));
+
+          if (isSameDepartment(itemDept, deptName) && isApproved) {
             const days = parseInt(item["Total number of days"] || item.totalDays || item["จำนวนวันรวมที่ขอขยาย"] || item._col6 || 0) || 0;
             approvedExtensionDays += days;
           }
         });
       }
 
-      // 2. ระยะเวลาตรวจจริง (Col J) = Col I + วันขอขยายเวลาที่ได้รับอนุมัติ
+      // 4. ระยะเวลาตรวจจริง (Col J) = Col I + วันขอขยายเวลาที่อนุมัติ - วันไม่เข้าตรวจจริง
       if (auditStartDate && auditEndDate) {
-        const totalActualDays = plannedDays + approvedExtensionDays;
+        const totalActualDays = Math.max(plannedDays + approvedExtensionDays - nonAuditCount, 0);
         formDataToSend["ระยะเวลาตรวจจริง (วัน)"] = totalActualDays;
         formDataToSend["ระยะเวลาตรวจจริง"] = totalActualDays;
         formDataToSend["ระยะเวลาจริงในการตรวจสอบ"] = totalActualDays;
         formDataToSend["ระยะเวลาจริงในการตรวจสอบ (วัน)"] = totalActualDays;
-        console.log(`📊 2. ระยะเวลาตรวจจริง (Col J) = Col I (${plannedDays}) + วันขอขยายเวลาที่อนุมัติ (${approvedExtensionDays}) = ${totalActualDays} วัน`);
+        console.log(`📊 2. ระยะเวลาตรวจจริง (Col J) = Col I (${plannedDays}) + วันขอขยายเวลาที่อนุมัติ (${approvedExtensionDays}) - วันไม่เข้าตรวจ (${nonAuditCount}) = ${totalActualDays} วัน`);
       }
 
       // 3. ระยะเวลาเสนออธิการบดี (Col M): ปิดตรวจ (K) -> เสนออธิการบดี (L)

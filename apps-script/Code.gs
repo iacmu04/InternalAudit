@@ -320,13 +320,15 @@ function updateAuditEntry(ss, rowIndex, data) {
     plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
   }
 
+  const nonAuditCount = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
+
   let actualDays = -1;
   if (data["ระยะเวลาตรวจจริง (วัน)"] !== undefined && data["ระยะเวลาตรวจจริง (วัน)"] !== "") {
     actualDays = Number(data["ระยะเวลาตรวจจริง (วัน)"]);
   } else if (data["ระยะเวลาตรวจจริง"] !== undefined && data["ระยะเวลาตรวจจริง"] !== "") {
     actualDays = Number(data["ระยะเวลาตรวจจริง"]);
   } else if (plannedDays >= 0) {
-    actualDays = Math.max(plannedDays + approvedExtDays, 0);
+    actualDays = Math.max(plannedDays + approvedExtDays - nonAuditCount, 0);
   }
 
   let durPresident = -1;
@@ -495,13 +497,16 @@ function getApprovedExtensionDaysForDept(ss, deptName) {
   const values = delaySheet.getDataRange().getValues();
   if (values.length < 2) return 0;
 
-  const deptClean = String(deptName).trim().toLowerCase();
   let sum = 0;
-
   for (let i = 1; i < values.length; i++) {
-    const rDept = String(values[i][3] || "").trim().toLowerCase(); // Col D: Department
+    const rDept = String(values[i][3] || "").trim(); // Col D: Department
     const deanStatus = String(values[i][11] || values[i][8] || "").trim(); // Col L / Col I: DeanStatus/Status
-    if (rDept === deptClean && (deanStatus === "อนุมัติ" || deanStatus === "อนุมัติแล้ว")) {
+    const leaderStatus = String(values[i][9] || "").trim();
+
+    const isApproved = deanStatus.includes("อนุมัติ") || deanStatus.includes("อนุมัติแล้ว") || 
+      ((deanStatus === "-" || !deanStatus) && (leaderStatus.includes("อนุมัติ") || leaderStatus.includes("ผ่านพิจารณา")));
+
+    if (isSameDept(rDept, deptName) && isApproved) {
       const days = parseInt(values[i][6]) || 0; // Col G: Total number of days
       sum += days;
     }
@@ -517,16 +522,23 @@ function countNonAuditDaysForDept(ss, deptName) {
   const values = nonAuditSheet.getDataRange().getValues();
   if (values.length < 2) return 0;
 
-  const deptClean = String(deptName).trim().toLowerCase();
-  let count = 0;
-
+  const uniqueDates = {};
   for (let i = 1; i < values.length; i++) {
-    const rDept = String(values[i][2] || "").trim().toLowerCase(); // Col C: ส่วนงาน
-    if (rDept === deptClean || rDept === "ทั้งหมด") {
-      count++;
+    let isMatch = false;
+    for (let j = 0; j < values[i].length; j++) {
+      const cellVal = String(values[i][j] || "").trim();
+      if (cellVal && isSameDept(cellVal, deptName)) {
+        isMatch = true;
+        break;
+      }
+    }
+    if (isMatch) {
+      const rawDate = values[i][0] || values[i][1];
+      const dStr = formatDate(rawDate);
+      if (dStr) uniqueDates[dStr] = true;
     }
   }
-  return count;
+  return Object.keys(uniqueDates).length;
 }
 
 function calculateDaysDiff(startDateStr, endDateStr) {

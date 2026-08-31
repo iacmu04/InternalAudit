@@ -168,53 +168,38 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     const startDateG = getRowDateVal(row, "วันที่เริ่มตรวจสอบ", 6);
     const endDateH = getRowDateVal(row, "วันที่สิ้นสุดการตรวจสอบ", 7);
 
-    // Find approved extension days and maximum extended end date for this department
-    let approvedExtensionDays = 0;
-    let maxDelayEndDate = null;
+    // 1. Calculate Planned Audit Days (Col I) = Base working days between Col G and Col H (excluding weekends and holidays)
+    const auditPlanCalc = calculateActualAuditDays(
+      startDateG,
+      endDateH,
+      deptName,
+      holidaysList,
+      []
+    );
 
+    let plannedDays = 0;
+    if (startDateG && endDateH && auditPlanCalc && auditPlanCalc.actualDays >= 0) {
+      plannedDays = auditPlanCalc.actualDays;
+    } else {
+      const savedPlanned = (row["ระยะเวลาตรวจสอบตามแผน"] !== undefined && row["ระยะเวลาตรวจสอบตามแผน"] !== "") ? parseInt(row["ระยะเวลาตรวจสอบตามแผน"]) : 0;
+      plannedDays = !isNaN(savedPlanned) ? savedPlanned : 0;
+    }
+
+    // 2. Count non-audit days for this department
+    const nonAuditCount = typeof countNonAuditDaysForDepartment === "function" 
+      ? countNonAuditDaysForDepartment(deptName, nonAuditDaysList) 
+      : 0;
+
+    // 3. Find approved extension days from Delay sheet
+    let approvedExtensionDays = 0;
     Object.keys(deptExtensionDaysMap).forEach(kDept => {
       if (typeof isSameDepartment === "function" ? isSameDepartment(kDept, deptName) : (kDept === deptClean || kDept.includes(deptClean) || deptClean.includes(kDept))) {
         approvedExtensionDays += deptExtensionDaysMap[kDept];
       }
     });
 
-    Object.keys(deptExtensionEndDateMap).forEach(kDept => {
-      if (typeof isSameDepartment === "function" ? isSameDepartment(kDept, deptName) : (kDept === deptClean || kDept.includes(deptClean) || deptClean.includes(kDept))) {
-        const dEnd = deptExtensionEndDateMap[kDept];
-        if (!maxDelayEndDate || dEnd > maxDelayEndDate) {
-          maxDelayEndDate = dEnd;
-        }
-      }
-    });
-
-    // If extension exists in Delay sheet, the overall audit period extends to cover the delay period as well
-    let effectiveEndDate = endDateH;
-    if (maxDelayEndDate) {
-      const parsedEndH = parseDate(endDateH);
-      if (!parsedEndH || maxDelayEndDate > parsedEndH) {
-        effectiveEndDate = maxDelayEndDate;
-      }
-    }
-    
-    const auditCalc = calculateActualAuditDays(
-      startDateG,
-      effectiveEndDate,
-      deptName,
-      holidaysList,
-      nonAuditDaysList
-    );
-
-    // Dynamic planned days (Col I): Always recalculate from dates, holidays, and non-audit days
-    let plannedDays = 0;
-    if (startDateG && endDateH && auditCalc && auditCalc.actualDays >= 0) {
-      plannedDays = auditCalc.actualDays;
-    } else {
-      const savedPlanned = (row["ระยะเวลาตรวจสอบตามแผน"] !== undefined && row["ระยะเวลาตรวจสอบตามแผน"] !== "") ? parseInt(row["ระยะเวลาตรวจสอบตามแผน"]) : 0;
-      plannedDays = !isNaN(savedPlanned) ? savedPlanned : 0;
-    }
-
-    // Dynamic actual audit days (Col J): Col I + Approved Extension Days
-    const totalActualAuditDays = Math.max(plannedDays + approvedExtensionDays, 0);
+    // 4. Exact Formula: Actual Audit Days (Col J) = Planned (Col I) + Extension (Delay) - Non-Audit Days
+    const totalActualAuditDays = Math.max(plannedDays + approvedExtensionDays - nonAuditCount, 0);
 
     // 2.4 Calculate Duration: Closed Audit (Col K) -> Report to President (Col L)
     const dateJ = getRowDateVal(row, "วันที่ปิดตรวจ", 10);
@@ -252,9 +237,9 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       plannedDays: plannedDays,
       extensionDays: approvedExtensionDays,
       actualAuditDays: totalActualAuditDays,
-      weekendDays: auditCalc.weekendDays,
-      holidayDays: auditCalc.holidayDays,
-      interruptedDays: auditCalc.nonAuditDays,
+      weekendDays: auditPlanCalc.weekendDays,
+      holidayDays: auditPlanCalc.holidayDays,
+      interruptedDays: nonAuditCount,
       aeDuration: aeDuration,
       ctsDuration: ctsDuration,
       ctsCycle: ctsCycle,
