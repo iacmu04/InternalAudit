@@ -653,12 +653,12 @@ const app = createApp({
       });
     };
 
-    // Dynamic Non_Audit_Days functions inside Audit Form
+    // Dynamic Non_Audit_Days functions inside Audit Form (add to the TOP of the list)
     const addNonAuditDateRow = () => {
       if (!auditForm.value.nonAuditDays) {
         auditForm.value.nonAuditDays = [];
       }
-      auditForm.value.nonAuditDays.push({
+      auditForm.value.nonAuditDays.unshift({
         date: "",
         reason: nonAuditReasonOptions.value[0] || "ติดประชุมมหาวิทยาลัย",
         details: ""
