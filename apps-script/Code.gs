@@ -390,6 +390,25 @@ function deleteAuditEntry(ss, rowIndex) {
   return { status: "error", message: "ไม่พบตำแหน่งแถวที่ต้องการลบ" };
 }
 
+function isSameDept(d1, d2) {
+  if (!d1 || !d2) return false;
+  const clean = function(s) {
+    return String(s)
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/[–—−]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  };
+  const n1 = clean(d1);
+  const n2 = clean(d2);
+  if (n1 === n2) return true;
+  if (n1.includes(n2) || n2.includes(n1)) return true;
+  const c1 = n1.replace(/[\s\-_]/g, '');
+  const c2 = n2.replace(/[\s\-_]/g, '');
+  return c1 === c2 || c1.includes(c2) || c2.includes(c1);
+}
+
 function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
   if (!ss) ss = getSpreadsheet();
   if (!deptName) return;
@@ -408,7 +427,6 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
     } catch(e) {}
   }
 
-  const deptTarget = String(deptName).trim().toLowerCase();
   const lastRow = sheet.getLastRow();
   const lastCol = Math.max(sheet.getLastColumn(), 4);
 
@@ -422,29 +440,36 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 
-  // Find column index of "ส่วนงาน" (0-indexed)
-  let deptColIdx = headers.findIndex(h => h.includes("ส่วนงาน") || h.toLowerCase().includes("department"));
-  if (deptColIdx === -1) deptColIdx = 2;
-
-  // 1. Delete existing rows for this department (from bottom to top)
+  // 1. Thoroughly delete all existing rows for this department (scan all columns, bottom to top)
   if (lastRow >= 2) {
-    const dataVals = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+    const dataVals = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
     for (let i = dataVals.length - 1; i >= 0; i--) {
-      const rDept = String(dataVals[i][deptColIdx] || dataVals[i][2] || dataVals[i][0] || "").trim().toLowerCase();
-      if (rDept === deptTarget) {
+      let isMatch = false;
+      for (let j = 0; j < dataVals[i].length; j++) {
+        const cellVal = String(dataVals[i][j] || "").trim();
+        if (cellVal && isSameDept(cellVal, deptName)) {
+          isMatch = true;
+          break;
+        }
+      }
+      if (isMatch) {
         sheet.deleteRow(i + 2);
       }
     }
   }
 
-  // 2. Append new rows
+  // 2. Append new rows (deduplicating by date within the input list)
   if (Array.isArray(nonAuditDays) && nonAuditDays.length > 0) {
+    const seenDates = {};
     nonAuditDays.forEach(entry => {
       if (!entry) return;
       const rawDate = entry.date || entry["วันที่"] || "";
       if (!rawDate) return;
       
       const dateStr = formatDate(rawDate) || String(rawDate);
+      if (!dateStr || seenDates[dateStr]) return;
+      seenDates[dateStr] = true;
+
       const reason = entry.reason || entry["ประเภท"] || entry["สาเหตุ/หมายเหตุ"] || "ติดประชุมมหาวิทยาลัย";
       const details = entry.details || entry["รายละเอียด"] || entry["สาเหตุ/หมายเหตุ"] || reason;
 

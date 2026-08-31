@@ -74,15 +74,35 @@ function getRowDateVal(row, subKey, colIdx) {
 function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, delayList = []) {
   let completedCount = 0;
 
-  // Build department extension days map from approved Delay requests
+  // Build department extension days and latest extension end dates from Delay requests
   const deptExtensionDaysMap = {};
+  const deptExtensionEndDateMap = {};
+
   if (Array.isArray(delayList)) {
     delayList.forEach(item => {
-      const dept = String(item.Department || item.department || item["ส่วนงาน"] || "").trim().toLowerCase();
-      const status = String(item.DeanStatus || item.Status || item.status || "");
-      if (dept && (status.includes("อนุมัติ") || status.includes("อนุมัติแล้ว"))) {
-        const days = parseInt(item["Total number of days"] || item.totalDays || item["จำนวนวันรวมที่ขอขยาย"] || 0) || 0;
-        deptExtensionDaysMap[dept] = (deptExtensionDaysMap[dept] || 0) + days;
+      const itemDept = String(item.Department || item.department || item["ส่วนงาน"] || item._col3 || "").trim();
+      if (!itemDept) return;
+
+      const deanStatus = String(item.DeanStatus || item.status || item.Status || item._col11 || "").trim();
+      const leaderStatus = String(item.LeaderStatus || item._col9 || item._col8 || "").trim();
+      
+      const isApproved = deanStatus.includes("อนุมัติ") || deanStatus.includes("อนุมัติแล้ว") || 
+        ((deanStatus === "-" || !deanStatus) && (leaderStatus.includes("อนุมัติ") || leaderStatus.includes("ผ่านพิจารณา")));
+
+      if (isApproved) {
+        const days = parseInt(item["Total number of days"] || item.totalDays || item["จำนวนวันรวมที่ขอขยาย"] || item._col6 || 0) || 0;
+        const deptNorm = normalizeDeptString(itemDept);
+        deptExtensionDaysMap[deptNorm] = (deptExtensionDaysMap[deptNorm] || 0) + days;
+
+        const endDate = item["End Date"] || item.endDate || item["วันที่สิ้นสุด"] || item._col5;
+        if (endDate) {
+          const parsedEnd = parseDate(endDate);
+          if (parsedEnd) {
+            if (!deptExtensionEndDateMap[deptNorm] || parsedEnd > deptExtensionEndDateMap[deptNorm]) {
+              deptExtensionEndDateMap[deptNorm] = parsedEnd;
+            }
+          }
+        }
       }
     });
   }
@@ -147,16 +167,42 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     // 2.3 Dynamic Calculation: Planned Audit Days (Col I) and Actual Audit Days (Col J = Col I + Approved Extension Days)
     const startDateG = getRowDateVal(row, "วันที่เริ่มตรวจสอบ", 6);
     const endDateH = getRowDateVal(row, "วันที่สิ้นสุดการตรวจสอบ", 7);
+
+    // Find approved extension days and maximum extended end date for this department
+    let approvedExtensionDays = 0;
+    let maxDelayEndDate = null;
+
+    Object.keys(deptExtensionDaysMap).forEach(kDept => {
+      if (typeof isSameDepartment === "function" ? isSameDepartment(kDept, deptName) : (kDept === deptClean || kDept.includes(deptClean) || deptClean.includes(kDept))) {
+        approvedExtensionDays += deptExtensionDaysMap[kDept];
+      }
+    });
+
+    Object.keys(deptExtensionEndDateMap).forEach(kDept => {
+      if (typeof isSameDepartment === "function" ? isSameDepartment(kDept, deptName) : (kDept === deptClean || kDept.includes(deptClean) || deptClean.includes(kDept))) {
+        const dEnd = deptExtensionEndDateMap[kDept];
+        if (!maxDelayEndDate || dEnd > maxDelayEndDate) {
+          maxDelayEndDate = dEnd;
+        }
+      }
+    });
+
+    // If extension exists in Delay sheet, the overall audit period extends to cover the delay period as well
+    let effectiveEndDate = endDateH;
+    if (maxDelayEndDate) {
+      const parsedEndH = parseDate(endDateH);
+      if (!parsedEndH || maxDelayEndDate > parsedEndH) {
+        effectiveEndDate = maxDelayEndDate;
+      }
+    }
     
     const auditCalc = calculateActualAuditDays(
       startDateG,
-      endDateH,
+      effectiveEndDate,
       deptName,
       holidaysList,
       nonAuditDaysList
     );
-
-    const approvedExtensionDays = deptExtensionDaysMap[deptClean] || 0;
 
     // Dynamic planned days (Col I): Always recalculate from dates, holidays, and non-audit days
     let plannedDays = 0;
