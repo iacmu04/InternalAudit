@@ -211,15 +211,19 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     let ctsDuration = dateDiffInDays(dateJ, dateN);
     const ctsCycle = formatCtsCycle(row["ครั้งที่ประชุม_คตส"] || row["รอบประชุม_คตส"] || row._col16 || "");
 
-    // 2.6 Warning calculation: if CTS submission is >= 50 days (or pending & today - dateJ >= 50)
+    // 2.6 Warning calculation: Only warn if pending submission (!dateN) AND elapsed >= 50 days
+    let hasSubmittedToCts = false;
     let isWarning = false;
-    if (ctsDuration !== null && ctsDuration >= 50) {
-      isWarning = true;
-    } else if (!dateN && dateJ) {
+    if (dateN && String(dateN).trim() !== "" && dateN !== "-") {
+      hasSubmittedToCts = true;
+      isWarning = false;
+    } else if (dateJ) {
       const daysSinceJ = dateDiffInDays(dateJ, new Date());
-      if (daysSinceJ !== null && daysSinceJ >= 50) {
+      if (daysSinceJ !== null) {
         ctsDuration = daysSinceJ; // Dynamic elapsed days
-        isWarning = true;
+        if (daysSinceJ >= 50) {
+          isWarning = true;
+        }
       }
     }
 
