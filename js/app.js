@@ -584,7 +584,26 @@ const app = createApp({
     const pendingSupervisorCount = computed(() => pendingCounts.value.supervisorCount);
     const pendingDirectorCount = computed(() => pendingCounts.value.directorCount);
 
-    // Robust Flatpickr initializer that triggers Vue v-model updates
+    // Helper to keep Flatpickr header year in Thai Buddhist Era (พ.ศ. = ค.ศ. + 543)
+    const updateFlatpickrBEYear = (instance) => {
+      if (!instance || !instance.currentYearElement) return;
+      const yearElem = instance.currentYearElement;
+      if (!yearElem._beHandlerAttached) {
+        yearElem._beHandlerAttached = true;
+        yearElem.addEventListener("change", (e) => {
+          let val = parseInt(e.target.value);
+          if (val > 2400) {
+            instance.changeYear(val - 543);
+            yearElem.value = val;
+          }
+        });
+      }
+      if (instance.currentYear < 2400) {
+        yearElem.value = instance.currentYear + 543;
+      }
+    };
+
+    // Robust Flatpickr initializer that triggers Vue v-model updates and formats Thai Buddhist Years
     const initFlatpickrDatepickers = () => {
       nextTick(() => {
         if (window.flatpickr) {
@@ -592,11 +611,41 @@ const app = createApp({
             dateFormat: "d/m/Y",
             allowInput: true,
             locale: "th",
+            parseDate: (datestr) => {
+              return typeof parseDate === "function" ? parseDate(datestr) : new Date(datestr);
+            },
+            formatDate: (date) => {
+              const day = String(date.getDate()).padStart(2, '0');
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const yearBE = date.getFullYear() + 543;
+              return `${day}/${month}/${yearBE}`;
+            },
+            onReady: (selectedDates, dateStr, instance) => {
+              updateFlatpickrBEYear(instance);
+            },
+            onOpen: (selectedDates, dateStr, instance) => {
+              updateFlatpickrBEYear(instance);
+            },
+            onMonthChange: (selectedDates, dateStr, instance) => {
+              updateFlatpickrBEYear(instance);
+            },
+            onYearChange: (selectedDates, dateStr, instance) => {
+              updateFlatpickrBEYear(instance);
+            },
+            onValueUpdate: (selectedDates, dateStr, instance) => {
+              updateFlatpickrBEYear(instance);
+            },
             onChange: function(selectedDates, dateStr, instance) {
-              if (instance && instance.input) {
-                instance.input.value = dateStr;
+              if (instance && instance.input && selectedDates.length > 0) {
+                const d = selectedDates[0];
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const yearBE = d.getFullYear() + 543;
+                const beStr = `${day}/${month}/${yearBE}`;
+                instance.input.value = beStr;
                 instance.input.dispatchEvent(new Event("input", { bubbles: true }));
                 instance.input.dispatchEvent(new Event("change", { bubbles: true }));
+                updateFlatpickrBEYear(instance);
               }
             }
           });
