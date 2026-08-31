@@ -22,18 +22,20 @@ function parseDate(dateStr) {
   const str = String(dateStr).trim();
   if (!str) return null;
 
-  // Check YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-    const parts = str.split('T')[0].split('-');
-    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  // Check YYYY-MM-DD, YYYY MM DD, YYYY/MM/DD, YYYY.MM.DD
+  const ymdMatch = str.match(/^(\d{4})[-\/\s\.](\d{1,2})[-\/\s\.](\d{1,2})/);
+  if (ymdMatch) {
+    let yr = parseInt(ymdMatch[1]);
+    if (yr > 2400) yr -= 543;
+    return new Date(yr, parseInt(ymdMatch[2]) - 1, parseInt(ymdMatch[3]));
   }
 
-  // Check Thai date format e.g. "31/10/2569" or "31/10/2026"
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
-    const parts = str.split('/');
-    let yr = parseInt(parts[2]);
+  // Check Thai date format e.g. "31/10/2569" or "31/10/2026" or "31-10-2569"
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+  if (dmyMatch) {
+    let yr = parseInt(dmyMatch[3]);
     if (yr > 2400) yr -= 543;
-    return new Date(yr, parseInt(parts[1]) - 1, parseInt(parts[0]));
+    return new Date(yr, parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]));
   }
 
   // Check Thai date format e.g. "31 ตุลาคม 2569" or "31 ต.ค. 2569"
