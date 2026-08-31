@@ -59,12 +59,10 @@ function populateAuditFormFromRow(row, existingNonAuditList = []) {
 
   // Load existing non-audit days for this unit
   if (Array.isArray(existingNonAuditList) && form["ส่วนงาน"]) {
-    const deptClean = String(form["ส่วนงาน"]).trim().toLowerCase();
     form.nonAuditDays = existingNonAuditList.map(item => extractNonAuditRow(item))
       .filter(item => {
         if (!item || !item.date) return false;
-        const itemDept = item.department.trim().toLowerCase();
-        return itemDept === deptClean || deptClean.includes(itemDept) || itemDept.includes(deptClean);
+        return isSameDepartment(item.department, form["ส่วนงาน"]);
       })
       .map(item => ({
         date: formatDateDMY(item.date),

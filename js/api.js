@@ -126,7 +126,24 @@ class API {
               json.masterLists = liveMaster;
             }
           }
-          
+
+          // Normalize Non_Audit_Days in Strategy 1 as well
+          if (Array.isArray(json.nonAuditDays)) {
+            json.nonAuditDays = json.nonAuditDays.map(r => {
+              const extracted = typeof extractNonAuditRow === "function" ? extractNonAuditRow(r) : null;
+              if (extracted && extracted.date) {
+                return {
+                  ...r,
+                  "วันที่": formatISODate(extracted.date),
+                  "ส่วนงาน": extracted.department || r["ส่วนงาน"] || r.department || "",
+                  "ประเภท": extracted.reason || r["ประเภท"] || r.reason || "",
+                  "สาเหตุ/หมายเหตุ": extracted.details || r["สาเหตุ/หมายเหตุ"] || r["รายละเอียด"] || extracted.reason || ""
+                };
+              }
+              return r;
+            });
+          }
+
           return json;
         }
       } catch (err) {

@@ -157,11 +157,11 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     );
 
     const savedPlanned = (row["ระยะเวลาตรวจสอบตามแผน"] !== undefined && row["ระยะเวลาตรวจสอบตามแผน"] !== "") ? parseInt(row["ระยะเวลาตรวจสอบตามแผน"]) : NaN;
-    const plannedDays = !isNaN(savedPlanned) ? savedPlanned : auditCalc.actualDays;
+    const plannedDays = (startDateG && endDateH && auditCalc && auditCalc.actualDays >= 0) ? auditCalc.actualDays : (!isNaN(savedPlanned) ? savedPlanned : 0);
     const approvedExtensionDays = deptExtensionDaysMap[deptClean] || 0;
 
     const savedActual = (row["ระยะเวลาตรวจจริง (วัน)"] !== undefined && row["ระยะเวลาตรวจจริง (วัน)"] !== "") ? parseInt(row["ระยะเวลาตรวจจริง (วัน)"]) : (row["ระยะเวลาตรวจจริง"] !== undefined && row["ระยะเวลาตรวจจริง"] !== "") ? parseInt(row["ระยะเวลาตรวจจริง"]) : NaN;
-    const totalActualAuditDays = !isNaN(savedActual) ? savedActual : Math.max(plannedDays + approvedExtensionDays, 0);
+    const totalActualAuditDays = (startDateG && endDateH && auditCalc && auditCalc.actualDays >= 0) ? Math.max(plannedDays + approvedExtensionDays, 0) : (!isNaN(savedActual) ? savedActual : Math.max(plannedDays + approvedExtensionDays, 0));
 
     // 2.4 Calculate Duration: Closed Audit (Col K) -> Report to President (Col L)
     const dateJ = getRowDateVal(row, "วันที่ปิดตรวจ", 10);

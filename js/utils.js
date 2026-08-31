@@ -189,6 +189,17 @@ function normalizeDeptString(str) {
     .toLowerCase();
 }
 
+function isSameDepartment(d1, d2) {
+  if (!d1 || !d2) return false;
+  const n1 = normalizeDeptString(d1);
+  const n2 = normalizeDeptString(d2);
+  if (n1 === n2 || n1 === "ทั้งหมด" || n2 === "ทั้งหมด") return true;
+  if (n1.includes(n2) || n2.includes(n1)) return true;
+  const c1 = n1.replace(/[\s\-_–—]/g, '');
+  const c2 = n2.replace(/[\s\-_–—]/g, '');
+  return c1 === c2 || c1.includes(c2) || c2.includes(c1);
+}
+
 /**
  * Calculate actual audit days between startDate and endDate
  */
@@ -213,14 +224,11 @@ function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holi
 
   const nonAuditTimeSet = new Set();
   if (Array.isArray(nonAuditDaysList) && departmentName) {
-    const deptClean = normalizeDeptString(departmentName);
     nonAuditDaysList.forEach(item => {
       const extracted = extractNonAuditRow(item);
       if (!extracted || !extracted.date) return;
 
-      const itemDept = normalizeDeptString(extracted.department);
-      // Match department name flexibly (exact, contains, or wildcard)
-      if (itemDept === deptClean || itemDept === "ทั้งหมด" || !itemDept || deptClean.includes(itemDept) || itemDept.includes(deptClean)) {
+      if (isSameDepartment(extracted.department, departmentName)) {
         const nDate = new Date(extracted.date);
         nDate.setHours(0,0,0,0);
         nonAuditTimeSet.add(nDate.getTime());
