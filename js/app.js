@@ -576,13 +576,35 @@ const app = createApp({
       });
     });
 
-    // Extension Request Summary Counts (Global & Accessible)
-    const pendingCounts = computed(() => {
-      const listToCount = delayList.value.length > 0 ? delayList.value : accessibleDelayList.value;
-      return countPendingRequests(listToCount);
+    // Filter accessible delay requests by fiscal year in Drawer
+    const selectedDelayDrawerYear = ref('ALL');
+    
+    const delayDrawerYearOptions = computed(() => {
+      const yearsSet = new Set();
+      accessibleDelayList.value.forEach(item => {
+        const fields = getDelayFields(item);
+        if (fields.fiscalYear) yearsSet.add(String(fields.fiscalYear).trim());
+      });
+      ["2568", "2569", "2570", "2571", "2572"].forEach(y => yearsSet.add(y));
+      return Array.from(yearsSet).sort((a, b) => a.localeCompare(b));
     });
-    const pendingSupervisorCount = computed(() => pendingCounts.value.supervisorCount);
-    const pendingDirectorCount = computed(() => pendingCounts.value.directorCount);
+
+    const filteredAccessibleDelayList = computed(() => {
+      const list = accessibleDelayList.value;
+      if (selectedDelayDrawerYear.value === 'ALL') return list;
+      return list.filter(item => {
+        const fields = getDelayFields(item);
+        return String(fields.fiscalYear).trim() === String(selectedDelayDrawerYear.value).trim();
+      });
+    });
+
+    // Extension Request Summary Counts (Filtered by selected year in drawer)
+    const pendingSupervisorCount = computed(() => {
+      return filteredAccessibleDelayList.value.filter(item => getDelayFields(item).status.includes("รอพิจารณา")).length;
+    });
+    const pendingDirectorCount = computed(() => {
+      return filteredAccessibleDelayList.value.filter(item => getDelayFields(item).status.includes("รออนุมัติ")).length;
+    });
 
     // Helper to keep Flatpickr header year in Thai Buddhist Era (พ.ศ. = ค.ศ. + 543)
     const updateFlatpickrBEYear = (instance) => {
@@ -1473,7 +1495,10 @@ const app = createApp({
       onDepartmentChange,
       exportPdfReportAction,
       formatDateDMY,
-      getDelayFields
+      getDelayFields,
+      selectedDelayDrawerYear,
+      delayDrawerYearOptions,
+      filteredAccessibleDelayList
     };
   }
 });

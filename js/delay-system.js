@@ -63,6 +63,26 @@ function getDelayFields(item) {
   let remarks = item.Remarks || item.remarks || item["หมายเหตุ"] || item._col13 || item.col_13 || "";
   let status = getDelayStatus(item);
 
+  // Fiscal Year determination
+  let fiscalYear = item.FiscalYear || item.fiscalYear || item["ปีงบประมาณ"] || item["ปี"] || item._fiscalYear || "";
+  if (!fiscalYear && startDate) {
+    const pStart = typeof parseDate === "function" ? parseDate(startDate) : new Date(startDate);
+    if (pStart && !isNaN(pStart.getTime())) {
+      const y = pStart.getFullYear() + (pStart.getMonth() >= 9 ? 1 : 0);
+      fiscalYear = String(y > 2400 ? y : y + 543);
+    }
+  }
+  if (!fiscalYear && endDate) {
+    const pEnd = typeof parseDate === "function" ? parseDate(endDate) : new Date(endDate);
+    if (pEnd && !isNaN(pEnd.getTime())) {
+      const y = pEnd.getFullYear() + (pEnd.getMonth() >= 9 ? 1 : 0);
+      fiscalYear = String(y > 2400 ? y : y + 543);
+    }
+  }
+  if (!fiscalYear) {
+    fiscalYear = "2569";
+  }
+
   // If supervisor text contains status text (due to shifted columns in historical rows), clean it
   if (String(supervisor).includes("รออนุมัติ") || String(supervisor).includes("รอพิจารณา") || String(supervisor).includes("ผ่านพิจารณา")) {
     if (reason && (reason === "Pui" || reason.startsWith("Team") || reason.startsWith("ทีม"))) {
@@ -75,6 +95,7 @@ function getDelayFields(item) {
 
   return {
     department: department || "ไม่ระบุส่วนงาน",
+    fiscalYear: fiscalYear,
     requestor: requestor || "ไม่ระบุผู้ขอ",
     email: email,
     startDate: startDate,

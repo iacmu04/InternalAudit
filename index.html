@@ -1231,18 +1231,44 @@
                 </div>
             </div>
 
+            <!-- Year Filter Bar for Delay Requests -->
+            <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-100/90 rounded-2xl border border-slate-200 text-xs">
+                <div class="flex items-center gap-1.5 font-bold text-slate-700">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span>เลือกปีงบประมาณ:</span>
+                </div>
+                <div class="flex items-center gap-1 flex-wrap">
+                    <button type="button" 
+                            @click="selectedDelayDrawerYear = 'ALL'"
+                            :class="selectedDelayDrawerYear === 'ALL' ? 'bg-purple-700 text-white font-black shadow-xs ring-2 ring-purple-400/50' : 'bg-white hover:bg-purple-50 text-slate-700 font-bold border border-slate-200'"
+                            class="px-2.5 py-1 text-xs rounded-xl transition-all">
+                        ทั้งหมด
+                    </button>
+                    <button v-for="yr in delayDrawerYearOptions" 
+                            :key="'delay-drawer-yr-'+yr"
+                            type="button" 
+                            @click="selectedDelayDrawerYear = yr"
+                            :class="selectedDelayDrawerYear === yr ? 'bg-purple-700 text-white font-black shadow-xs ring-2 ring-purple-400/50' : 'bg-white hover:bg-purple-50 text-slate-700 font-bold border border-slate-200'"
+                            class="px-2.5 py-1 text-xs rounded-xl transition-all">
+                        {{ yr }}
+                    </button>
+                </div>
+            </div>
+
             <!-- List of Extension Requests (Compact Height & 2-Column Information Layout) -->
             <div class="space-y-3">
-                <div v-if="accessibleDelayList.length === 0" class="py-12 text-center text-slate-400 text-xs font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                    ไม่พบรายการคำขอขยายระยะเวลาที่คุณมีสิทธิ์เข้าถึง
+                <div v-if="filteredAccessibleDelayList.length === 0" class="py-12 text-center text-slate-400 text-xs font-bold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    ไม่พบรายการคำขอขยายระยะเวลาในปีงบประมาณที่เลือก
                 </div>
 
-                <div v-for="item in accessibleDelayList" :key="item._rowIndex" 
+                <div v-for="item in filteredAccessibleDelayList" :key="item._rowIndex" 
                      class="p-3.5 bg-slate-50/90 hover:bg-slate-50 rounded-2xl border border-slate-200/90 text-xs space-y-2.5 shadow-2xs transition-all">
                     
-                    <!-- Header: ส่วนงาน + Status Badge -->
+                    <!-- Header: ส่วนงาน (พร้อมระบุปีงบประมาณ) + Status Badge -->
                     <div class="flex justify-between items-center pb-2 border-b border-slate-200/70">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <span class="w-2.5 h-2.5 rounded-full shrink-0"
                                   :class="{
                                     'bg-purple-600': getDelayFields(item).status.includes('รอพิจารณา'),
@@ -1252,6 +1278,9 @@
                                     'bg-slate-400': getDelayFields(item).status === 'ขอยกเลิก'
                                   }"></span>
                             <span class="text-sm font-black text-indigo-950">{{ getDelayFields(item).department }}</span>
+                            <span class="text-xs font-black text-purple-800 bg-purple-100/90 border border-purple-200 px-2 py-0.5 rounded-lg shadow-2xs">
+                                ปี {{ getDelayFields(item).fiscalYear }}
+                            </span>
                         </div>
                         <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black shrink-0"
                               :class="{
