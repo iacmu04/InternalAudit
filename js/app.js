@@ -217,29 +217,59 @@ const app = createApp({
       return Array.from(set).sort((a,b) => a.localeCompare(b));
     });
 
-    // Form department options dynamic per year (excluding already recorded depts to prevent duplicates)
+    // Combined departments by year from Master_Lists AND Main_Audit (ensuring all years like 2569, 2570 have complete dept and team lists)
+    const combinedDepartmentsByYear = computed(() => {
+      const result = {};
+      const schema = parsedMasterListsSchema.value;
+      if (schema && schema.departmentsByYear) {
+        Object.keys(schema.departmentsByYear).forEach(yr => {
+          result[yr] = [...schema.departmentsByYear[yr]];
+        });
+      }
+
+      // Collect departments and their assigned teams from rawAuditList
+      if (Array.isArray(rawAuditList.value)) {
+        rawAuditList.value.forEach(row => {
+          const dept = String(row["ส่วนงาน"] || row._col0 || "").trim();
+          const yr = String(row["ปีงบประมาณ"] || row["ปี"] || row._col1 || "2569").trim();
+          const team = String(row["ทีม"] || row._col2 || "1").replace(/^ทีม\s*/, "").trim() || "1";
+
+          if (dept && yr) {
+            if (!result[yr]) result[yr] = [];
+            if (!result[yr].some(d => d.name === dept)) {
+              result[yr].push({ name: dept, team: team, year: yr });
+            }
+          }
+        });
+      }
+
+      // If a year has no departments, fallback to all unique departments across all years
+      const allUniqueDepts = [];
+      const seenDeptNames = new Set();
+      Object.values(result).flat().forEach(d => {
+        if (d && d.name && !seenDeptNames.has(d.name)) {
+          seenDeptNames.add(d.name);
+          allUniqueDepts.push({ name: d.name, team: d.team || "1", year: "" });
+        }
+      });
+
+      // Ensure standard years (2568, 2569, 2570, 2571, 2572) have fallback depts if empty
+      ["2568", "2569", "2570", "2571", "2572"].forEach(yr => {
+        if (!result[yr] || result[yr].length === 0) {
+          result[yr] = allUniqueDepts.map(d => ({ ...d, year: yr }));
+        }
+      });
+
+      return result;
+    });
+
+    // Form department options dynamic per year
     const formDepartmentOptions = computed(() => {
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
-      const schema = parsedMasterListsSchema.value;
-      if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear]) {
-        const deptsForYear = schema.departmentsByYear[selectedYear];
-        if (deptsForYear && deptsForYear.length > 0) {
-          const currentDeptBeingEdited = editingRowIndex.value ? String(auditForm.value['ส่วนงาน'] || "").trim().toLowerCase() : null;
-          
-          const existingDeptsInYear = new Set(
-            rawAuditList.value
-              .filter(r => String(r["ปีงบประมาณ"] || r._col1 || "").trim() === String(selectedYear).trim())
-              .map(r => String(r["ส่วนงาน"] || r._col0 || "").trim().toLowerCase())
-          );
-          
-          return deptsForYear
-            .map(d => d.name)
-            .filter(name => {
-              if (currentDeptBeingEdited && name.toLowerCase() === currentDeptBeingEdited) return true;
-              return !existingDeptsInYear.has(name.toLowerCase());
-            })
-            .sort((a,b) => a.localeCompare(b, 'th'));
-        }
+      const deptsByYear = combinedDepartmentsByYear.value;
+      const deptsForYear = deptsByYear[selectedYear] || [];
+      if (deptsForYear.length > 0) {
+        return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
       }
       return [];
     });
@@ -263,9 +293,9 @@ const app = createApp({
     const onDepartmentChange = () => {
       const selectedDept = auditForm.value['ส่วนงาน'];
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
-      const schema = parsedMasterListsSchema.value;
-      if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear] && selectedDept) {
-        const deptsForYear = schema.departmentsByYear[selectedYear];
+      const deptsByYear = combinedDepartmentsByYear.value;
+      const deptsForYear = deptsByYear[selectedYear] || [];
+      if (deptsForYear.length > 0 && selectedDept) {
         const found = deptsForYear.find(d => d.name === selectedDept);
         if (found && found.team) {
           auditForm.value['ทีม'] = found.team;
@@ -1033,14 +1063,12 @@ const app = createApp({
     // Delay Form Department Options filtered by selected fiscal year in delayForm
     const delayDepartmentOptions = computed(() => {
       const selectedYear = delayForm.value.fiscalYear || "2570";
-      const schema = parsedMasterListsSchema.value;
-      if (schema && schema.departmentsByYear && schema.departmentsByYear[selectedYear]) {
-        const deptsForYear = schema.departmentsByYear[selectedYear];
-        if (deptsForYear && deptsForYear.length > 0) {
-          return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
-        }
+      const deptsByYear = combinedDepartmentsByYear.value;
+      const deptsForYear = deptsByYear[selectedYear] || [];
+      if (deptsForYear.length > 0) {
+        return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
       }
-      return [];
+      return formDepartmentOptions.value;
     });
 
     const onDelayFiscalYearChange = () => {
