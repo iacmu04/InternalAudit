@@ -325,7 +325,24 @@ function renderPhaseChart(canvasId, phaseStats) {
 
   const ctx = canvas.getContext('2d');
   
-  const labels = phaseStats.map(s => s.name);
+  // Format labels into multiline arrays for clean word-wrapping without tilting
+  const labels = phaseStats.map(s => {
+    const name = String(s.name || "").trim();
+    if (name.includes("1.1")) {
+      return ["1.1 ก่อนเข้าตรวจ", "(รวมยังไม่ดำเนินการ)"];
+    }
+    if (name.includes("1.2")) {
+      return ["1.2 ระหว่าง", "การตรวจสอบ"];
+    }
+    if (name.includes("1.3")) {
+      return ["1.3 รายงานผล", "การตรวจสอบ"];
+    }
+    if (name.includes("1.4")) {
+      return ["1.4 ชี้แจงผล", "การดำเนินงาน"];
+    }
+    return [name];
+  });
+
   const dataCounts = phaseStats.map(s => s.count);
   const colors = phaseStats.map(s => s.color);
 
@@ -338,16 +355,27 @@ function renderPhaseChart(canvasId, phaseStats) {
         data: dataCounts,
         backgroundColor: colors,
         borderRadius: 8,
-        barThickness: 32
+        barThickness: 'flex',
+        maxBarThickness: 45
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          bottom: 12
+        }
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
           callbacks: {
+            title: function(tooltipItems) {
+              const item = tooltipItems[0];
+              const stat = phaseStats[item.dataIndex];
+              return stat ? stat.name : '';
+            },
             label: function(context) {
               return ` ${context.raw} ส่วนงาน`;
             }
@@ -357,11 +385,34 @@ function renderPhaseChart(canvasId, phaseStats) {
       scales: {
         y: {
           beginAtZero: true,
-          ticks: { precision: 0 },
+          ticks: { 
+            precision: 0,
+            font: {
+              size: 11,
+              weight: 'bold',
+              family: "'Prompt', 'Sarabun', sans-serif"
+            }
+          },
           grid: { color: '#f1f5f9' }
         },
         x: {
-          grid: { display: false }
+          grid: { display: false },
+          ticks: {
+            maxRotation: 0,
+            minRotation: 0,
+            autoSkip: false,
+            color: '#334155',
+            font: function(context) {
+              const width = context.chart.width;
+              return {
+                size: width < 480 ? 9.5 : (width < 768 ? 10.5 : 11.5),
+                weight: 'bold',
+                family: "'Prompt', 'Sarabun', sans-serif",
+                lineHeight: 1.3
+              };
+            },
+            padding: 6
+          }
         }
       }
     }
