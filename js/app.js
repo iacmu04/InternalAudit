@@ -751,6 +751,22 @@ const app = createApp({
       }
     };
 
+    const setNoRecommendations = () => {
+      if (!auditForm.value.clarifications || auditForm.value.clarifications.length === 0) {
+        auditForm.value.clarifications = [{}];
+      }
+      const c = auditForm.value.clarifications[0];
+      if (c['วันที่หน่วยรับตรวจชี้แจง'] === 'ไม่มีข้อเสนอแนะ' && c['วันที่แจ้งหน่วยรับตรวจ_ชี้แจง'] === 'ไม่มีข้อเสนอแนะ') {
+        c['วันที่หน่วยรับตรวจชี้แจง'] = '';
+        c['วันที่เสนออธิการบดี_ชี้แจง'] = '';
+        c['วันที่แจ้งหน่วยรับตรวจ_ชี้แจง'] = '';
+      } else {
+        c['วันที่หน่วยรับตรวจชี้แจง'] = 'ไม่มีข้อเสนอแนะ';
+        c['วันที่เสนออธิการบดี_ชี้แจง'] = 'ไม่มีข้อเสนอแนะ';
+        c['วันที่แจ้งหน่วยรับตรวจ_ชี้แจง'] = 'ไม่มีข้อเสนอแนะ';
+      }
+    };
+
     // Modal Actions
     const openAuditModal = (rowToEdit = null) => {
       if (currentUser.value.role === "User") {
@@ -821,8 +837,12 @@ const app = createApp({
           const item = { ...c };
           Object.keys(item).forEach(k => {
             if (item[k] && k.startsWith("วันที่")) {
-              const d = parseDate(item[k]);
-              if (d) item[k] = formatISODate(d);
+              if (String(item[k]).includes("ไม่มีข้อเสนอแนะ")) {
+                item[k] = "ไม่มีข้อเสนอแนะ";
+              } else {
+                const d = parseDate(item[k]);
+                if (d) item[k] = formatISODate(d);
+              }
             }
           });
           return item;
@@ -948,34 +968,48 @@ const app = createApp({
         }
       }
 
-      // 5. คำนวณ ครบกำหนดชี้แจง 30 วัน (Col U) เมื่อมีการกรอก วันที่แจ้งหน่วยรับตรวจ_รายงาน (Col N)
+      // 5. คำนวณ ครบกำหนดชี้แจง 30 วัน (Col U) & 6. ระยะเวลาชี้แจง (Col V)
       const reportDateToUnit = formDataToSend["วันที่แจ้งหน่วยรับตรวจ_รายงาน"];
-      if (reportDateToUnit) {
-        const pReportDate = parseDate(reportDateToUnit);
-        if (pReportDate) {
-          const dueDateObj = new Date(pReportDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-          const dueDateDMY = formatDateDMY(dueDateObj);
-          formDataToSend["ครบกำหนดชี้แจง 30 วัน"] = dueDateDMY;
-          formDataToSend["ครบกำหนดชี้แจง_30วัน"] = dueDateDMY;
-          formDataToSend["ครบกำหนดชี้แจง"] = dueDateDMY;
-          console.log(`📊 5. ครบกำหนดชี้แจง 30 วัน (Col U) = ${dueDateDMY} (แจ้งหน่วยตรวจ: ${reportDateToUnit} + 30 วัน)`);
-        }
-      } else {
-        formDataToSend["ครบกำหนดชี้แจง 30 วัน"] = "";
-        formDataToSend["ครบกำหนดชี้แจง_30วัน"] = "";
-        formDataToSend["ครบกำหนดชี้แจง"] = "";
-      }
-
-      // 6. คำนวณ ระยะเวลาชี้แจง (Col V) เมื่อมีการกรอก วันที่แจ้งหน่วยรับตรวจ_รายงาน (Col N) และ วันที่หน่วยรับตรวจชี้แจง (Col R)
       const clarifyDateFromUnit = formDataToSend["วันที่หน่วยรับตรวจชี้แจง"];
-      if (reportDateToUnit && clarifyDateFromUnit) {
-        const durClarify = dateDiffInDays(reportDateToUnit, clarifyDateFromUnit);
-        if (durClarify !== null && durClarify >= 0) {
-          formDataToSend["ระยะเวลาชี้แจง (วัน)"] = durClarify;
-          formDataToSend["ระยะเวลาชี้แจง"] = durClarify;
-          formDataToSend["ระยะเวลาได้รับชี้แจง"] = durClarify;
-          formDataToSend["ระยะเวลาการชี้แจง"] = durClarify;
-          console.log(`📊 6. ระยะเวลาชี้แจง (Col V) = ${durClarify} วัน (แจ้งหน่วยตรวจ: ${reportDateToUnit} -> ชี้แจง: ${clarifyDateFromUnit})`);
+      const isNoRec = String(clarifyDateFromUnit).includes("ไม่มีข้อเสนอแนะ") || 
+                      String(formDataToSend["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"]).includes("ไม่มีข้อเสนอแนะ") ||
+                      String(formDataToSend["วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์"]).includes("ไม่มีข้อเสนอแนะ");
+
+      if (isNoRec) {
+        formDataToSend["ครบกำหนดชี้แจง 30 วัน"] = "-";
+        formDataToSend["ครบกำหนดชี้แจง_30วัน"] = "-";
+        formDataToSend["ครบกำหนดชี้แจง"] = "-";
+        formDataToSend["ระยะเวลาชี้แจง (วัน)"] = "ไม่มีข้อเสนอแนะ";
+        formDataToSend["ระยะเวลาชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+        formDataToSend["ระยะเวลาได้รับชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+        formDataToSend["ระยะเวลาการชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+        console.log(`📊 5-6. สถานะ: ไม่มีข้อเสนอแนะ (เสร็จสิ้นกระบวนการ)`);
+      } else {
+        if (reportDateToUnit) {
+          const pReportDate = parseDate(reportDateToUnit);
+          if (pReportDate) {
+            const dueDateObj = new Date(pReportDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+            const dueDateDMY = formatDateDMY(dueDateObj);
+            formDataToSend["ครบกำหนดชี้แจง 30 วัน"] = dueDateDMY;
+            formDataToSend["ครบกำหนดชี้แจง_30วัน"] = dueDateDMY;
+            formDataToSend["ครบกำหนดชี้แจง"] = dueDateDMY;
+            console.log(`📊 5. ครบกำหนดชี้แจง 30 วัน (Col U) = ${dueDateDMY} (แจ้งหน่วยตรวจ: ${reportDateToUnit} + 30 วัน)`);
+          }
+        } else {
+          formDataToSend["ครบกำหนดชี้แจง 30 วัน"] = "";
+          formDataToSend["ครบกำหนดชี้แจง_30วัน"] = "";
+          formDataToSend["ครบกำหนดชี้แจง"] = "";
+        }
+
+        if (reportDateToUnit && clarifyDateFromUnit) {
+          const durClarify = dateDiffInDays(reportDateToUnit, clarifyDateFromUnit);
+          if (durClarify !== null && durClarify >= 0) {
+            formDataToSend["ระยะเวลาชี้แจง (วัน)"] = durClarify;
+            formDataToSend["ระยะเวลาชี้แจง"] = durClarify;
+            formDataToSend["ระยะเวลาได้รับชี้แจง"] = durClarify;
+            formDataToSend["ระยะเวลาการชี้แจง"] = durClarify;
+            console.log(`📊 6. ระยะเวลาชี้แจง (Col V) = ${durClarify} วัน (แจ้งหน่วยตรวจ: ${reportDateToUnit} -> ชี้แจง: ${clarifyDateFromUnit})`);
+          }
         }
       }
 
@@ -1412,6 +1446,7 @@ const app = createApp({
       ctsCycleOptions,
       addClarificationItem,
       removeClarificationItem,
+      setNoRecommendations,
       supervisorOptions,
       selectedFiscalYear,
       selectedFiscalYears,

@@ -145,17 +145,40 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     let latestPhase = "1.1";
     let isCompleted = false;
 
-    for (let item of STATUS_PRIORITY_ORDER) {
-      const val = getRowDateVal(row, item.sub, item.colIdx);
-      if (val && val !== "-" && String(val).trim() !== "") {
-        latestStatusObj = item;
-        latestDateVal = formatThaiDateShort(val);
-        latestPhase = item.phase;
-        if (item.isComplete) {
-          isCompleted = true;
-          completedCount++;
+    // Check if row has "ไม่มีข้อเสนอแนะ" in Col R, Col S, or Col T
+    const dateR = getRowDateVal(row, "วันที่หน่วยรับตรวจชี้แจง", 17);
+    const dateS = getRowDateVal(row, "วันที่เสนออธิการบดี_ชี้แจง", 18);
+    const dateT = getRowDateVal(row, "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์", 19) || getRowDateVal(row, "วันที่แจ้งหน่วยรับตรวจ_ชี้แจง", 19);
+
+    const hasNoRecommendation = (dateR && String(dateR).includes("ไม่มีข้อเสนอแนะ")) ||
+                               (dateS && String(dateS).includes("ไม่มีข้อเสนอแนะ")) ||
+                               (dateT && String(dateT).includes("ไม่มีข้อเสนอแนะ"));
+
+    if (hasNoRecommendation) {
+      latestStatusObj = {
+        phase: "1.4",
+        sub: "วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์",
+        colIdx: 19,
+        title: "เสร็จสมบูรณ์ (ไม่มีข้อเสนอแนะ)",
+        isComplete: true
+      };
+      latestDateVal = "ไม่มีข้อเสนอแนะ";
+      latestPhase = "1.4";
+      isCompleted = true;
+      completedCount++;
+    } else {
+      for (let item of STATUS_PRIORITY_ORDER) {
+        const val = getRowDateVal(row, item.sub, item.colIdx);
+        if (val && val !== "-" && String(val).trim() !== "") {
+          latestStatusObj = item;
+          latestDateVal = formatThaiDateShort(val);
+          latestPhase = item.phase;
+          if (item.isComplete) {
+            isCompleted = true;
+            completedCount++;
+          }
+          break;
         }
-        break;
       }
     }
 
@@ -238,8 +261,13 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     let isClarifyWarning = false; // >= 20 days without clarification
     let isClarifyOverdue = false; // > 30 days without clarification
     let isClarified = false;      // Unit has submitted clarification
+    let isNoRecommendation = false;
 
-    if (reportDateToUnit) {
+    if (hasNoRecommendation || (clarifyDateFromUnit && String(clarifyDateFromUnit).includes("ไม่มีข้อเสนอแนะ"))) {
+      isClarified = true;
+      isNoRecommendation = true;
+      clarifyDueDateFormatted = "-";
+    } else if (reportDateToUnit) {
       const pReportDate = parseDate(reportDateToUnit);
       if (pReportDate) {
         clarifyDueDateObj = new Date(pReportDate.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -303,6 +331,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       isClarifyWarning: isClarifyWarning,
       isClarifyOverdue: isClarifyOverdue,
       isClarified: isClarified,
+      isNoRecommendation: isNoRecommendation,
       raw: row
     });
   });

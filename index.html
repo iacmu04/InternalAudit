@@ -820,7 +820,12 @@
 
                         <!-- Highlighted Cell: ครบกำหนดชี้แจง 30 วัน -->
                         <td class="py-3.5 px-3 text-center bg-amber-50/70 border-x border-amber-200/80">
-                            <div v-if="u.clarifyDueDate !== '-'" class="space-y-1">
+                            <div v-if="u.isNoRecommendation">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10.5px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-2xs">
+                                    <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i> ไม่มีข้อเสนอแนะ
+                                </span>
+                            </div>
+                            <div v-else-if="u.clarifyDueDate !== '-'" class="space-y-1">
                                 <div class="font-bold text-xs" :class="u.isClarifyOverdue ? 'text-red-700 font-black' : (u.isClarifyWarning ? 'text-amber-800 font-black' : 'text-slate-800')">
                                     {{ u.clarifyDueDate }}
                                 </div>
@@ -1028,13 +1033,21 @@
 
                 <!-- 1.4 ขั้นตอนชี้แจงผลการดำเนินงาน (Multi-Clarification) -->
                 <div class="phase-box-1-4 p-4 rounded-2xl space-y-3">
-                    <div class="font-black text-emerald-950 flex items-center justify-between pb-1 border-b border-emerald-200/60">
+                    <div class="font-black text-emerald-950 flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-emerald-200/60">
                         <span class="flex items-center gap-1.5 text-sm">
                             <span class="w-3 h-3 rounded-full shadow-2xs" style="background-color: #839B77;"></span> 1.4 ขั้นตอนชี้แจงผลการดำเนินงาน
                         </span>
-                        <button type="button" @click="addClarificationItem" class="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5">
-                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> เพิ่มการชี้แจง
-                        </button>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" @click="setNoRecommendations" 
+                                    :class="auditForm.clarifications && auditForm.clarifications[0] && auditForm.clarifications[0]['วันที่หน่วยรับตรวจชี้แจง'] === 'ไม่มีข้อเสนอแนะ' ? 'bg-teal-700 ring-2 ring-teal-400 text-white shadow-xs' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-2xs'"
+                                    class="px-3 py-1.5 text-xs font-black rounded-xl transition-all flex items-center gap-1.5">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                                <span>{{ auditForm.clarifications && auditForm.clarifications[0] && auditForm.clarifications[0]['วันที่หน่วยรับตรวจชี้แจง'] === 'ไม่มีข้อเสนอแนะ' ? '✓ ไม่มีข้อเสนอแนะ (เสร็จสิ้น)' : 'ไม่มีข้อเสนอแนะ (เสร็จสิ้นกระบวนการ)' }}</span>
+                            </button>
+                            <button type="button" @click="addClarificationItem" class="px-3 py-1.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl transition-all shadow-2xs flex items-center gap-1.5">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> เพิ่มการชี้แจง
+                            </button>
+                        </div>
                     </div>
 
                     <div v-for="(cItem, idx) in auditForm.clarifications" :key="idx" class="p-3 bg-white/90 rounded-xl border border-emerald-200 space-y-2 relative shadow-2xs">

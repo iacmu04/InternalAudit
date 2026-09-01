@@ -291,38 +291,53 @@ function saveAuditEntry(ss, data) {
 
   // Auto-calculate Col U (ครบกำหนดชี้แจง 30 วัน) from Col N (วันที่แจ้งหน่วยรับตรวจ_รายงาน)
   const reportDateN = data["วันที่แจ้งหน่วยรับตรวจ_รายงาน"] || data["วันที่แจ้งหน่วยรับตรวจ (รายงาน)"];
-  if (reportDateN) {
-    const dN = parseDateFromStr(reportDateN);
-    if (dN) {
-      const dueD = new Date(dN.getTime() + 30 * 24 * 60 * 60 * 1000);
-      const dueStr = formatDate(dueD);
-      data["ครบกำหนดชี้แจง 30 วัน"] = dueStr;
-      data["ครบกำหนดชี้แจง_30วัน"] = dueStr;
-      data["ครบกำหนดชี้แจง"] = dueStr;
-      data["ครบกำหนดชี้แจง (30 วัน)"] = dueStr;
-    }
-  } else {
-    data["ครบกำหนดชี้แจง 30 วัน"] = "";
-    data["ครบกำหนดชี้แจง_30วัน"] = "";
-    data["ครบกำหนดชี้แจง"] = "";
-    data["ครบกำหนดชี้แจง (30 วัน)"] = "";
-  }
-
-  // Auto-calculate Col V (ระยะเวลาชี้แจง (วัน)) from Col N and Col R
   const clarifyDateR = data["วันที่หน่วยรับตรวจชี้แจง"];
-  let durClarify = -1;
-  if (data["ระยะเวลาชี้แจง (วัน)"] !== undefined && data["ระยะเวลาชี้แจง (วัน)"] !== "") {
-    durClarify = Number(data["ระยะเวลาชี้แจง (วัน)"]);
-  } else if (data["ระยะเวลาชี้แจง"] !== undefined && data["ระยะเวลาชี้แจง"] !== "") {
-    durClarify = Number(data["ระยะเวลาชี้แจง"]);
-  } else if (reportDateN && clarifyDateR) {
-    durClarify = calculateDaysDiff(reportDateN, clarifyDateR);
-  }
-  if (durClarify >= 0) {
-    data["ระยะเวลาชี้แจง (วัน)"] = durClarify;
-    data["ระยะเวลาชี้แจง"] = durClarify;
-    data["ระยะเวลาได้รับชี้แจง"] = durClarify;
-    data["ระยะเวลาการชี้แจง"] = durClarify;
+  const isNoRec = String(clarifyDateR).includes("ไม่มีข้อเสนอแนะ") || 
+                  String(data["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"]).includes("ไม่มีข้อเสนอแนะ") || 
+                  String(data["วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์"]).includes("ไม่มีข้อเสนอแนะ");
+
+  if (isNoRec) {
+    data["ครบกำหนดชี้แจง 30 วัน"] = "-";
+    data["ครบกำหนดชี้แจง_30วัน"] = "-";
+    data["ครบกำหนดชี้แจง"] = "-";
+    data["ครบกำหนดชี้แจง (30 วัน)"] = "-";
+    data["ระยะเวลาชี้แจง (วัน)"] = "ไม่มีข้อเสนอแนะ";
+    data["ระยะเวลาชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+    data["ระยะเวลาได้รับชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+    data["ระยะเวลาการชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+  } else {
+    if (reportDateN) {
+      const dN = parseDateFromStr(reportDateN);
+      if (dN) {
+        const dueD = new Date(dN.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const dueStr = formatDate(dueD);
+        data["ครบกำหนดชี้แจง 30 วัน"] = dueStr;
+        data["ครบกำหนดชี้แจง_30วัน"] = dueStr;
+        data["ครบกำหนดชี้แจง"] = dueStr;
+        data["ครบกำหนดชี้แจง (30 วัน)"] = dueStr;
+      }
+    } else {
+      data["ครบกำหนดชี้แจง 30 วัน"] = "";
+      data["ครบกำหนดชี้แจง_30วัน"] = "";
+      data["ครบกำหนดชี้แจง"] = "";
+      data["ครบกำหนดชี้แจง (30 วัน)"] = "";
+    }
+
+    // Auto-calculate Col V (ระยะเวลาชี้แจง (วัน)) from Col N and Col R
+    let durClarify = -1;
+    if (data["ระยะเวลาชี้แจง (วัน)"] !== undefined && data["ระยะเวลาชี้แจง (วัน)"] !== "" && !isNaN(data["ระยะเวลาชี้แจง (วัน)"])) {
+      durClarify = Number(data["ระยะเวลาชี้แจง (วัน)"]);
+    } else if (data["ระยะเวลาชี้แจง"] !== undefined && data["ระยะเวลาชี้แจง"] !== "" && !isNaN(data["ระยะเวลาชี้แจง"])) {
+      durClarify = Number(data["ระยะเวลาชี้แจง"]);
+    } else if (reportDateN && clarifyDateR) {
+      durClarify = calculateDaysDiff(reportDateN, clarifyDateR);
+    }
+    if (durClarify >= 0) {
+      data["ระยะเวลาชี้แจง (วัน)"] = durClarify;
+      data["ระยะเวลาชี้แจง"] = durClarify;
+      data["ระยะเวลาได้รับชี้แจง"] = durClarify;
+      data["ระยะเวลาการชี้แจง"] = durClarify;
+    }
   }
 
   const row = headers.map((h, colIdx) => {
@@ -412,38 +427,53 @@ function updateAuditEntry(ss, rowIndex, data) {
 
   // Auto-calculate Col U (ครบกำหนดชี้แจง 30 วัน) from Col N (วันที่แจ้งหน่วยรับตรวจ_รายงาน)
   const reportDateN = data["วันที่แจ้งหน่วยรับตรวจ_รายงาน"] || data["วันที่แจ้งหน่วยรับตรวจ (รายงาน)"];
-  if (reportDateN) {
-    const dN = parseDateFromStr(reportDateN);
-    if (dN) {
-      const dueD = new Date(dN.getTime() + 30 * 24 * 60 * 60 * 1000);
-      const dueStr = formatDate(dueD);
-      data["ครบกำหนดชี้แจง 30 วัน"] = dueStr;
-      data["ครบกำหนดชี้แจง_30วัน"] = dueStr;
-      data["ครบกำหนดชี้แจง"] = dueStr;
-      data["ครบกำหนดชี้แจง (30 วัน)"] = dueStr;
-    }
-  } else {
-    data["ครบกำหนดชี้แจง 30 วัน"] = "";
-    data["ครบกำหนดชี้แจง_30วัน"] = "";
-    data["ครบกำหนดชี้แจง"] = "";
-    data["ครบกำหนดชี้แจง (30 วัน)"] = "";
-  }
-
-  // Auto-calculate Col V (ระยะเวลาชี้แจง (วัน)) from Col N and Col R
   const clarifyDateR = data["วันที่หน่วยรับตรวจชี้แจง"];
-  let durClarify = -1;
-  if (data["ระยะเวลาชี้แจง (วัน)"] !== undefined && data["ระยะเวลาชี้แจง (วัน)"] !== "") {
-    durClarify = Number(data["ระยะเวลาชี้แจง (วัน)"]);
-  } else if (data["ระยะเวลาชี้แจง"] !== undefined && data["ระยะเวลาชี้แจง"] !== "") {
-    durClarify = Number(data["ระยะเวลาชี้แจง"]);
-  } else if (reportDateN && clarifyDateR) {
-    durClarify = calculateDaysDiff(reportDateN, clarifyDateR);
-  }
-  if (durClarify >= 0) {
-    data["ระยะเวลาชี้แจง (วัน)"] = durClarify;
-    data["ระยะเวลาชี้แจง"] = durClarify;
-    data["ระยะเวลาได้รับชี้แจง"] = durClarify;
-    data["ระยะเวลาการชี้แจง"] = durClarify;
+  const isNoRecUpdate = String(clarifyDateR).includes("ไม่มีข้อเสนอแนะ") || 
+                        String(data["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"]).includes("ไม่มีข้อเสนอแนะ") || 
+                        String(data["วันที่แจ้งหน่วยรับตรวจ_เสร็จสมบูรณ์"]).includes("ไม่มีข้อเสนอแนะ");
+
+  if (isNoRecUpdate) {
+    data["ครบกำหนดชี้แจง 30 วัน"] = "-";
+    data["ครบกำหนดชี้แจง_30วัน"] = "-";
+    data["ครบกำหนดชี้แจง"] = "-";
+    data["ครบกำหนดชี้แจง (30 วัน)"] = "-";
+    data["ระยะเวลาชี้แจง (วัน)"] = "ไม่มีข้อเสนอแนะ";
+    data["ระยะเวลาชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+    data["ระยะเวลาได้รับชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+    data["ระยะเวลาการชี้แจง"] = "ไม่มีข้อเสนอแนะ";
+  } else {
+    if (reportDateN) {
+      const dN = parseDateFromStr(reportDateN);
+      if (dN) {
+        const dueD = new Date(dN.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const dueStr = formatDate(dueD);
+        data["ครบกำหนดชี้แจง 30 วัน"] = dueStr;
+        data["ครบกำหนดชี้แจง_30วัน"] = dueStr;
+        data["ครบกำหนดชี้แจง"] = dueStr;
+        data["ครบกำหนดชี้แจง (30 วัน)"] = dueStr;
+      }
+    } else {
+      data["ครบกำหนดชี้แจง 30 วัน"] = "";
+      data["ครบกำหนดชี้แจง_30วัน"] = "";
+      data["ครบกำหนดชี้แจง"] = "";
+      data["ครบกำหนดชี้แจง (30 วัน)"] = "";
+    }
+
+    // Auto-calculate Col V (ระยะเวลาชี้แจง (วัน)) from Col N and Col R
+    let durClarify = -1;
+    if (data["ระยะเวลาชี้แจง (วัน)"] !== undefined && data["ระยะเวลาชี้แจง (วัน)"] !== "" && !isNaN(data["ระยะเวลาชี้แจง (วัน)"])) {
+      durClarify = Number(data["ระยะเวลาชี้แจง (วัน)"]);
+    } else if (data["ระยะเวลาชี้แจง"] !== undefined && data["ระยะเวลาชี้แจง"] !== "" && !isNaN(data["ระยะเวลาชี้แจง"])) {
+      durClarify = Number(data["ระยะเวลาชี้แจง"]);
+    } else if (reportDateN && clarifyDateR) {
+      durClarify = calculateDaysDiff(reportDateN, clarifyDateR);
+    }
+    if (durClarify >= 0) {
+      data["ระยะเวลาชี้แจง (วัน)"] = durClarify;
+      data["ระยะเวลาชี้แจง"] = durClarify;
+      data["ระยะเวลาได้รับชี้แจง"] = durClarify;
+      data["ระยะเวลาการชี้แจง"] = durClarify;
+    }
   }
 
   const rowValues = headers.map((h, colIdx) => {
