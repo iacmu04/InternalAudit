@@ -216,7 +216,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     // 3. Find approved extension days from Delay sheet
     let approvedExtensionDays = 0;
     Object.keys(deptExtensionDaysMap).forEach(kDept => {
-      if (typeof isSameDepartment === "function" ? isSameDepartment(kDept, deptName) : (kDept === deptClean || kDept.includes(deptClean) || deptClean.includes(kDept))) {
+      if (typeof isSameDepartment === "function" ? isSameDepartment(kDept, deptName) : (kDept === deptClean)) {
         approvedExtensionDays += deptExtensionDaysMap[kDept];
       }
     });

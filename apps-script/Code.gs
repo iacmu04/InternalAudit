@@ -523,10 +523,9 @@ function isSameDept(d1, d2) {
   const n1 = clean(d1);
   const n2 = clean(d2);
   if (n1 === n2) return true;
-  if (n1.includes(n2) || n2.includes(n1)) return true;
-  const c1 = n1.replace(/[\s\-_]/g, '');
-  const c2 = n2.replace(/[\s\-_]/g, '');
-  return c1 === c2 || c1.includes(c2) || c2.includes(c1);
+  const c1 = n1.replace(/[\s\-_–—]/g, '');
+  const c2 = n2.replace(/[\s\-_–—]/g, '');
+  return c1 === c2;
 }
 
 function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
@@ -560,16 +559,31 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 
-  // 1. Thoroughly delete all existing rows for this department (scan all columns, bottom to top)
+  // 1. Delete all existing rows ONLY for this exact department
+  let deptColIdx = -1;
+  headers.forEach((h, idx) => {
+    const hNorm = h.toLowerCase().trim();
+    if (hNorm.includes("ส่วนงาน") || hNorm === "department") {
+      deptColIdx = idx;
+    }
+  });
+
   if (lastRow >= 2) {
     const dataVals = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
     for (let i = dataVals.length - 1; i >= 0; i--) {
       let isMatch = false;
-      for (let j = 0; j < dataVals[i].length; j++) {
-        const cellVal = String(dataVals[i][j] || "").trim();
+      if (deptColIdx !== -1 && deptColIdx < dataVals[i].length) {
+        const cellVal = String(dataVals[i][deptColIdx] || "").trim();
         if (cellVal && isSameDept(cellVal, deptName)) {
           isMatch = true;
-          break;
+        }
+      } else {
+        for (let j = 0; j < dataVals[i].length; j++) {
+          const cellVal = String(dataVals[i][j] || "").trim();
+          if (cellVal && isSameDept(cellVal, deptName)) {
+            isMatch = true;
+            break;
+          }
         }
       }
       if (isMatch) {
