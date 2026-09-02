@@ -340,6 +340,40 @@ function saveAuditEntry(ss, data) {
     }
   }
 
+  // Auto-calculate Col W (ระยะเวลาร่างรายงาน)
+  const auditEndDateH = data["วันที่สิ้นสุดการตรวจสอบ"];
+  const auditCloseDateK = data["วันที่ปิดตรวจ"];
+  const approvedDelayEndDate = getLatestApprovedDelayEndDateForDept(ss, data["ส่วนงาน"]);
+
+  let effectiveEndDate = null;
+  if (auditEndDateH) {
+    const dH = parseDateFromStr(auditEndDateH);
+    if (dH) effectiveEndDate = dH;
+  }
+  if (approvedDelayEndDate) {
+    if (!effectiveEndDate || approvedDelayEndDate > effectiveEndDate) {
+      effectiveEndDate = approvedDelayEndDate;
+    }
+  }
+
+  let durDraft = -1;
+  if (data["ระยะเวลาร่างรายงาน"] !== undefined && data["ระยะเวลาร่างรายงาน"] !== "" && !isNaN(data["ระยะเวลาร่างรายงาน"])) {
+    durDraft = Number(data["ระยะเวลาร่างรายงาน"]);
+  } else if (data["ระยะเวลาร่างรายงาน (วัน)"] !== undefined && data["ระยะเวลาร่างรายงาน (วัน)"] !== "" && !isNaN(data["ระยะเวลาร่างรายงาน (วัน)"])) {
+    durDraft = Number(data["ระยะเวลาร่างรายงาน (วัน)"]);
+  } else if (effectiveEndDate && auditCloseDateK) {
+    const dK = parseDateFromStr(auditCloseDateK);
+    if (dK && !isNaN(dK.getTime())) {
+      const msPerDay = 1000 * 60 * 60 * 24;
+      durDraft = Math.round((dK.getTime() - effectiveEndDate.getTime()) / msPerDay);
+    }
+  }
+
+  if (durDraft >= 0) {
+    data["ระยะเวลาร่างรายงาน"] = durDraft;
+    data["ระยะเวลาร่างรายงาน (วัน)"] = durDraft;
+  }
+
   const row = headers.map((h, colIdx) => {
     if (data[h] !== undefined && data[h] !== null) return data[h];
     const hNorm = h.toLowerCase().trim();
@@ -347,6 +381,8 @@ function saveAuditEntry(ss, data) {
     if (colIdx === 20 && data["ครบกำหนดชี้แจง 30 วัน"]) return data["ครบกำหนดชี้แจง 30 วัน"];
     if (hNorm.includes("ระยะเวลาชี้แจง") || hNorm.includes("ระยะเวลาได้รับชี้แจง")) return data["ระยะเวลาชี้แจง (วัน)"] || "";
     if (colIdx === 21 && data["ระยะเวลาชี้แจง (วัน)"]) return data["ระยะเวลาชี้แจง (วัน)"];
+    if (hNorm.includes("ระยะเวลาร่างรายงาน") || hNorm.includes("ร่างรายงาน")) return data["ระยะเวลาร่างรายงาน"] !== undefined ? data["ระยะเวลาร่างรายงาน"] : "";
+    if (colIdx === 22 && data["ระยะเวลาร่างรายงาน"] !== undefined) return data["ระยะเวลาร่างรายงาน"];
     return "";
   });
   sheet.appendRow(row);
@@ -476,6 +512,40 @@ function updateAuditEntry(ss, rowIndex, data) {
     }
   }
 
+  // Auto-calculate Col W (ระยะเวลาร่างรายงาน)
+  const auditEndDateH = data["วันที่สิ้นสุดการตรวจสอบ"];
+  const auditCloseDateK = data["วันที่ปิดตรวจ"];
+  const approvedDelayEndDate = getLatestApprovedDelayEndDateForDept(ss, data["ส่วนงาน"]);
+
+  let effectiveEndDate = null;
+  if (auditEndDateH) {
+    const dH = parseDateFromStr(auditEndDateH);
+    if (dH) effectiveEndDate = dH;
+  }
+  if (approvedDelayEndDate) {
+    if (!effectiveEndDate || approvedDelayEndDate > effectiveEndDate) {
+      effectiveEndDate = approvedDelayEndDate;
+    }
+  }
+
+  let durDraft = -1;
+  if (data["ระยะเวลาร่างรายงาน"] !== undefined && data["ระยะเวลาร่างรายงาน"] !== "" && !isNaN(data["ระยะเวลาร่างรายงาน"])) {
+    durDraft = Number(data["ระยะเวลาร่างรายงาน"]);
+  } else if (data["ระยะเวลาร่างรายงาน (วัน)"] !== undefined && data["ระยะเวลาร่างรายงาน (วัน)"] !== "" && !isNaN(data["ระยะเวลาร่างรายงาน (วัน)"])) {
+    durDraft = Number(data["ระยะเวลาร่างรายงาน (วัน)"]);
+  } else if (effectiveEndDate && auditCloseDateK) {
+    const dK = parseDateFromStr(auditCloseDateK);
+    if (dK && !isNaN(dK.getTime())) {
+      const msPerDay = 1000 * 60 * 60 * 24;
+      durDraft = Math.round((dK.getTime() - effectiveEndDate.getTime()) / msPerDay);
+    }
+  }
+
+  if (durDraft >= 0) {
+    data["ระยะเวลาร่างรายงาน"] = durDraft;
+    data["ระยะเวลาร่างรายงาน (วัน)"] = durDraft;
+  }
+
   const rowValues = headers.map((h, colIdx) => {
     if (data[h] !== undefined && data[h] !== null) return data[h];
     const hNorm = h.toLowerCase().trim();
@@ -483,6 +553,8 @@ function updateAuditEntry(ss, rowIndex, data) {
     if (colIdx === 20 && data["ครบกำหนดชี้แจง 30 วัน"]) return data["ครบกำหนดชี้แจง 30 วัน"];
     if (hNorm.includes("ระยะเวลาชี้แจง") || hNorm.includes("ระยะเวลาได้รับชี้แจง")) return data["ระยะเวลาชี้แจง (วัน)"] || "";
     if (colIdx === 21 && data["ระยะเวลาชี้แจง (วัน)"]) return data["ระยะเวลาชี้แจง (วัน)"];
+    if (hNorm.includes("ระยะเวลาร่างรายงาน") || hNorm.includes("ร่างรายงาน")) return data["ระยะเวลาร่างรายงาน"] !== undefined ? data["ระยะเวลาร่างรายงาน"] : "";
+    if (colIdx === 22 && data["ระยะเวลาร่างรายงาน"] !== undefined) return data["ระยะเวลาร่างรายงาน"];
     return "";
   });
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);
@@ -644,6 +716,38 @@ function getApprovedExtensionDaysForDept(ss, deptName) {
     }
   }
   return sum;
+}
+
+function getLatestApprovedDelayEndDateForDept(ss, deptName) {
+  if (!deptName) return null;
+  const delaySheet = ss.getSheetByName("Delay");
+  if (!delaySheet) return null;
+
+  const values = delaySheet.getDataRange().getValues();
+  if (values.length < 2) return null;
+
+  let latestDate = null;
+  for (let i = 1; i < values.length; i++) {
+    const rDept = String(values[i][3] || "").trim(); // Col D: Department
+    const deanStatus = String(values[i][11] || values[i][8] || "").trim(); // Col L / Col I: DeanStatus/Status
+    const leaderStatus = String(values[i][9] || "").trim();
+
+    const isApproved = deanStatus.includes("อนุมัติ") || deanStatus.includes("อนุมัติแล้ว") || 
+      ((deanStatus === "-" || !deanStatus) && (leaderStatus.includes("อนุมัติ") || leaderStatus.includes("ผ่านพิจารณา")));
+
+    if (isSameDept(rDept, deptName) && isApproved) {
+      const endVal = values[i][5]; // Col F: End Date
+      if (endVal) {
+        let pDate = endVal instanceof Date ? endVal : parseDateFromStr(endVal);
+        if (pDate && !isNaN(pDate.getTime())) {
+          if (!latestDate || pDate > latestDate) {
+            latestDate = pDate;
+          }
+        }
+      }
+    }
+  }
+  return latestDate;
 }
 
 function countNonAuditDaysForDept(ss, deptName) {

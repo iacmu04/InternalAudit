@@ -9,8 +9,8 @@ const PHASE_STRUCTURE = {
     { code: "F", title: "อนุมัติแผน", col: "วันที่อนุมัติแผน" }
   ],
   "1.2": [
-    { code: "G", title: "เปิดตรวจ/เริ่มตรวจสอบ", col: "วันที่เริ่มตรวจสอบ" },
-    { code: "H", title: "สิ้นสุดตรวจสอบ", col: "วันที่สิ้นสุดการตรวจสอบ" },
+    { code: "G", title: "ระหว่างการตรวจสอบ", col: "วันที่เริ่มตรวจสอบ" },
+    { code: "H", title: "ระหว่างร่างรายงาน", col: "วันที่สิ้นสุดการตรวจสอบ" },
     { code: "J", title: "ประชุมปิดตรวจ", col: "วันที่ปิดตรวจ" }
   ],
   "1.3": [
@@ -34,8 +34,8 @@ const STATUS_PRIORITY_ORDER = [
   { phase: "1.3", sub: "วันที่แจ้งหน่วยรับตรวจ_รายงาน", colIdx: 13, title: "รายงานผล:แจ้งหน่วยรับตรวจ" },
   { phase: "1.3", sub: "วันที่เสนออธิการบดี_รายงาน", colIdx: 11, title: "รายงานผล:เสนออธิการบดี" },
   { phase: "1.2", sub: "วันที่ปิดตรวจ", colIdx: 10, title: "ระหว่างตรวจสอบ:ประชุมปิดตรวจ" },
-  { phase: "1.2", sub: "วันที่สิ้นสุดการตรวจสอบ", colIdx: 7, title: "ระหว่างตรวจสอบ:สิ้นสุดการตรวจสอบ" },
-  { phase: "1.2", sub: "วันที่เริ่มตรวจสอบ", colIdx: 6, title: "ระหว่างตรวจสอบ:เปิดตรวจ/เริ่มตรวจสอบ" },
+  { phase: "1.2", sub: "วันที่สิ้นสุดการตรวจสอบ", colIdx: 7, title: "ระหว่างร่างรายงาน" },
+  { phase: "1.2", sub: "วันที่เริ่มตรวจสอบ", colIdx: 6, title: "ระหว่างการตรวจสอบ" },
   { phase: "1.1", sub: "วันที่อนุมัติแผน", colIdx: 5, title: "ก่อนเข้าตรวจ:อนุมัติแผน" },
   { phase: "1.1", sub: "วันที่แจ้งเข้าตรวจ", colIdx: 4, title: "ก่อนเข้าตรวจ:แจ้งเข้าตรวจ" },
   { phase: "1.1", sub: "วันที่มอบหมายงาน", colIdx: 3, title: "ก่อนเข้าตรวจ:มอบหมายงาน" }
@@ -300,6 +300,54 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       }
     }
 
+    // 2.8 Calculate Duration: ระยะเวลาร่างรายงาน (Col W)
+    // Sourced from latest date between Col H (วันที่สิ้นสุดการตรวจสอบ) and Delay Sheet Col F (End Date) -> to Col K (วันที่ปิดตรวจ)
+    const dateH = getRowDateVal(row, "วันที่สิ้นสุดการตรวจสอบ", 7);
+    const approvedDelayEndDate = deptExtensionEndDateMap[normalizeDeptString(deptName)] || null;
+
+    let effectiveEndDate = null;
+    let effectiveEndDateStr = "";
+
+    const parsedDateH = parseDate(dateH);
+    if (parsedDateH && approvedDelayEndDate) {
+      if (approvedDelayEndDate > parsedDateH) {
+        effectiveEndDate = approvedDelayEndDate;
+        effectiveEndDateStr = formatISODate(approvedDelayEndDate);
+      } else {
+        effectiveEndDate = parsedDateH;
+        effectiveEndDateStr = dateH;
+      }
+    } else if (parsedDateH) {
+      effectiveEndDate = parsedDateH;
+      effectiveEndDateStr = dateH;
+    } else if (approvedDelayEndDate) {
+      effectiveEndDate = approvedDelayEndDate;
+      effectiveEndDateStr = formatISODate(approvedDelayEndDate);
+    }
+
+    let draftDuration = null;
+    let isDraftWarning = false;
+    let draftDaysElapsed = null;
+
+    if (effectiveEndDateStr && dateJ) {
+      // dateJ is วันที่ปิดตรวจ (Col K / Index 10)
+      draftDuration = dateDiffInDays(effectiveEndDateStr, dateJ);
+      if (draftDuration !== null && draftDuration > 20) {
+        isDraftWarning = true;
+      }
+    } else if (effectiveEndDate) {
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      const eDate = new Date(effectiveEndDate);
+      eDate.setHours(0,0,0,0);
+      if (now > eDate) {
+        draftDaysElapsed = Math.floor((now - eDate) / (24 * 60 * 60 * 1000));
+        if (draftDaysElapsed > 20) {
+          isDraftWarning = true;
+        }
+      }
+    }
+
     processedUnits.push({
       id: row._rowIndex || idx + 1,
       name: deptName,
@@ -321,6 +369,9 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       ctsDuration: ctsDuration,
       ctsCycle: ctsCycle,
       isWarning: isWarning,
+      draftDuration: draftDuration,
+      isDraftWarning: isDraftWarning,
+      draftDaysElapsed: draftDaysElapsed,
       clarifyDueDate: clarifyDueDateFormatted,
       clarifyDueDateObj: clarifyDueDateObj,
       reportDateToUnit: reportDateToUnit,
@@ -357,17 +408,20 @@ function renderPhaseChart(canvasId, phaseStats) {
   // Format labels into multiline arrays for clean word-wrapping without tilting
   const labels = phaseStats.map(s => {
     const name = String(s.name || "").trim();
-    if (name.includes("1.1")) {
-      return ["1.1 ก่อนเข้าตรวจ", "(รวมยังไม่ดำเนินการ)"];
+    if (name.includes("ก่อนเข้าตรวจ")) {
+      return ["ก่อนเข้าตรวจ", "(รวมยังไม่ดำเนินการ)"];
     }
-    if (name.includes("1.2")) {
-      return ["1.2 ระหว่าง", "การตรวจสอบ"];
+    if (name.includes("ระหว่างการตรวจสอบ")) {
+      return ["ระหว่าง", "การตรวจสอบ"];
     }
-    if (name.includes("1.3")) {
-      return ["1.3 รายงานผล", "การตรวจสอบ"];
+    if (name.includes("ระหว่างร่างรายงาน")) {
+      return ["ระหว่าง", "ร่างรายงาน"];
     }
-    if (name.includes("1.4")) {
-      return ["1.4 ชี้แจงผล", "การดำเนินงาน"];
+    if (name.includes("รายงานผลการตรวจสอบ")) {
+      return ["รายงานผล", "การตรวจสอบ"];
+    }
+    if (name.includes("ชี้แจงผลการดำเนินงาน") || name.includes("ชี้แจง")) {
+      return ["ชี้แจงผล", "การดำเนินงาน"];
     }
     return [name];
   });

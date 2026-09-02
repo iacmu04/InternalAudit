@@ -545,13 +545,20 @@ const app = createApp({
       return count;
     };
 
-    // Chart Stats with User-Specified Palette Colors
+    // Chart Stats with 5 Main Audit Statuses
     const phaseChartStats = computed(() => {
+      const p1Count = filteredUnits.value.filter(u => u.latestPhase === "1.1").length + unstartedUnitsList.value.length;
+      const p2AuditCount = filteredUnits.value.filter(u => u.latestPhase === "1.2" && (u.latestSubCol === "วันที่เริ่มตรวจสอบ" || (u.latestStatusTitle && u.latestStatusTitle.includes("ระหว่างการตรวจสอบ")))).length;
+      const p2DraftCount = filteredUnits.value.filter(u => u.latestPhase === "1.2" && (u.latestSubCol === "วันที่สิ้นสุดการตรวจสอบ" || (u.latestStatusTitle && u.latestStatusTitle.includes("ระหว่างร่างรายงาน")))).length;
+      const p3ReportCount = filteredUnits.value.filter(u => u.latestPhase === "1.3" || (u.latestPhase === "1.2" && u.latestSubCol === "วันที่ปิดตรวจ")).length;
+      const p4ClarifyCount = filteredUnits.value.filter(u => u.latestPhase === "1.4").length;
+
       return [
-        { key: "1.1", name: "1.1 ก่อนเข้าตรวจ (รวมยังไม่ดำเนินการ)", color: "#FA897B", count: getPhaseCount("1.1") },
-        { key: "1.2", name: "1.2 ระหว่างการตรวจสอบ", color: "#FFDD94", count: getPhaseCount("1.2") },
-        { key: "1.3", name: "1.3 รายงานผลการตรวจสอบ", color: "#D0E6A5", count: getPhaseCount("1.3") },
-        { key: "1.4", name: "1.4 ชี้แจงผลการดำเนินงาน", color: "#86E3CE", count: getPhaseCount("1.4") }
+        { key: "1.1", name: "ก่อนเข้าตรวจ (รวมยังไม่ดำเนินการ)", color: "#FA897B", count: p1Count },
+        { key: "1.2-audit", name: "ระหว่างการตรวจสอบ", color: "#FFAC59", count: p2AuditCount },
+        { key: "1.2-draft", name: "ระหว่างร่างรายงาน", color: "#FFDD94", count: p2DraftCount },
+        { key: "1.3", name: "รายงานผลการตรวจสอบ", color: "#D0E6A5", count: p3ReportCount },
+        { key: "1.4", name: "ชี้แจงผลการดำเนินงาน", color: "#86E3CE", count: p4ClarifyCount }
       ];
     });
 
@@ -1039,6 +1046,57 @@ const app = createApp({
             formDataToSend["ระยะเวลาได้รับชี้แจง"] = durClarify;
             formDataToSend["ระยะเวลาการชี้แจง"] = durClarify;
             console.log(`📊 6. ระยะเวลาชี้แจง (Col V) = ${durClarify} วัน (แจ้งหน่วยตรวจ: ${reportDateToUnit} -> ชี้แจง: ${clarifyDateFromUnit})`);
+          }
+        }
+
+        // 7. คำนวณ ระยะเวลาร่างรายงาน (Col W)
+        // วันที่สิ้นสุดการตรวจสอบ (Col H) หรือ วัน End Date ในชีท Delay (Col F) วันหลังสุด -> วันที่ปิดตรวจ (Col K)
+        const auditEndDateH = formDataToSend["วันที่สิ้นสุดการตรวจสอบ"];
+        let approvedDelayEndDate = null;
+        if (Array.isArray(delayList.value) && deptName) {
+          delayList.value.forEach(item => {
+            const itemDept = String(item.Department || item.department || item["ส่วนงาน"] || item._col3 || "").trim();
+            const deanStatus = String(item.DeanStatus || item.status || item.Status || item._col11 || "").trim();
+            const leaderStatus = String(item.LeaderStatus || item._col9 || item._col8 || "").trim();
+            
+            const isApproved = deanStatus.includes("อนุมัติ") || deanStatus.includes("อนุมัติแล้ว") || 
+              ((deanStatus === "-" || !deanStatus) && (leaderStatus.includes("อนุมัติ") || leaderStatus.includes("ผ่านพิจารณา")));
+
+            if (isSameDepartment(itemDept, deptName) && isApproved) {
+              const endDate = item["End Date"] || item.endDate || item["วันที่สิ้นสุด"] || item._col5;
+              if (endDate) {
+                const pEnd = parseDate(endDate);
+                if (pEnd) {
+                  if (!approvedDelayEndDate || pEnd > approvedDelayEndDate) {
+                    approvedDelayEndDate = pEnd;
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        let effectiveEnd = null;
+        if (auditEndDateH) {
+          const dH = parseDate(auditEndDateH);
+          if (dH) effectiveEnd = dH;
+        }
+        if (approvedDelayEndDate) {
+          if (!effectiveEnd || approvedDelayEndDate > effectiveEnd) {
+            effectiveEnd = approvedDelayEndDate;
+          }
+        }
+
+        if (effectiveEnd && auditCloseDate) {
+          const dK = parseDate(auditCloseDate);
+          if (dK) {
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const durDraft = Math.round((dK.getTime() - effectiveEnd.getTime()) / msPerDay);
+            if (durDraft >= 0) {
+              formDataToSend["ระยะเวลาร่างรายงาน"] = durDraft;
+              formDataToSend["ระยะเวลาร่างรายงาน (วัน)"] = durDraft;
+              console.log(`📊 7. ระยะเวลาร่างรายงาน (Col W) = ${durDraft} วัน (วันสิ้นสุดหลังสุด: ${formatDateDMY(effectiveEnd)} -> ปิดตรวจ: ${auditCloseDate})`);
+            }
           }
         }
       }
