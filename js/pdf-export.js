@@ -190,7 +190,7 @@ function generatePdfReport(options) {
         <td style="padding: 8px 4px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #6b3e80;">100.0%</td>
       </tr>
       <tr style="background-color: #f0fdf4;">
-        <td style="padding: 7px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #166534; line-height: 1.3;">2. ดำเนินการเสร็จสมบูรณ์</td>
+        <td style="padding: 7px 10px; border: 1px solid #cbd5e1; font-weight: 700; color: #166534; line-height: 1.3;">2. ดำเนินการเสร็จสมบูรณ์ (ชี้แจงผลการดำเนินงานตามข้อเสนอแนะแล้ว)</td>
         ${activeYears.map(yr => `
           <td style="padding: 7px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534;">${yearStatsMap[yr].completed.length}</td>
           <td style="padding: 7px 4px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: 800; color: #166534;">${((yearStatsMap[yr].completed.length / yearStatsMap[yr].totalPlanned) * 100).toFixed(1)}%</td>
@@ -272,7 +272,7 @@ function generatePdfReport(options) {
         <td style="padding: 8px 8px; border: 1px solid #d4b2e6; text-align: center !important; vertical-align: middle !important; font-weight: bold; font-size: 11pt; color: #6b3e80;">100.0%</td>
       </tr>
       <tr style="background-color: #f0fdf4;">
-        <td style="padding: 7px 14px; border: 1px solid #cbd5e1; font-weight: bold; color: #166534; line-height: 1.3; font-size: 10.5pt;">2. ดำเนินการเสร็จสมบูรณ์</td>
+        <td style="padding: 7px 14px; border: 1px solid #cbd5e1; font-weight: bold; color: #166534; line-height: 1.3; font-size: 10.5pt;">2. ดำเนินการเสร็จสมบูรณ์ (ชี้แจงผลการดำเนินงานตามข้อเสนอแนะแล้ว)</td>
         <td style="padding: 7px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #166534; font-size: 11pt;">${stats.completed.length}</td>
         <td style="padding: 7px 8px; border: 1px solid #cbd5e1; text-align: center !important; vertical-align: middle !important; font-weight: bold; color: #166534; font-size: 11pt;">${yrPct(stats.completed.length)}</td>
       </tr>
@@ -311,7 +311,7 @@ function generatePdfReport(options) {
     const allCategories = [
       {
         num: 2,
-        title: `2. ดำเนินการเสร็จสมบูรณ์ (${stats.completed.length} ส่วนงาน - ${yrPct(stats.completed.length)})`,
+        title: `2. ดำเนินการเสร็จสมบูรณ์ (ชี้แจงผลการดำเนินงานตามข้อเสนอแนะแล้ว) (${stats.completed.length} ส่วนงาน - ${yrPct(stats.completed.length)})`,
         headerBg: "#86E3CE",
         headerColor: "#0E5C4B",
         bodyBg: "#EFFCF9",
