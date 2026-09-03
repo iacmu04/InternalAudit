@@ -429,8 +429,36 @@ function renderPhaseChart(canvasId, phaseStats) {
   const dataCounts = phaseStats.map(s => s.count);
   const colors = phaseStats.map(s => s.color);
 
+  // Custom plugin to draw clear count values on top of each bar (including 0)
+  const topValuesPlugin = {
+    id: 'topValuesPlugin',
+    afterDatasetsDraw(chart) {
+      const { ctx, scales: { x, y } } = chart;
+      chart.data.datasets.forEach((dataset, i) => {
+        const meta = chart.getDatasetMeta(i);
+        meta.data.forEach((bar, index) => {
+          const val = dataset.data[index];
+          const valText = String(val !== undefined && val !== null ? val : 0);
+          
+          ctx.save();
+          ctx.font = 'bold 12px "Prompt", "Sarabun", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillStyle = val === 0 ? '#94a3b8' : '#1e293b';
+          
+          const xPos = bar.x;
+          const yPos = val === 0 ? y.getPixelForValue(0) - 5 : bar.y - 5;
+          
+          ctx.fillText(valText, xPos, yPos);
+          ctx.restore();
+        });
+      });
+    }
+  };
+
   phaseChartInstance = new Chart(ctx, {
     type: 'bar',
+    plugins: [topValuesPlugin],
     data: {
       labels: labels,
       datasets: [{
@@ -438,8 +466,9 @@ function renderPhaseChart(canvasId, phaseStats) {
         data: dataCounts,
         backgroundColor: colors,
         borderRadius: 8,
-        barThickness: 'flex',
-        maxBarThickness: 45
+        categoryPercentage: 0.75,
+        barPercentage: 0.85,
+        maxBarThickness: 55
       }]
     },
     options: {
@@ -447,6 +476,7 @@ function renderPhaseChart(canvasId, phaseStats) {
       maintainAspectRatio: false,
       layout: {
         padding: {
+          top: 20,
           bottom: 12
         }
       },
@@ -468,6 +498,7 @@ function renderPhaseChart(canvasId, phaseStats) {
       scales: {
         y: {
           beginAtZero: true,
+          grace: '12%',
           ticks: { 
             precision: 0,
             font: {
@@ -479,14 +510,20 @@ function renderPhaseChart(canvasId, phaseStats) {
           grid: { color: '#f1f5f9' }
         },
         x: {
-          grid: { display: false },
+          grid: { 
+            display: false,
+            offset: true
+          },
           ticks: {
+            align: 'center',
+            crossAlign: 'center',
+            textAlign: 'center',
             maxRotation: 0,
             minRotation: 0,
             autoSkip: false,
             color: '#334155',
             font: function(context) {
-              const width = context.chart.width;
+              const width = context.chart ? context.chart.width : window.innerWidth;
               return {
                 size: width < 480 ? 9.5 : (width < 768 ? 10.5 : 11.5),
                 weight: 'bold',
@@ -494,7 +531,7 @@ function renderPhaseChart(canvasId, phaseStats) {
                 lineHeight: 1.3
               };
             },
-            padding: 6
+            padding: 8
           }
         }
       }
