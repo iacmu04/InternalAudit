@@ -510,17 +510,11 @@ function renderPhaseChart(canvasId, phaseStats) {
           grid: { color: '#f1f5f9' }
         },
         x: {
-          grid: { 
-            display: false,
-            offset: true
-          },
+          grid: { display: false },
           ticks: {
-            align: 'center',
-            crossAlign: 'center',
-            textAlign: 'center',
+            autoSkip: false,
             maxRotation: 0,
             minRotation: 0,
-            autoSkip: false,
             color: '#334155',
             font: function(context) {
               const width = context.chart ? context.chart.width : window.innerWidth;
