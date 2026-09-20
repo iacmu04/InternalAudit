@@ -680,6 +680,17 @@ function generatePdfReport(options) {
   }
 }
 
+// Smart Thai word segmentation helper to prevent html2canvas line-wrap collisions
+function formatDeptNameForPdf(name) {
+  if (!name) return "";
+  let str = String(name).trim();
+  str = str.replace(/([^ ])(คณะ|วิทยาลัย|สำนัก|สถาบัน|ศูนย์|โรงเรียน|กอง|หอพัก|สถานี|อุทยาน)/g, '$1 $2');
+  str = str.replace(/([^ ])(และถ่ายทอด|และบริการ|และการจัดการ|และเทคโนโลยี|และบำรุง|และพัฒนา)/g, '$1 $2');
+  str = str.replace(/([^ ])(เพื่อความยั่งยืน|คลินิก)/g, '$1 $2');
+  str = str.replace(/\s+/g, ' ').trim();
+  return str;
+}
+
 function renderCategoryListHTML(items, includeStatusDetails = true) {
   if (!items || items.length === 0) {
     return `<div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; padding: 4px 0; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
@@ -697,14 +708,19 @@ function renderCategoryListHTML(items, includeStatusDetails = true) {
       const item = items[idx];
       if (item) {
         cellsHTML += `
-          <td style="width: ${cols === 2 ? '50%' : '33.33%'}; vertical-align: top; padding: 4px 6px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
-            <div style="font-size: ${cols === 3 ? '9.5pt' : '10pt'}; line-height: 1.45; color: #0f172a;">
-              <span style="color: #64748b; font-weight: 800; font-size: 8.5pt; margin-right: 3px;">${idx + 1}.</span><strong style="font-weight: 700; color: #0f172a; font-size: ${cols === 3 ? '9.5pt' : '10pt'};">${item.name}</strong>
-              ${(includeStatusDetails && item.detail) ? `
-                <div style="color: #475569; font-size: 8.5pt; font-weight: 500; padding-left: 14px; line-height: 1.35; margin-top: 1px;">
-                  (${item.detail})
-                </div>
-              ` : ''}
+          <td style="width: ${cols === 2 ? '50%' : '33.33%'}; vertical-align: top; padding: 3.5px 5px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+            <div style="display: table; width: 100%;">
+              <div style="display: table-cell; width: 22px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
+                ${idx + 1}.
+              </div>
+              <div style="display: table-cell; vertical-align: top; font-size: ${cols === 3 ? '9pt' : '9.5pt'}; line-height: 1.45; color: #0f172a; word-break: break-word;">
+                <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(item.name)}</strong>
+                ${(includeStatusDetails && item.detail) ? `
+                  <div style="color: #475569; font-size: 8pt; font-weight: 500; line-height: 1.35; margin-top: 1px;">
+                    (${item.detail})
+                  </div>
+                ` : ''}
+              </div>
             </div>
           </td>
         `;
@@ -744,15 +760,25 @@ function renderTeamsListHTML(teamsMap) {
       const u2 = list[idx2];
       rowsHTML += `
         <tr>
-          <td style="width: 50%; vertical-align: top; padding: 3.5px 8px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
-            <div style="font-size: 10pt; line-height: 1.45; color: #0f172a;">
-              <span style="color: #64748b; font-weight: 800; font-size: 8.5pt; margin-right: 3px;">${idx1 + 1}.</span><strong style="font-weight: 700; color: #0f172a; font-size: 10pt;">${u1.name}</strong>
+          <td style="width: 50%; vertical-align: top; padding: 3px 6px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+            <div style="display: table; width: 100%;">
+              <div style="display: table-cell; width: 22px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
+                ${idx1 + 1}.
+              </div>
+              <div style="display: table-cell; vertical-align: top; font-size: 9.5pt; line-height: 1.45; color: #0f172a; word-break: break-word;">
+                <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(u1.name)}</strong>
+              </div>
             </div>
           </td>
-          <td style="width: 50%; vertical-align: top; padding: 3.5px 8px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+          <td style="width: 50%; vertical-align: top; padding: 3px 6px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
             ${u2 ? `
-              <div style="font-size: 10pt; line-height: 1.45; color: #0f172a;">
-                <span style="color: #64748b; font-weight: 800; font-size: 8.5pt; margin-right: 3px;">${idx2 + 1}.</span><strong style="font-weight: 700; color: #0f172a; font-size: 10pt;">${u2.name}</strong>
+              <div style="display: table; width: 100%;">
+                <div style="display: table-cell; width: 22px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
+                  ${idx2 + 1}.
+                </div>
+                <div style="display: table-cell; vertical-align: top; font-size: 9.5pt; line-height: 1.45; color: #0f172a; word-break: break-word;">
+                  <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(u2.name)}</strong>
+                </div>
               </div>
             ` : ''}
           </td>
