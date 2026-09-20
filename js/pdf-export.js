@@ -375,16 +375,16 @@ function generatePdfReport(options) {
       const cardTitle = isContinuation ? `${cat.title} (ต่อ)` : cat.title;
       const compactHeaderPadding = includeStatusDetails ? '6px 10px' : '4px 8px';
       const compactHeaderFontSize = includeStatusDetails ? '10.5pt' : '9.5pt';
-      const compactBodyPadding = includeStatusDetails ? '8px 10px' : '5px 8px';
+      const compactBodyPadding = includeStatusDetails ? '8px 10px' : '4px 6px';
       const cardMarginBottom = includeStatusDetails ? '10px' : '6px';
 
       return `
         <div style="margin-bottom: ${cardMarginBottom}; border: 1.5px solid ${cat.borderColor}; border-radius: 6px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: ${cat.headerBg}; padding: ${compactHeaderPadding}; font-weight: 800; font-size: ${compactHeaderFontSize}; color: ${cat.headerColor}; border-bottom: 1px solid ${cat.borderColor};">
+          <div style="background-color: ${cat.headerBg}; padding: ${compactHeaderPadding}; font-weight: 800; font-size: ${compactHeaderFontSize}; color: ${cat.headerColor}; border-bottom: 1px solid ${cat.borderColor}; font-family: 'Sarabun', sans-serif;">
             ${cardTitle}
           </div>
           <div style="padding: ${compactBodyPadding}; background-color: ${cat.bodyBg};">
-            ${renderCategoryListHTML(items, includeStatusDetails)}
+            ${renderCategoryListHTML(items, includeStatusDetails, orientation)}
           </div>
         </div>
       `;
@@ -398,17 +398,18 @@ function generatePdfReport(options) {
 
       return [`
         <div style="margin-bottom: 10px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: #f6ecfc; padding: 7px 12px; font-weight: 800; font-size: 11pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
+          <div style="background-color: #f6ecfc; padding: 6px 12px; font-weight: 800; font-size: 11pt; color: #5e327a; border-bottom: 1px solid #B889CF; font-family: 'Sarabun', sans-serif;">
             📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)
           </div>
-          <div style="padding: 8px 10px; background-color: #ffffff;">
+          <div style="padding: 6px 8px; background-color: #ffffff;">
             ${activeCards.join('')}
           </div>
         </div>
       `];
     }
 
-    const MAX_PAGE_ROWS = 24;
+    const MAX_PAGE_ROWS = orientation === 'landscape' ? 16 : 24;
+    const colsForPaging = orientation === 'landscape' ? 3 : 2;
     const pages = [];
     let currentPageCards = [];
     let currentRows = 0;
@@ -420,7 +421,7 @@ function generatePdfReport(options) {
       let isFirstChunk = true;
 
       while (remainingItems.length > 0) {
-        const itemRows = Math.ceil(remainingItems.length / 2);
+        const itemRows = Math.ceil(remainingItems.length / colsForPaging);
         const cardRows = itemRows + 2;
 
         if (currentRows + cardRows <= MAX_PAGE_ROWS || currentRows === 0) {
@@ -429,7 +430,7 @@ function generatePdfReport(options) {
           remainingItems = [];
         } else {
           const availableItemRows = Math.max(MAX_PAGE_ROWS - currentRows - 2, 0);
-          const availableItems = availableItemRows * 2;
+          const availableItems = availableItemRows * colsForPaging;
 
           if (availableItems >= 6 && remainingItems.length > availableItems) {
             const chunk = remainingItems.slice(0, availableItems);
@@ -446,7 +447,7 @@ function generatePdfReport(options) {
               currentPageCards = [];
               currentRows = 0;
             }
-            const freshMaxItems = (MAX_PAGE_ROWS - 2) * 2;
+            const freshMaxItems = (MAX_PAGE_ROWS - 2) * colsForPaging;
             if (remainingItems.length > freshMaxItems) {
               const chunk = remainingItems.slice(0, freshMaxItems);
               remainingItems = remainingItems.slice(freshMaxItems);
@@ -457,7 +458,7 @@ function generatePdfReport(options) {
               currentRows = 0;
             } else {
               currentPageCards.push(renderCardHTML(cat, remainingItems, !isFirstChunk));
-              currentRows += Math.ceil(remainingItems.length / 2) + 2;
+              currentRows += Math.ceil(remainingItems.length / colsForPaging) + 2;
               remainingItems = [];
             }
           }
@@ -471,10 +472,10 @@ function generatePdfReport(options) {
 
     return pages.map((cardsHTML, pIdx) => `
       <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-        <div style="background-color: #f6ecfc; padding: 8px 12px; font-weight: 800; font-size: 11.5pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
+        <div style="background-color: #f6ecfc; padding: 7px 12px; font-weight: 800; font-size: 11pt; color: #5e327a; border-bottom: 1px solid #B889CF; font-family: 'Sarabun', sans-serif;">
           📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)${pIdx > 0 ? ' (ต่อ)' : ''}
         </div>
-        <div style="padding: 10px; background-color: #ffffff;">
+        <div style="padding: 8px; background-color: #ffffff;">
           ${cardsHTML.join('')}
         </div>
       </div>
@@ -488,7 +489,7 @@ function generatePdfReport(options) {
     yrBlocks.forEach(b => section2PageBlocks.push(b));
   });
 
-  // Build Section 3 Page Blocks (Unstarted Units with Clean 2-column Flow & Solid Borders)
+  // Build Section 3 Page Blocks (Unstarted Units with Clean Multi-column Flow & Solid Borders)
   const section3PageBlocks = [];
   activeYears.forEach(yr => {
     const stats = yearStatsMap[yr];
@@ -500,38 +501,39 @@ function generatePdfReport(options) {
     const t3 = stats.unstartedByTeam["3"] || [];
     const t4 = stats.unstartedByTeam["4"] || [];
     const totalCount = t1.length + t2.length + t3.length + t4.length;
+    const splitThreshold = orientation === 'landscape' ? 48 : 36;
 
-    if (totalCount > 36) {
+    if (totalCount > splitThreshold) {
       // Split into 2 clean pages:
       section3PageBlocks.push(`
-        <div style="margin-bottom: 14px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: #B889CF; color: #ffffff; padding: 9px 14px; font-weight: 800; font-size: 12pt;">
+        <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 8px 14px; font-weight: 800; font-size: 11.5pt; font-family: 'Sarabun', sans-serif;">
             ${headerTitle}
           </div>
-          <div style="padding: 12px; background-color: #fdf8ff;">
-            ${renderTeamsListHTML({ "1": t1, "2": t2 })}
+          <div style="padding: 10px; background-color: #fdf8ff;">
+            ${renderTeamsListHTML({ "1": t1, "2": t2 }, orientation)}
           </div>
         </div>
       `);
 
       section3PageBlocks.push(`
-        <div style="margin-bottom: 14px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: #B889CF; color: #ffffff; padding: 9px 14px; font-weight: 800; font-size: 12pt;">
+        <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 8px 14px; font-weight: 800; font-size: 11.5pt; font-family: 'Sarabun', sans-serif;">
             ${headerTitle} (ต่อ)
           </div>
-          <div style="padding: 12px; background-color: #fdf8ff;">
-            ${renderTeamsListHTML({ "3": t3, "4": t4 })}
+          <div style="padding: 10px; background-color: #fdf8ff;">
+            ${renderTeamsListHTML({ "3": t3, "4": t4 }, orientation)}
           </div>
         </div>
       `);
     } else {
       section3PageBlocks.push(`
-        <div style="margin-bottom: 14px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: #B889CF; color: #ffffff; padding: 9px 14px; font-weight: 800; font-size: 12pt;">
+        <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 8px 14px; font-weight: 800; font-size: 11.5pt; font-family: 'Sarabun', sans-serif;">
             ${headerTitle}
           </div>
-          <div style="padding: 12px; background-color: #fdf8ff;">
-            ${renderTeamsListHTML({ "1": t1, "2": t2, "3": t3, "4": t4 })}
+          <div style="padding: 10px; background-color: #fdf8ff;">
+            ${renderTeamsListHTML({ "1": t1, "2": t2, "3": t3, "4": t4 }, orientation)}
           </div>
         </div>
       `);
@@ -721,14 +723,27 @@ function formatDeptNameForPdf(name) {
   return str;
 }
 
-function renderCategoryListHTML(items, includeStatusDetails = true) {
+function renderCategoryListHTML(items, includeStatusDetails = true, orientation = 'landscape') {
   if (!items || items.length === 0) {
     return `<div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; padding: 4px 0; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
   }
 
-  // Use 3 columns when not showing status details (compact executive layout)
-  // Use 2 columns when showing status details (to provide space for sub-status details)
-  const cols = includeStatusDetails ? 2 : 3;
+  // Determine column count based on orientation & details flag
+  // In landscape: 4 columns without status details, 3 columns with status details
+  // In portrait: 3 columns without status details, 2 columns with status details
+  let cols = 3;
+  if (orientation === 'landscape') {
+    cols = includeStatusDetails ? 3 : 4;
+  } else {
+    cols = includeStatusDetails ? 2 : 3;
+  }
+
+  const colWidthPct = cols === 4 ? '25%' : (cols === 3 ? '33.33%' : '50%');
+  const numCellWidth = cols === 4 ? '18px' : (cols === 3 ? '20px' : '22px');
+  const numFontSize = cols === 4 ? '8pt' : '8.5pt';
+  const textFontSize = cols === 4 ? '8.5pt' : (cols === 3 ? '9pt' : '9.5pt');
+  const cellPadding = cols === 4 ? '3px 4px' : (cols === 3 ? '4px 5px' : '4px 6px');
+
   let rowsHTML = "";
 
   for (let i = 0; i < items.length; i += cols) {
@@ -738,12 +753,12 @@ function renderCategoryListHTML(items, includeStatusDetails = true) {
       const item = items[idx];
       if (item) {
         cellsHTML += `
-          <td style="width: ${cols === 2 ? '50%' : '33.33%'}; vertical-align: top; padding: 4px 5px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+          <td style="width: ${colWidthPct}; vertical-align: top; padding: ${cellPadding}; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
             <div style="display: table; width: 100%;">
-              <div style="display: table-cell; width: 22px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
+              <div style="display: table-cell; width: ${numCellWidth}; vertical-align: top; color: #64748b; font-weight: 800; font-size: ${numFontSize}; line-height: 1.45;">
                 ${idx + 1}.
               </div>
-              <div style="display: table-cell; vertical-align: top; font-size: ${cols === 3 ? '9pt' : '9.5pt'}; line-height: 1.5; color: #0f172a; word-break: normal; overflow-wrap: normal;">
+              <div style="display: table-cell; vertical-align: top; font-size: ${textFontSize}; line-height: 1.45; color: #0f172a; word-break: normal; overflow-wrap: normal;">
                 <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(item.name)}</strong>
                 ${(includeStatusDetails && item.detail) ? `
                   <div style="color: #475569; font-size: 8pt; font-weight: 500; line-height: 1.35; margin-top: 1px;">
@@ -755,7 +770,7 @@ function renderCategoryListHTML(items, includeStatusDetails = true) {
           </td>
         `;
       } else {
-        cellsHTML += `<td style="width: ${cols === 2 ? '50%' : '33.33%'}; border-bottom: 1px dashed rgba(0, 0, 0, 0.08);"></td>`;
+        cellsHTML += `<td style="width: ${colWidthPct}; border-bottom: 1px dashed rgba(0, 0, 0, 0.08);"></td>`;
       }
     }
     rowsHTML += `<tr>${cellsHTML}</tr>`;
@@ -770,7 +785,7 @@ function renderCategoryListHTML(items, includeStatusDetails = true) {
   `;
 }
 
-function renderTeamsListHTML(teamsMap) {
+function renderTeamsListHTML(teamsMap, orientation = 'landscape') {
   const teamLabels = {
     "1": "งานตรวจสอบ 1",
     "2": "งานตรวจสอบ 2",
@@ -778,42 +793,37 @@ function renderTeamsListHTML(teamsMap) {
     "4": "งานตรวจสอบอื่น"
   };
 
+  const cols = orientation === 'landscape' ? 3 : 2;
+  const colWidthPct = cols === 3 ? '33.33%' : (cols === 4 ? '25%' : '50%');
+
   return Object.keys(teamsMap).map(key => {
     const list = teamsMap[key] || [];
     const headerTitle = key === "4" ? `📌 งานตรวจสอบอื่น (${list.length} ส่วนงาน)` : `📌 ${teamLabels[key]} (${list.length} ส่วนงาน)`;
     
     let rowsHTML = "";
-    for (let i = 0; i < list.length; i += 2) {
-      const idx1 = i;
-      const idx2 = i + 1;
-      const u1 = list[idx1];
-      const u2 = list[idx2];
-      rowsHTML += `
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding: 3px 6px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
-            <div style="display: table; width: 100%;">
-              <div style="display: table-cell; width: 22px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
-                ${idx1 + 1}.
-              </div>
-              <div style="display: table-cell; vertical-align: top; font-size: 9.5pt; line-height: 1.45; color: #0f172a; word-break: break-word;">
-                <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(u1.name)}</strong>
-              </div>
-            </div>
-          </td>
-          <td style="width: 50%; vertical-align: top; padding: 3px 6px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
-            ${u2 ? `
+    for (let i = 0; i < list.length; i += cols) {
+      let cellsHTML = "";
+      for (let c = 0; c < cols; c++) {
+        const idx = i + c;
+        const u = list[idx];
+        if (u) {
+          cellsHTML += `
+            <td style="width: ${colWidthPct}; vertical-align: top; padding: 3px 5px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
               <div style="display: table; width: 100%;">
-                <div style="display: table-cell; width: 22px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
-                  ${idx2 + 1}.
+                <div style="display: table-cell; width: 20px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
+                  ${idx + 1}.
                 </div>
-                <div style="display: table-cell; vertical-align: top; font-size: 9.5pt; line-height: 1.45; color: #0f172a; word-break: break-word;">
-                  <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(u2.name)}</strong>
+                <div style="display: table-cell; vertical-align: top; font-size: ${cols === 3 ? '9pt' : '9.5pt'}; line-height: 1.45; color: #0f172a; word-break: break-word;">
+                  <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(u.name)}</strong>
                 </div>
               </div>
-            ` : ''}
-          </td>
-        </tr>
-      `;
+            </td>
+          `;
+        } else {
+          cellsHTML += `<td style="width: ${colWidthPct}; border-bottom: 1px dashed rgba(0, 0, 0, 0.08);"></td>`;
+        }
+      }
+      rowsHTML += `<tr>${cellsHTML}</tr>`;
     }
 
     return `
@@ -821,7 +831,7 @@ function renderTeamsListHTML(teamsMap) {
         <div style="font-weight: 800; font-size: 10.5pt; color: #5e327a; background-color: #f3e8ff; padding: 5px 12px; border-bottom: 1px solid #e9d5ff; font-family: 'Sarabun', sans-serif;">
           ${headerTitle}
         </div>
-        <div style="padding: 4px 10px;">
+        <div style="padding: 4px 8px;">
           ${list.length === 0 ? `
             <div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการ -</div>
           ` : `
