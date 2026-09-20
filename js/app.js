@@ -100,7 +100,8 @@ const app = createApp({
 
     const pdfExportForm = reactive({
       ctsMeetingNumber: "",
-      includeStatusDetails: true
+      includeStatusDetails: true,
+      orientation: "landscape"
     });
 
     // Google Apps Script API Connection
@@ -1228,6 +1229,7 @@ const app = createApp({
         selectedPhase: selectedPhase.value,
         ctsMeetingNumber: pdfExportForm.ctsMeetingNumber.trim(),
         includeStatusDetails: pdfExportForm.includeStatusDetails,
+        orientation: pdfExportForm.orientation || "landscape",
         totalPlannedUnitsCount: totalPlannedUnitsCount.value,
         completedUnitsCount: completedUnitsCount.value,
         overallCompletionRate: overallCompletionRate.value

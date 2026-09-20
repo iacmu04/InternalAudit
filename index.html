@@ -1633,6 +1633,27 @@
                         </div>
                     </label>
                 </div>
+
+                <!-- 3. Page Orientation Selector -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-800 mb-1.5">
+                        ทิศทางหน้ากระดาษ (Page Orientation)
+                    </label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" 
+                                @click="pdfExportForm.orientation = 'landscape'"
+                                :class="pdfExportForm.orientation === 'landscape' ? 'bg-purple-700 text-white border-purple-700 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'"
+                                class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-bold transition-all">
+                            <span>🖼️ แนวนอน (แนะนำ)</span>
+                        </button>
+                        <button type="button" 
+                                @click="pdfExportForm.orientation = 'portrait'"
+                                :class="pdfExportForm.orientation === 'portrait' ? 'bg-purple-700 text-white border-purple-700 shadow-sm' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'"
+                                class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-bold transition-all">
+                            <span>📄 แนวตั้ง</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
