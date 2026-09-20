@@ -373,13 +373,14 @@ function generatePdfReport(options) {
 
     const renderCardHTML = (cat, items, isContinuation = false) => {
       const cardTitle = isContinuation ? `${cat.title} (ต่อ)` : cat.title;
-      const compactHeaderPadding = includeStatusDetails ? '6px 10px' : '4px 8px';
-      const compactHeaderFontSize = includeStatusDetails ? '10.5pt' : '9.5pt';
-      const compactBodyPadding = includeStatusDetails ? '8px 10px' : '4px 6px';
-      const cardMarginBottom = includeStatusDetails ? '10px' : '6px';
+      const isLandscape = orientation === 'landscape';
+      const compactHeaderPadding = !includeStatusDetails ? (isLandscape ? '3px 8px' : '4px 8px') : '5px 10px';
+      const compactHeaderFontSize = !includeStatusDetails ? (isLandscape ? '8.5pt' : '9.5pt') : '10pt';
+      const compactBodyPadding = !includeStatusDetails ? (isLandscape ? '2px 5px' : '4px 6px') : '6px 8px';
+      const cardMarginBottom = !includeStatusDetails ? (isLandscape ? '4px' : '6px') : '8px';
 
       return `
-        <div style="margin-bottom: ${cardMarginBottom}; border: 1.5px solid ${cat.borderColor}; border-radius: 6px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+        <div style="margin-bottom: ${cardMarginBottom}; border: 1.5px solid ${cat.borderColor}; border-radius: 5px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
           <div style="background-color: ${cat.headerBg}; padding: ${compactHeaderPadding}; font-weight: 800; font-size: ${compactHeaderFontSize}; color: ${cat.headerColor}; border-bottom: 1px solid ${cat.borderColor}; font-family: 'Sarabun', sans-serif;">
             ${cardTitle}
           </div>
@@ -396,12 +397,13 @@ function generatePdfReport(options) {
         .filter(cat => cat.items && cat.items.length > 0)
         .map(cat => renderCardHTML(cat, cat.items));
 
+      const isLandscape = orientation === 'landscape';
       return [`
-        <div style="margin-bottom: 10px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: #f6ecfc; padding: 6px 12px; font-weight: 800; font-size: 11pt; color: #5e327a; border-bottom: 1px solid #B889CF; font-family: 'Sarabun', sans-serif;">
+        <div style="margin-bottom: ${isLandscape ? '6px' : '10px'}; border: 2px solid #B889CF; border-radius: 6px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #f6ecfc; padding: ${isLandscape ? '4px 10px' : '6px 12px'}; font-weight: 800; font-size: ${isLandscape ? '10pt' : '11pt'}; color: #5e327a; border-bottom: 1px solid #B889CF; font-family: 'Sarabun', sans-serif;">
             📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)
           </div>
-          <div style="padding: 6px 8px; background-color: #ffffff;">
+          <div style="padding: ${isLandscape ? '4px 6px' : '6px 8px'}; background-color: #ffffff;">
             ${activeCards.join('')}
           </div>
         </div>
@@ -471,11 +473,11 @@ function generatePdfReport(options) {
     }
 
     return pages.map((cardsHTML, pIdx) => `
-      <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-        <div style="background-color: #f6ecfc; padding: 7px 12px; font-weight: 800; font-size: 11pt; color: #5e327a; border-bottom: 1px solid #B889CF; font-family: 'Sarabun', sans-serif;">
+      <div style="margin-bottom: 10px; border: 2px solid #B889CF; border-radius: 6px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+        <div style="background-color: #f6ecfc; padding: 5px 10px; font-weight: 800; font-size: 10.5pt; color: #5e327a; border-bottom: 1px solid #B889CF; font-family: 'Sarabun', sans-serif;">
           📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)${pIdx > 0 ? ' (ต่อ)' : ''}
         </div>
-        <div style="padding: 8px; background-color: #ffffff;">
+        <div style="padding: 6px 8px; background-color: #ffffff;">
           ${cardsHTML.join('')}
         </div>
       </div>
@@ -506,33 +508,33 @@ function generatePdfReport(options) {
     if (totalCount > splitThreshold) {
       // Split into 2 clean pages:
       section3PageBlocks.push(`
-        <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: #B889CF; color: #ffffff; padding: 8px 14px; font-weight: 800; font-size: 11.5pt; font-family: 'Sarabun', sans-serif;">
+        <div style="margin-bottom: 10px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 6px 12px; font-weight: 800; font-size: 11pt; font-family: 'Sarabun', sans-serif;">
             ${headerTitle}
           </div>
-          <div style="padding: 10px; background-color: #fdf8ff;">
+          <div style="padding: 8px; background-color: #fdf8ff;">
             ${renderTeamsListHTML({ "1": t1, "2": t2 }, orientation)}
           </div>
         </div>
       `);
 
       section3PageBlocks.push(`
-        <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: #B889CF; color: #ffffff; padding: 8px 14px; font-weight: 800; font-size: 11.5pt; font-family: 'Sarabun', sans-serif;">
+        <div style="margin-bottom: 10px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 6px 12px; font-weight: 800; font-size: 11pt; font-family: 'Sarabun', sans-serif;">
             ${headerTitle} (ต่อ)
           </div>
-          <div style="padding: 10px; background-color: #fdf8ff;">
+          <div style="padding: 8px; background-color: #fdf8ff;">
             ${renderTeamsListHTML({ "3": t3, "4": t4 }, orientation)}
           </div>
         </div>
       `);
     } else {
       section3PageBlocks.push(`
-        <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: #B889CF; color: #ffffff; padding: 8px 14px; font-weight: 800; font-size: 11.5pt; font-family: 'Sarabun', sans-serif;">
+        <div style="margin-bottom: 10px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #B889CF; color: #ffffff; padding: 6px 12px; font-weight: 800; font-size: 11pt; font-family: 'Sarabun', sans-serif;">
             ${headerTitle}
           </div>
-          <div style="padding: 10px; background-color: #fdf8ff;">
+          <div style="padding: 8px; background-color: #fdf8ff;">
             ${renderTeamsListHTML({ "1": t1, "2": t2, "3": t3, "4": t4 }, orientation)}
           </div>
         </div>
@@ -560,39 +562,43 @@ function generatePdfReport(options) {
   // Build Full HTML Document with clean page-break-before structure
   let pagesHTML = '';
 
+  const pageWrapperPadding = orientation === 'landscape' ? '10px 14px 10px 14px' : '14px 18px 18px 18px';
+  const sectionTitleFontSize = orientation === 'landscape' ? '12pt' : '14pt';
+  const sectionTitleMargin = orientation === 'landscape' ? '0 0 8px 0' : '0 0 14px 0';
+
   // Page 1: Executive Summary
   pagesHTML += `
-    <div style="padding: 14px 18px 18px 18px; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
+    <div style="padding: ${pageWrapperPadding}; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
       <!-- Header Title -->
-      <div style="text-align: center; border-bottom: 3px solid #B889CF; padding-bottom: 10px; margin-bottom: 16px;">
-        <div style="margin: 0; font-size: 16pt; font-weight: bold; color: #5e327a; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+      <div style="text-align: center; border-bottom: 3px solid #B889CF; padding-bottom: ${orientation === 'landscape' ? '6px' : '10px'}; margin-bottom: ${orientation === 'landscape' ? '10px' : '16px'};">
+        <div style="margin: 0; font-size: ${orientation === 'landscape' ? '14pt' : '16pt'}; font-weight: bold; color: #5e327a; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           สรุปผลการปฏิบัติงานตามแผนการตรวจสอบ
         </div>
-        <div style="margin: 4px 0 0 0; font-size: 11pt; font-weight: bold; color: #6b3e80; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+        <div style="margin: 3px 0 0 0; font-size: 10.5pt; font-weight: bold; color: #6b3e80; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           สำนักงานการตรวจสอบภายใน | ข้อมูล ณ วันที่ ${todayStr}
         </div>
-        <div style="margin: 6px 0 0 0; font-size: 11pt; font-weight: bold; color: #5e327a; background-color: #f6ecfc; display: inline-block; padding: 4px 18px; border-radius: 8px; border: 1px solid #B889CF; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+        <div style="margin: 4px 0 0 0; font-size: 10.5pt; font-weight: bold; color: #5e327a; background-color: #f6ecfc; display: inline-block; padding: 3px 16px; border-radius: 6px; border: 1px solid #B889CF; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ${yearText}
         </div>
-        <div style="margin: 6px 0 0 0; font-size: 11pt; font-weight: bold; color: #5e327a; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+        <div style="margin: 4px 0 0 0; font-size: 10.5pt; font-weight: bold; color: #5e327a; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ${ctsText}
         </div>
       </div>
 
       <!-- Section 1 Title -->
-      <div style="margin-bottom: 14px;">
-        <div style="font-size: 14pt; font-weight: bold; color: #5e327a; margin: 0 0 6px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+      <div style="margin-bottom: ${orientation === 'landscape' ? '8px' : '14px'};">
+        <div style="font-size: ${sectionTitleFontSize}; font-weight: bold; color: #5e327a; margin: 0 0 4px 0; padding-bottom: 3px; border-bottom: 2px solid #B889CF; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ส่วนที่ 1: หน้าสรุปภาพรวม (Executive Summary)
         </div>
-        <p style="font-size: 10.5pt; color: #64748b; margin: 0; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+        <p style="font-size: 10pt; color: #64748b; margin: 0; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           สรุปสัดส่วนการดำเนินงานจำแนกตามสถานะเปรียบเทียบกับจำนวนหน่วยรับตรวจตามแผนประจำปี ${isMultiYear ? `(เปรียบเทียบแยกตามปีงบประมาณ ${activeYears.join(', ')})` : ''}
         </p>
       </div>
 
       <!-- Executive Summary Table -->
-      ${tableHeaderHTML ? `<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 10pt; margin-bottom: 16px; table-layout: fixed; font-family: 'Tahoma', 'Sarabun', sans-serif !important;"><thead>${tableHeaderHTML}</thead><tbody>${tableBodyHTML}</tbody></table>` : ''}
+      ${tableHeaderHTML ? `<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: ${orientation === 'landscape' ? '9.5pt' : '10pt'}; margin-bottom: 12px; table-layout: fixed; font-family: 'Tahoma', 'Sarabun', sans-serif !important;"><thead>${tableHeaderHTML}</thead><tbody>${tableBodyHTML}</tbody></table>` : ''}
 
-      <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+      <div style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 4px; text-align: right; font-size: 8.5pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
         หน้า ${pageCounter++}/${totalExactPages} (หน้าสรุปภาพรวม)
       </div>
     </div>
@@ -601,14 +607,14 @@ function generatePdfReport(options) {
   // Section 2 Pages (Explicit page-break-before on every Section 2 block)
   section2PageBlocks.forEach((blockHTML, bIdx) => {
     pagesHTML += `
-      <div style="padding: 14px 18px 18px 18px; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
-        <div style="font-size: 14pt; font-weight: bold; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+      <div style="padding: ${pageWrapperPadding}; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
+        <div style="font-size: ${sectionTitleFontSize}; font-weight: bold; color: #5e327a; margin: ${sectionTitleMargin}; padding-bottom: 3px; border-bottom: 2px solid #B889CF; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ส่วนที่ 2: รายละเอียดสถานะงานตรวจสอบที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์
         </div>
         
         ${blockHTML}
 
-        <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+        <div style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px; text-align: right; font-size: 8.5pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           หน้า ${pageCounter++}/${totalExactPages} (รายชื่อส่วนงานที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์${bIdx > 0 ? ' - ต่อ' : ''})
         </div>
       </div>
@@ -618,14 +624,14 @@ function generatePdfReport(options) {
   // Section 3 Pages (Explicit page-break-before on every Section 3 block)
   section3PageBlocks.forEach((blockHTML, bIdx) => {
     pagesHTML += `
-      <div style="padding: 14px 18px 18px 18px; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
-        <div style="font-size: 14pt; font-weight: bold; color: #5e327a; margin: 0 0 14px 0; padding-bottom: 4px; border-bottom: 2px solid #B889CF; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+      <div style="padding: ${pageWrapperPadding}; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
+        <div style="font-size: ${sectionTitleFontSize}; font-weight: bold; color: #5e327a; margin: ${sectionTitleMargin}; padding-bottom: 3px; border-bottom: 2px solid #B889CF; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ส่วนที่ 3: รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ (แยกตามงานตรวจสอบ)
         </div>
         
         ${blockHTML}
 
-        <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 6px; text-align: right; font-size: 9pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+        <div style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px; text-align: right; font-size: 8.5pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           หน้า ${pageCounter++}/${totalExactPages} (ส่วนงานที่ยังไม่ได้ดำเนินการ${bIdx > 0 ? ' - ต่อ' : ''})
         </div>
       </div>
@@ -725,24 +731,55 @@ function formatDeptNameForPdf(name) {
 
 function renderCategoryListHTML(items, includeStatusDetails = true, orientation = 'landscape') {
   if (!items || items.length === 0) {
-    return `<div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; padding: 4px 0; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
+    return `<div style="color: #94a3b8; font-style: italic; font-size: 8.5pt; padding: 2px 0; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
   }
 
   // Determine column count based on orientation & details flag
-  // In landscape: 4 columns without status details, 3 columns with status details
+  // In landscape: 5 columns without status details (fits all statuses in 1 page), 3 columns with status details
   // In portrait: 3 columns without status details, 2 columns with status details
   let cols = 3;
   if (orientation === 'landscape') {
-    cols = includeStatusDetails ? 3 : 4;
+    cols = includeStatusDetails ? 3 : 5;
   } else {
     cols = includeStatusDetails ? 2 : 3;
   }
 
-  const colWidthPct = cols === 4 ? '25%' : (cols === 3 ? '33.33%' : '50%');
-  const numCellWidth = cols === 4 ? '18px' : (cols === 3 ? '20px' : '22px');
-  const numFontSize = cols === 4 ? '8pt' : '8.5pt';
-  const textFontSize = cols === 4 ? '8.5pt' : (cols === 3 ? '9pt' : '9.5pt');
-  const cellPadding = cols === 4 ? '3px 4px' : (cols === 3 ? '4px 5px' : '4px 6px');
+  let colWidthPct = '33.33%';
+  let numCellWidth = '20px';
+  let numFontSize = '8pt';
+  let textFontSize = '8.5pt';
+  let textLineHeight = '1.35';
+  let cellPadding = '2px 3px';
+
+  if (cols === 5) {
+    colWidthPct = '20%';
+    numCellWidth = '16px';
+    numFontSize = '7.5pt';
+    textFontSize = '8pt';
+    textLineHeight = '1.3';
+    cellPadding = '1px 3px';
+  } else if (cols === 4) {
+    colWidthPct = '25%';
+    numCellWidth = '18px';
+    numFontSize = '8pt';
+    textFontSize = '8.5pt';
+    textLineHeight = '1.35';
+    cellPadding = '2px 4px';
+  } else if (cols === 3) {
+    colWidthPct = '33.33%';
+    numCellWidth = '20px';
+    numFontSize = '8.5pt';
+    textFontSize = '9pt';
+    textLineHeight = '1.4';
+    cellPadding = '3px 4px';
+  } else if (cols === 2) {
+    colWidthPct = '50%';
+    numCellWidth = '22px';
+    numFontSize = '8.5pt';
+    textFontSize = '9.5pt';
+    textLineHeight = '1.45';
+    cellPadding = '4px 6px';
+  }
 
   let rowsHTML = "";
 
@@ -755,13 +792,13 @@ function renderCategoryListHTML(items, includeStatusDetails = true, orientation 
         cellsHTML += `
           <td style="width: ${colWidthPct}; vertical-align: top; padding: ${cellPadding}; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
             <div style="display: table; width: 100%;">
-              <div style="display: table-cell; width: ${numCellWidth}; vertical-align: top; color: #64748b; font-weight: 800; font-size: ${numFontSize}; line-height: 1.45;">
+              <div style="display: table-cell; width: ${numCellWidth}; vertical-align: top; color: #64748b; font-weight: 800; font-size: ${numFontSize}; line-height: ${textLineHeight};">
                 ${idx + 1}.
               </div>
-              <div style="display: table-cell; vertical-align: top; font-size: ${textFontSize}; line-height: 1.45; color: #0f172a; word-break: normal; overflow-wrap: normal;">
+              <div style="display: table-cell; vertical-align: top; font-size: ${textFontSize}; line-height: ${textLineHeight}; color: #0f172a; word-break: normal; overflow-wrap: normal;">
                 <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(item.name)}</strong>
                 ${(includeStatusDetails && item.detail) ? `
-                  <div style="color: #475569; font-size: 8pt; font-weight: 500; line-height: 1.35; margin-top: 1px;">
+                  <div style="color: #475569; font-size: 7.5pt; font-weight: 500; line-height: 1.25; margin-top: 1px;">
                     (${item.detail})
                   </div>
                 ` : ''}
@@ -793,8 +830,13 @@ function renderTeamsListHTML(teamsMap, orientation = 'landscape') {
     "4": "งานตรวจสอบอื่น"
   };
 
-  const cols = orientation === 'landscape' ? 3 : 2;
-  const colWidthPct = cols === 3 ? '33.33%' : (cols === 4 ? '25%' : '50%');
+  const isLandscape = orientation === 'landscape';
+  const cols = isLandscape ? 4 : 2;
+  const colWidthPct = cols === 4 ? '25%' : (cols === 3 ? '33.33%' : '50%');
+  const numCellWidth = cols === 4 ? '18px' : '20px';
+  const numFontSize = cols === 4 ? '8pt' : '8.5pt';
+  const textFontSize = cols === 4 ? '8.5pt' : '9.5pt';
+  const cellPadding = cols === 4 ? '2px 4px' : '3px 6px';
 
   return Object.keys(teamsMap).map(key => {
     const list = teamsMap[key] || [];
@@ -808,12 +850,12 @@ function renderTeamsListHTML(teamsMap, orientation = 'landscape') {
         const u = list[idx];
         if (u) {
           cellsHTML += `
-            <td style="width: ${colWidthPct}; vertical-align: top; padding: 3px 5px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+            <td style="width: ${colWidthPct}; vertical-align: top; padding: ${cellPadding}; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
               <div style="display: table; width: 100%;">
-                <div style="display: table-cell; width: 20px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
+                <div style="display: table-cell; width: ${numCellWidth}; vertical-align: top; color: #64748b; font-weight: 800; font-size: ${numFontSize}; line-height: 1.35;">
                   ${idx + 1}.
                 </div>
-                <div style="display: table-cell; vertical-align: top; font-size: ${cols === 3 ? '9pt' : '9.5pt'}; line-height: 1.45; color: #0f172a; word-break: break-word;">
+                <div style="display: table-cell; vertical-align: top; font-size: ${textFontSize}; line-height: 1.35; color: #0f172a; word-break: break-word;">
                   <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(u.name)}</strong>
                 </div>
               </div>
@@ -827,13 +869,13 @@ function renderTeamsListHTML(teamsMap, orientation = 'landscape') {
     }
 
     return `
-      <div style="margin-bottom: 8px; border: 1.5px solid #e9d5ff; border-radius: 8px; overflow: hidden; background-color: #fdf8ff; page-break-inside: avoid; break-inside: avoid;">
-        <div style="font-weight: 800; font-size: 10.5pt; color: #5e327a; background-color: #f3e8ff; padding: 5px 12px; border-bottom: 1px solid #e9d5ff; font-family: 'Sarabun', sans-serif;">
+      <div style="margin-bottom: 6px; border: 1.5px solid #e9d5ff; border-radius: 6px; overflow: hidden; background-color: #fdf8ff; page-break-inside: avoid; break-inside: avoid;">
+        <div style="font-weight: 800; font-size: 9.5pt; color: #5e327a; background-color: #f3e8ff; padding: 4px 10px; border-bottom: 1px solid #e9d5ff; font-family: 'Sarabun', sans-serif;">
           ${headerTitle}
         </div>
-        <div style="padding: 4px 8px;">
+        <div style="padding: 3px 6px;">
           ${list.length === 0 ? `
-            <div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการ -</div>
+            <div style="color: #94a3b8; font-style: italic; font-size: 8.5pt; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการ -</div>
           ` : `
             <table style="width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; padding: 0;">
               <tbody>
