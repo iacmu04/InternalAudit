@@ -684,9 +684,32 @@ function generatePdfReport(options) {
 function formatDeptNameForPdf(name) {
   if (!name) return "";
   let str = String(name).trim();
-  str = str.replace(/([^ ])(คณะ|วิทยาลัย|สำนัก|สถาบัน|ศูนย์|โรงเรียน|กอง|หอพัก|สถานี|อุทยาน)/g, '$1 $2');
-  str = str.replace(/([^ ])(และถ่ายทอด|และบริการ|และการจัดการ|และเทคโนโลยี|และบำรุง|และพัฒนา)/g, '$1 $2');
-  str = str.replace(/([^ ])(เพื่อความยั่งยืน|คลินิก)/g, '$1 $2');
+
+  // Known dictionary mappings for CMU departments with long compound names
+  const knownMappings = {
+    "ศูนย์บริการวิชาการและถ่ายทอดเทคโนโลยีการเกษตร คณะเกษตรศาสตร์": "ศูนย์บริการวิชาการ และถ่ายทอดเทคโนโลยีการเกษตร คณะเกษตรศาสตร์",
+    "ศูนย์บริการวิทยาศาสตร์และเทคโนโลยี คณะวิทยาศาสตร์": "ศูนย์บริการวิทยาศาสตร์ และเทคโนโลยี คณะวิทยาศาสตร์",
+    "สำนักงานมหาวิทยาลัย - ศูนย์บริหารจัดการเมืองเพื่อความยั่งยืน": "สำนักงานมหาวิทยาลัย - ศูนย์บริหารจัดการ เมืองเพื่อความยั่งยืน",
+    "สำนักงานมหาวิทยาลัย-ศูนย์บริหารจัดการเมืองเพื่อความยั่งยืน": "สำนักงานมหาวิทยาลัย - ศูนย์บริหารจัดการ เมืองเพื่อความยั่งยืน",
+    "ศูนย์บริหารจัดการเมืองเพื่อความยั่งยืน": "ศูนย์บริหารจัดการ เมืองเพื่อความยั่งยืน",
+    "สำนักงานบริหารและจัดการทรัพย์สิน": "สำนักงานบริหาร และจัดการทรัพย์สิน",
+    "สถาบันวิจัยวิทยาศาสตร์สุขภาพ": "สถาบันวิจัย วิทยาศาสตร์สุขภาพ",
+    "ศูนย์ส่งเสริมพฤฒพลังผู้สูงอายุ มช.": "ศูนย์ส่งเสริมพฤฒพลัง ผู้สูงอายุ มช.",
+    "ศูนย์นวัตกรรมและการจัดการความรู้ วิทยาลัยศิลปะ สื่อ และเทคโนโลยี": "ศูนย์นวัตกรรม และการจัดการความรู้ วิทยาลัยศิลปะ สื่อ และเทคโนโลยี",
+    "ศูนย์วิจัยและบริการวิชาการนานาชาติ วิทยาลัยนานาชาตินวัตกรรมดิจิทัล": "ศูนย์วิจัย และบริการวิชาการนานาชาติ วิทยาลัยนานาชาตินวัตกรรมดิจิทัล",
+    "ศูนย์นวัตกรรมอาหารและบรรจุภัณฑ์": "ศูนย์นวัตกรรมอาหาร และบรรจุภัณฑ์",
+    "ศูนย์บริการเทคนิคการแพทย์คลินิก คณะเทคนิคการแพทย์": "ศูนย์บริการเทคนิคการแพทย์ คลินิก คณะเทคนิคการแพทย์",
+    "อุทยานวิทยาศาสตร์และเทคโนโลยี": "อุทยานวิทยาศาสตร์ และเทคโนโลยี",
+    "สถาบันวิศวกรรมชีวการแพทย์": "สถาบันวิศวกรรม ชีวการแพทย์"
+  };
+
+  if (knownMappings[str]) {
+    return knownMappings[str];
+  }
+
+  // General regex for other possible names (ensuring มหาวิทยาลัย is never split)
+  str = str.replace(/([^ มหา])(คณะ|วิทยาลัย|สำนัก|สถาบัน|ศูนย์|โรงเรียน|กอง|หอพัก|สถานี|อุทยาน)/g, '$1 $2');
+  str = str.replace(/([^ ])(และถ่ายทอด|และบริการ|และการจัดการ|และจัดการ|และเทคโนโลยี|และบำรุง|และพัฒนา|เพื่อความยั่งยืน|คลินิก)/g, '$1 $2');
   str = str.replace(/\s+/g, ' ').trim();
   return str;
 }
@@ -708,12 +731,12 @@ function renderCategoryListHTML(items, includeStatusDetails = true) {
       const item = items[idx];
       if (item) {
         cellsHTML += `
-          <td style="width: ${cols === 2 ? '50%' : '33.33%'}; vertical-align: top; padding: 3.5px 5px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+          <td style="width: ${cols === 2 ? '50%' : '33.33%'}; vertical-align: top; padding: 4px 5px; border-bottom: 1px dashed rgba(0, 0, 0, 0.08); box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
             <div style="display: table; width: 100%;">
               <div style="display: table-cell; width: 22px; vertical-align: top; color: #64748b; font-weight: 800; font-size: 8.5pt; line-height: 1.45;">
                 ${idx + 1}.
               </div>
-              <div style="display: table-cell; vertical-align: top; font-size: ${cols === 3 ? '9pt' : '9.5pt'}; line-height: 1.45; color: #0f172a; word-break: break-word;">
+              <div style="display: table-cell; vertical-align: top; font-size: ${cols === 3 ? '9pt' : '9.5pt'}; line-height: 1.5; color: #0f172a; word-break: normal; overflow-wrap: normal;">
                 <strong style="font-weight: 700; color: #0f172a;">${formatDeptNameForPdf(item.name)}</strong>
                 ${(includeStatusDetails && item.detail) ? `
                   <div style="color: #475569; font-size: 8pt; font-weight: 500; line-height: 1.35; margin-top: 1px;">
