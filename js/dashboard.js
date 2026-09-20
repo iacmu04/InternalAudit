@@ -170,6 +170,26 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       for (let item of STATUS_PRIORITY_ORDER) {
         const val = getRowDateVal(row, item.sub, item.colIdx);
         if (val && val !== "-" && String(val).trim() !== "") {
+          // Special condition: Col H (วันที่สิ้นสุดการตรวจสอบ) only counts as "ระหว่างร่างรายงาน" if today >= effective end date
+          if (item.sub === "วันที่สิ้นสุดการตรวจสอบ") {
+            const pDateH = parseDate(val);
+            const approvedDelayEnd = deptExtensionEndDateMap[normalizeDeptString(deptName)];
+            let effEnd = pDateH;
+            if (approvedDelayEnd && (!effEnd || approvedDelayEnd > effEnd)) {
+              effEnd = approvedDelayEnd;
+            }
+            if (effEnd) {
+              const nowToday = new Date();
+              nowToday.setHours(0, 0, 0, 0);
+              const targetEnd = new Date(effEnd);
+              targetEnd.setHours(0, 0, 0, 0);
+              if (nowToday < targetEnd) {
+                // Today is before the end date -> audit is still actively ongoing, continue to Col G (ระหว่างการตรวจสอบ)
+                continue;
+              }
+            }
+          }
+
           latestStatusObj = item;
           latestDateVal = formatThaiDateShort(val);
           latestPhase = item.phase;

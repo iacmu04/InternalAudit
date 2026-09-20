@@ -95,6 +95,20 @@ function generatePdfReport(options) {
       const dateO = getUnitDate(u, "วันที่เสนอ_คตส", 14);
       const isNoRec = u.isNoRecommendation || String(u.clarifyDateFromUnit).includes("ไม่มีข้อเสนอแนะ");
 
+      // Check if audit end date H has passed relative to today
+      const pDateH = parseDate(dateH);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let isAuditEnded = false;
+      if (pDateH) {
+        const dH = new Date(pDateH);
+        dH.setHours(0, 0, 0, 0);
+        if (today >= dH) {
+          isAuditEnded = true;
+        }
+      }
+
       if (u.isCompleted || isNoRec || u.latestPhase === "1.4" || (u.latestSubCol && u.latestSubCol.includes("เสร็จสมบูรณ์"))) {
         // 2. ดำเนินการเสร็จสมบูรณ์
         catCompletedYr.push(item);
@@ -104,11 +118,11 @@ function generatePdfReport(options) {
       } else if (dateK || (u.latestSubCol && (u.latestSubCol === "วันที่ปิดตรวจ" || u.latestSubCol.includes("ปิดตรวจ")))) {
         // 4. ระหว่างสรุปปิดตรวจ (มีวันที่ใน Col K)
         catClosingSummaryYr.push(item);
-      } else if (dateH || (u.latestSubCol && (u.latestSubCol === "วันที่สิ้นสุดการตรวจสอบ" || u.latestSubCol.includes("สิ้นสุด") || u.latestSubCol.includes("ร่างรายงาน")))) {
-        // 5. ระหว่างร่างรายงาน (สถานะสิ้นสุดการตรวจสอบ / Col H)
+      } else if (dateH && isAuditEnded) {
+        // 5. ระหว่างร่างรายงาน (มีวันที่สิ้นสุดการตรวจ Col H และถึง/เลยวันสิ้นสุดแล้ว)
         catDraftingReportYr.push(item);
-      } else if (dateG || (u.latestSubCol && (u.latestSubCol === "วันที่เริ่มตรวจสอบ" || u.latestSubCol.includes("เริ่มตรวจสอบ") || u.latestSubCol.includes("ระหว่างการตรวจสอบ")))) {
-        // 6. ระหว่างเข้าตรวจ (มีวันที่ใน Col G)
+      } else if (dateG || (dateH && !isAuditEnded) || (u.latestSubCol && (u.latestSubCol.includes("เริ่มตรวจสอบ") || u.latestSubCol.includes("ระหว่างการตรวจสอบ")))) {
+        // 6. ระหว่างเข้าตรวจ (มีวันที่เริ่มตรวจ Col G หรือวันสิ้นสุดยังไม่ถึงวันปัจจุบัน)
         catAuditingYr.push(item);
       } else {
         // 7. ยังไม่ได้ดำเนินการ (Phase 1.1 มอบหมายงาน / แจ้งเข้าตรวจ / อนุมัติแผน)
@@ -358,19 +372,42 @@ function generatePdfReport(options) {
 
     const renderCardHTML = (cat, items, isContinuation = false) => {
       const cardTitle = isContinuation ? `${cat.title} (ต่อ)` : cat.title;
+      const compactHeaderPadding = includeStatusDetails ? '6px 10px' : '4px 8px';
+      const compactHeaderFontSize = includeStatusDetails ? '10.5pt' : '9.5pt';
+      const compactBodyPadding = includeStatusDetails ? '8px 10px' : '5px 8px';
+      const cardMarginBottom = includeStatusDetails ? '10px' : '6px';
+
       return `
-        <div style="margin-bottom: 12px; border: 1.5px solid ${cat.borderColor}; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-          <div style="background-color: ${cat.headerBg}; padding: 7px 12px; font-weight: 800; font-size: 11pt; color: ${cat.headerColor}; border-bottom: 1px solid ${cat.borderColor};">
+        <div style="margin-bottom: ${cardMarginBottom}; border: 1.5px solid ${cat.borderColor}; border-radius: 6px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: ${cat.headerBg}; padding: ${compactHeaderPadding}; font-weight: 800; font-size: ${compactHeaderFontSize}; color: ${cat.headerColor}; border-bottom: 1px solid ${cat.borderColor};">
             ${cardTitle}
           </div>
-          <div style="padding: 9px 12px; background-color: ${cat.bodyBg};">
+          <div style="padding: ${compactBodyPadding}; background-color: ${cat.bodyBg};">
             ${renderCategoryListHTML(items, includeStatusDetails)}
           </div>
         </div>
       `;
     };
 
-    const MAX_PAGE_ROWS = 26;
+    if (!includeStatusDetails) {
+      // Single Page Mode for Section 2 when no status details: All active categories in 1 page!
+      const activeCards = allCategories
+        .filter(cat => cat.items && cat.items.length > 0)
+        .map(cat => renderCardHTML(cat, cat.items));
+
+      return [`
+        <div style="margin-bottom: 10px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+          <div style="background-color: #f6ecfc; padding: 7px 12px; font-weight: 800; font-size: 11pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
+            📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)
+          </div>
+          <div style="padding: 8px 10px; background-color: #ffffff;">
+            ${activeCards.join('')}
+          </div>
+        </div>
+      `];
+    }
+
+    const MAX_PAGE_ROWS = 24;
     const pages = [];
     let currentPageCards = [];
     let currentRows = 0;
@@ -393,7 +430,7 @@ function generatePdfReport(options) {
           const availableItemRows = Math.max(MAX_PAGE_ROWS - currentRows - 2, 0);
           const availableItems = availableItemRows * 2;
 
-          if (availableItems >= 8 && remainingItems.length > availableItems) {
+          if (availableItems >= 6 && remainingItems.length > availableItems) {
             const chunk = remainingItems.slice(0, availableItems);
             remainingItems = remainingItems.slice(availableItems);
             currentPageCards.push(renderCardHTML(cat, chunk, !isFirstChunk));
@@ -432,11 +469,11 @@ function generatePdfReport(options) {
     }
 
     return pages.map((cardsHTML, pIdx) => `
-      <div style="margin-bottom: 14px; border: 2px solid #B889CF; border-radius: 10px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
-        <div style="background-color: #f6ecfc; padding: 9px 14px; font-weight: 800; font-size: 12pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
+      <div style="margin-bottom: 12px; border: 2px solid #B889CF; border-radius: 8px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+        <div style="background-color: #f6ecfc; padding: 8px 12px; font-weight: 800; font-size: 11.5pt; color: #5e327a; border-bottom: 1px solid #B889CF;">
           📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)${pIdx > 0 ? ' (ต่อ)' : ''}
         </div>
-        <div style="padding: 12px; background-color: #ffffff;">
+        <div style="padding: 10px; background-color: #ffffff;">
           ${cardsHTML.join('')}
         </div>
       </div>
@@ -645,22 +682,44 @@ function generatePdfReport(options) {
 
 function renderCategoryListHTML(items, includeStatusDetails = true) {
   if (!items || items.length === 0) {
-    return `<div style="color: #94a3b8; font-style: italic; font-size: 10pt; padding: 2px 0;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
+    return `<div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; padding: 2px 0;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
   }
-  return `
-    <div style="display: flex; flex-wrap: wrap; margin: 0 -4px;">
-      ${items.map(item => `
-        <div style="width: 50%; box-sizing: border-box; padding: 2.5px 6px; font-size: 10.5pt; line-height: 1.4; page-break-inside: avoid; break-inside: avoid;">
-          <div style="display: flex; align-items: flex-start; gap: 4px;">
-            <span style="color: #475569; font-size: 12pt; line-height: 1;">•</span>
-            <div>
-              <strong style="color: #000000; font-size: 10.5pt; font-weight: 800;">${item.name}</strong>
-              ${(includeStatusDetails && item.detail) ? `<span style="color: #64748b; font-size: 9pt; font-weight: 500; margin-left: 4px;">(${item.detail})</span>` : ''}
+
+  // When not showing status details, render in 3 compact columns to guarantee 1-page fit
+  // When showing status details, render in 2 columns with detail on secondary line
+  const cols = includeStatusDetails ? 2 : 3;
+  let rowsHTML = "";
+
+  for (let i = 0; i < items.length; i += cols) {
+    let cellsHTML = "";
+    for (let c = 0; c < cols; c++) {
+      const item = items[i + c];
+      if (item) {
+        cellsHTML += `
+          <td style="width: ${cols === 2 ? '50%' : '33.33%'}; vertical-align: top; padding: ${includeStatusDetails ? '2.5px 6px' : '1.5px 5px'}; box-sizing: border-box;">
+            <div style="font-size: ${includeStatusDetails ? '9.5pt' : '8.5pt'}; line-height: 1.3; color: #000000;">
+              • <strong style="font-weight: 800; color: #000000;">${item.name}</strong>
+              ${(includeStatusDetails && item.detail) ? `
+                <div style="color: #475569; font-size: 8pt; font-weight: 500; padding-left: 8px; line-height: 1.2; margin-top: 1px;">
+                  (${item.detail})
+                </div>
+              ` : ''}
             </div>
-          </div>
-        </div>
-      `).join('')}
-    </div>
+          </td>
+        `;
+      } else {
+        cellsHTML += `<td style="width: ${cols === 2 ? '50%' : '33.33%'};"></td>`;
+      }
+    }
+    rowsHTML += `<tr>${cellsHTML}</tr>`;
+  }
+
+  return `
+    <table style="width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; padding: 0;">
+      <tbody>
+        ${rowsHTML}
+      </tbody>
+    </table>
   `;
 }
 
@@ -675,23 +734,43 @@ function renderTeamsListHTML(teamsMap) {
   return Object.keys(teamsMap).map(key => {
     const list = teamsMap[key] || [];
     const headerTitle = key === "4" ? `📌 งานตรวจสอบอื่น (${list.length} ส่วนงาน)` : `📌 ${teamLabels[key]} (${list.length} ส่วนงาน)`;
+    
+    let rowsHTML = "";
+    for (let i = 0; i < list.length; i += 2) {
+      const u1 = list[i];
+      const u2 = list[i + 1];
+      rowsHTML += `
+        <tr>
+          <td style="width: 50%; vertical-align: top; padding: 2px 6px; box-sizing: border-box;">
+            <div style="font-size: 10pt; line-height: 1.35; color: #000000;">
+              • <strong style="font-weight: 800; color: #000000;">${u1.name}</strong>
+            </div>
+          </td>
+          <td style="width: 50%; vertical-align: top; padding: 2px 6px; box-sizing: border-box;">
+            ${u2 ? `
+              <div style="font-size: 10pt; line-height: 1.35; color: #000000;">
+                • <strong style="font-weight: 800; color: #000000;">${u2.name}</strong>
+              </div>
+            ` : ''}
+          </td>
+        </tr>
+      `;
+    }
+
     return `
-      <div style="margin-bottom: 10px; border: 1.5px solid #e9d5ff; border-radius: 8px; overflow: hidden; background-color: #fdf8ff; page-break-inside: avoid; break-inside: avoid;">
-        <div style="font-weight: 800; font-size: 11pt; color: #5e327a; background-color: #f3e8ff; padding: 6px 12px; border-bottom: 1px solid #e9d5ff;">
+      <div style="margin-bottom: 8px; border: 1.5px solid #e9d5ff; border-radius: 8px; overflow: hidden; background-color: #fdf8ff; page-break-inside: avoid; break-inside: avoid;">
+        <div style="font-weight: 800; font-size: 10.5pt; color: #5e327a; background-color: #f3e8ff; padding: 5px 12px; border-bottom: 1px solid #e9d5ff;">
           ${headerTitle}
         </div>
-        <div style="padding: 8px 12px;">
+        <div style="padding: 6px 10px;">
           ${list.length === 0 ? `
-            <div style="color: #94a3b8; font-style: italic; font-size: 10pt;">- ไม่มีรายการ -</div>
+            <div style="color: #94a3b8; font-style: italic; font-size: 9.5pt;">- ไม่มีรายการ -</div>
           ` : `
-            <div style="display: flex; flex-wrap: wrap; margin: 0 -4px;">
-              ${list.map(u => `
-                <div style="width: 50%; box-sizing: border-box; padding: 2.5px 6px; font-size: 10.5pt; line-height: 1.4; page-break-inside: avoid; break-inside: avoid;">
-                  <span style="color: #475569; font-size: 12pt; line-height: 1;">•</span>
-                  <strong style="color: #000000; font-size: 10.5pt; font-weight: 800; margin-left: 4px;">${u.name}</strong>
-                </div>
-              `).join('')}
-            </div>
+            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; padding: 0;">
+              <tbody>
+                ${rowsHTML}
+              </tbody>
+            </table>
           `}
         </div>
       </div>
