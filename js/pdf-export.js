@@ -410,8 +410,27 @@ function generatePdfReport(options) {
       `];
     }
 
-    const MAX_PAGE_ROWS = orientation === 'landscape' ? 16 : 24;
-    const colsForPaging = orientation === 'landscape' ? 3 : 2;
+    let MAX_PAGE_ROWS = 12;
+    let colsForPaging = 2;
+
+    if (includeStatusDetails) {
+      if (orientation === 'landscape') {
+        MAX_PAGE_ROWS = 8;   // 8 rows * 3 cols = 24 items per page
+        colsForPaging = 3;
+      } else {
+        MAX_PAGE_ROWS = 12;  // 12 rows * 2 cols = 24 items per page (safely fits inside A4 Portrait without row splitting)
+        colsForPaging = 2;
+      }
+    } else {
+      if (orientation === 'landscape') {
+        MAX_PAGE_ROWS = 16;  // 16 rows * 5 cols = 80 items
+        colsForPaging = 5;
+      } else {
+        MAX_PAGE_ROWS = 22;  // 22 rows * 3 cols = 66 items
+        colsForPaging = 3;
+      }
+    }
+
     const pages = [];
     let currentPageCards = [];
     let currentRows = 0;
@@ -434,7 +453,7 @@ function generatePdfReport(options) {
           const availableItemRows = Math.max(MAX_PAGE_ROWS - currentRows - 2, 0);
           const availableItems = availableItemRows * colsForPaging;
 
-          if (availableItems >= 6 && remainingItems.length > availableItems) {
+          if (availableItems >= 4 && remainingItems.length > availableItems) {
             const chunk = remainingItems.slice(0, availableItems);
             remainingItems = remainingItems.slice(availableItems);
             currentPageCards.push(renderCardHTML(cat, chunk, !isFirstChunk));
@@ -449,7 +468,8 @@ function generatePdfReport(options) {
               currentPageCards = [];
               currentRows = 0;
             }
-            const freshMaxItems = (MAX_PAGE_ROWS - 2) * colsForPaging;
+            const freshMaxItemRows = Math.max(MAX_PAGE_ROWS - 2, 2);
+            const freshMaxItems = freshMaxItemRows * colsForPaging;
             if (remainingItems.length > freshMaxItems) {
               const chunk = remainingItems.slice(0, freshMaxItems);
               remainingItems = remainingItems.slice(freshMaxItems);
@@ -503,7 +523,7 @@ function generatePdfReport(options) {
     const t3 = stats.unstartedByTeam["3"] || [];
     const t4 = stats.unstartedByTeam["4"] || [];
     const totalCount = t1.length + t2.length + t3.length + t4.length;
-    const splitThreshold = orientation === 'landscape' ? 48 : 36;
+    const splitThreshold = orientation === 'landscape' ? 48 : 28;
 
     if (totalCount > splitThreshold) {
       // Split into 2 clean pages:
@@ -562,16 +582,16 @@ function generatePdfReport(options) {
   // Build Full HTML Document with clean page-break-before structure
   let pagesHTML = '';
 
-  const pageWrapperPadding = orientation === 'landscape' ? '10px 14px 10px 14px' : '14px 18px 18px 18px';
-  const sectionTitleFontSize = orientation === 'landscape' ? '12pt' : '14pt';
-  const sectionTitleMargin = orientation === 'landscape' ? '0 0 8px 0' : '0 0 14px 0';
+  const pageWrapperPadding = orientation === 'landscape' ? '10px 14px 10px 14px' : '12px 16px 14px 16px';
+  const sectionTitleFontSize = orientation === 'landscape' ? '12pt' : '13pt';
+  const sectionTitleMargin = orientation === 'landscape' ? '0 0 8px 0' : '0 0 10px 0';
 
   // Page 1: Executive Summary
   pagesHTML += `
     <div style="padding: ${pageWrapperPadding}; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
       <!-- Header Title -->
-      <div style="text-align: center; border-bottom: 3px solid #B889CF; padding-bottom: ${orientation === 'landscape' ? '6px' : '10px'}; margin-bottom: ${orientation === 'landscape' ? '10px' : '16px'};">
-        <div style="margin: 0; font-size: ${orientation === 'landscape' ? '14pt' : '16pt'}; font-weight: bold; color: #5e327a; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+      <div style="text-align: center; border-bottom: 3px solid #B889CF; padding-bottom: ${orientation === 'landscape' ? '6px' : '8px'}; margin-bottom: ${orientation === 'landscape' ? '10px' : '14px'};">
+        <div style="margin: 0; font-size: ${orientation === 'landscape' ? '14pt' : '15pt'}; font-weight: bold; color: #5e327a; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           สรุปผลการปฏิบัติงานตามแผนการตรวจสอบ
         </div>
         <div style="margin: 3px 0 0 0; font-size: 10.5pt; font-weight: bold; color: #6b3e80; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
@@ -586,7 +606,7 @@ function generatePdfReport(options) {
       </div>
 
       <!-- Section 1 Title -->
-      <div style="margin-bottom: ${orientation === 'landscape' ? '8px' : '14px'};">
+      <div style="margin-bottom: ${orientation === 'landscape' ? '8px' : '12px'};">
         <div style="font-size: ${sectionTitleFontSize}; font-weight: bold; color: #5e327a; margin: 0 0 4px 0; padding-bottom: 3px; border-bottom: 2px solid #B889CF; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ส่วนที่ 1: หน้าสรุปภาพรวม (Executive Summary)
         </div>
@@ -642,9 +662,14 @@ function generatePdfReport(options) {
     <style>
       .pdf-export-container, .pdf-export-container * {
         font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important;
+        box-sizing: border-box;
+      }
+      tr, td, table, .page-block {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
     </style>
-    <div class="pdf-export-container" style="font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important; color: #1e293b; line-height: 1.5; font-size: 11pt; background: #ffffff; width: 100%; box-sizing: border-box;">
+    <div class="pdf-export-container" style="font-family: 'Sarabun', 'TH Sarabun New', sans-serif !important; color: #1e293b; line-height: 1.45; font-size: 10.5pt; background: #ffffff; width: 100%; box-sizing: border-box;">
       ${pagesHTML}
     </div>
   `;
@@ -666,7 +691,7 @@ function generatePdfReport(options) {
       logging: false
     },
     jsPDF: { unit: 'mm', format: 'a4', orientation: orientation },
-    pagebreak: { mode: ['css', 'legacy'] }
+    pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'td', 'table', 'div'] }
   };
 
   if (window.html2pdf) {
