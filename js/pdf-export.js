@@ -682,36 +682,41 @@ function generatePdfReport(options) {
 
 function renderCategoryListHTML(items, includeStatusDetails = true) {
   if (!items || items.length === 0) {
-    return `<div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; padding: 2px 0;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
+    return `<div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; padding: 3px 0; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
   }
 
-  // When not showing status details, render in 3 compact columns to guarantee 1-page fit
-  // When showing status details, render in 2 columns with detail on secondary line
-  const cols = includeStatusDetails ? 2 : 3;
+  // Always use 2 columns for optimal readability and Thai line-height clearance
   let rowsHTML = "";
+  for (let i = 0; i < items.length; i += 2) {
+    const item1 = items[i];
+    const item2 = items[i + 1];
 
-  for (let i = 0; i < items.length; i += cols) {
-    let cellsHTML = "";
-    for (let c = 0; c < cols; c++) {
-      const item = items[i + c];
-      if (item) {
-        cellsHTML += `
-          <td style="width: ${cols === 2 ? '50%' : '33.33%'}; vertical-align: top; padding: ${includeStatusDetails ? '2.5px 6px' : '1.5px 5px'}; box-sizing: border-box;">
-            <div style="font-size: ${includeStatusDetails ? '9.5pt' : '8.5pt'}; line-height: 1.3; color: #000000;">
-              • <strong style="font-weight: 800; color: #000000;">${item.name}</strong>
-              ${(includeStatusDetails && item.detail) ? `
-                <div style="color: #475569; font-size: 8pt; font-weight: 500; padding-left: 8px; line-height: 1.2; margin-top: 1px;">
-                  (${item.detail})
+    rowsHTML += `
+      <tr>
+        <td style="width: 50%; vertical-align: top; padding: 2.5px 8px; box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+          <div style="font-size: 10pt; line-height: 1.45; color: #0f172a;">
+            <span style="color: #64748b; font-size: 11pt; line-height: 1; margin-right: 4px;">•</span><strong style="font-weight: 700; color: #000000; font-size: 10pt;">${item1.name}</strong>
+            ${(includeStatusDetails && item1.detail) ? `
+              <div style="color: #475569; font-size: 8.5pt; font-weight: 500; padding-left: 10px; line-height: 1.35; margin-top: 1px;">
+                (${item1.detail})
+              </div>
+            ` : ''}
+          </div>
+        </td>
+        <td style="width: 50%; vertical-align: top; padding: 2.5px 8px; box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+          ${item2 ? `
+            <div style="font-size: 10pt; line-height: 1.45; color: #0f172a;">
+              <span style="color: #64748b; font-size: 11pt; line-height: 1; margin-right: 4px;">•</span><strong style="font-weight: 700; color: #000000; font-size: 10pt;">${item2.name}</strong>
+              ${(includeStatusDetails && item2.detail) ? `
+                <div style="color: #475569; font-size: 8.5pt; font-weight: 500; padding-left: 10px; line-height: 1.35; margin-top: 1px;">
+                  (${item2.detail})
                 </div>
               ` : ''}
             </div>
-          </td>
-        `;
-      } else {
-        cellsHTML += `<td style="width: ${cols === 2 ? '50%' : '33.33%'};"></td>`;
-      }
-    }
-    rowsHTML += `<tr>${cellsHTML}</tr>`;
+          ` : ''}
+        </td>
+      </tr>
+    `;
   }
 
   return `
@@ -741,15 +746,15 @@ function renderTeamsListHTML(teamsMap) {
       const u2 = list[i + 1];
       rowsHTML += `
         <tr>
-          <td style="width: 50%; vertical-align: top; padding: 2px 6px; box-sizing: border-box;">
-            <div style="font-size: 10pt; line-height: 1.35; color: #000000;">
-              • <strong style="font-weight: 800; color: #000000;">${u1.name}</strong>
+          <td style="width: 50%; vertical-align: top; padding: 2.5px 8px; box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+            <div style="font-size: 10pt; line-height: 1.45; color: #0f172a;">
+              <span style="color: #64748b; font-size: 11pt; line-height: 1; margin-right: 4px;">•</span><strong style="font-weight: 700; color: #000000; font-size: 10pt;">${u1.name}</strong>
             </div>
           </td>
-          <td style="width: 50%; vertical-align: top; padding: 2px 6px; box-sizing: border-box;">
+          <td style="width: 50%; vertical-align: top; padding: 2.5px 8px; box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
             ${u2 ? `
-              <div style="font-size: 10pt; line-height: 1.35; color: #000000;">
-                • <strong style="font-weight: 800; color: #000000;">${u2.name}</strong>
+              <div style="font-size: 10pt; line-height: 1.45; color: #0f172a;">
+                <span style="color: #64748b; font-size: 11pt; line-height: 1; margin-right: 4px;">•</span><strong style="font-weight: 700; color: #000000; font-size: 10pt;">${u2.name}</strong>
               </div>
             ` : ''}
           </td>
@@ -759,12 +764,12 @@ function renderTeamsListHTML(teamsMap) {
 
     return `
       <div style="margin-bottom: 8px; border: 1.5px solid #e9d5ff; border-radius: 8px; overflow: hidden; background-color: #fdf8ff; page-break-inside: avoid; break-inside: avoid;">
-        <div style="font-weight: 800; font-size: 10.5pt; color: #5e327a; background-color: #f3e8ff; padding: 5px 12px; border-bottom: 1px solid #e9d5ff;">
+        <div style="font-weight: 800; font-size: 10.5pt; color: #5e327a; background-color: #f3e8ff; padding: 5px 12px; border-bottom: 1px solid #e9d5ff; font-family: 'Sarabun', sans-serif;">
           ${headerTitle}
         </div>
         <div style="padding: 6px 10px;">
           ${list.length === 0 ? `
-            <div style="color: #94a3b8; font-style: italic; font-size: 9.5pt;">- ไม่มีรายการ -</div>
+            <div style="color: #94a3b8; font-style: italic; font-size: 9.5pt; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการ -</div>
           ` : `
             <table style="width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; padding: 0;">
               <tbody>
