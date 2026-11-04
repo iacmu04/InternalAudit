@@ -252,15 +252,12 @@ function saveAuditEntry(ss, data) {
   }
 
   let nonAuditCount = 0;
-  if (isYear70) {
-    if (Array.isArray(data.nonAuditDays70)) {
-      nonAuditCount = data.nonAuditDays70.reduce((acc, curr) => acc + (Number(curr.days || curr["จำนวนวัน"]) || 0), 0);
-    } else {
-      nonAuditCount = sumNonAuditDays70ForDept(ss, data["ส่วนงาน"]);
-    }
+  if (Array.isArray(data.nonAuditDays70) && data.nonAuditDays70.length > 0) {
+    nonAuditCount = data.nonAuditDays70.reduce((acc, curr) => acc + (Number(curr.days || curr["จำนวนวัน"]) || 0), 0);
   } else {
-    if (Array.isArray(data.nonAuditDays)) {
-      nonAuditCount = data.nonAuditDays.length;
+    const has70 = sumNonAuditDays70ForDept(ss, data["ส่วนงาน"]);
+    if (has70 > 0 || String(data["ปีงบประมาณ"] || "").trim() === "2570") {
+      nonAuditCount = has70;
     } else {
       nonAuditCount = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
     }
@@ -413,14 +410,12 @@ function saveAuditEntry(ss, data) {
   }
 
   // Save non-audit days if provided
-  if (isYear70) {
-    if (data.nonAuditDays70 !== undefined && data["ส่วนงาน"]) {
-      saveNonAuditDays70ForDept(ss, data["ส่วนงาน"], data.nonAuditDays70);
-    }
-  } else {
-    if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
-      saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
-    }
+  if (data.nonAuditDays70 !== undefined && data["ส่วนงาน"]) {
+    saveNonAuditDays70ForDept(ss, data["ส่วนงาน"], data.nonAuditDays70);
+    // If previously existed in old Non_Audit_Days, clear it so it doesn't duplicate
+    saveNonAuditDaysForDept(ss, data["ส่วนงาน"], []);
+  } else if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
+    saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
   }
 
   return { status: "success", message: "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
@@ -444,15 +439,12 @@ function updateAuditEntry(ss, rowIndex, data) {
   }
 
   let nonAuditCount = 0;
-  if (isYear70) {
-    if (Array.isArray(data.nonAuditDays70)) {
-      nonAuditCount = data.nonAuditDays70.reduce((acc, curr) => acc + (Number(curr.days || curr["จำนวนวัน"]) || 0), 0);
-    } else {
-      nonAuditCount = sumNonAuditDays70ForDept(ss, data["ส่วนงาน"]);
-    }
+  if (Array.isArray(data.nonAuditDays70) && data.nonAuditDays70.length > 0) {
+    nonAuditCount = data.nonAuditDays70.reduce((acc, curr) => acc + (Number(curr.days || curr["จำนวนวัน"]) || 0), 0);
   } else {
-    if (Array.isArray(data.nonAuditDays)) {
-      nonAuditCount = data.nonAuditDays.length;
+    const has70 = sumNonAuditDays70ForDept(ss, data["ส่วนงาน"]);
+    if (has70 > 0 || String(data["ปีงบประมาณ"] || "").trim() === "2570") {
+      nonAuditCount = has70;
     } else {
       nonAuditCount = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
     }
@@ -601,14 +593,12 @@ function updateAuditEntry(ss, rowIndex, data) {
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);
 
   // Save non-audit days if provided
-  if (isYear70) {
-    if (data.nonAuditDays70 !== undefined && data["ส่วนงาน"]) {
-      saveNonAuditDays70ForDept(ss, data["ส่วนงาน"], data.nonAuditDays70);
-    }
-  } else {
-    if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
-      saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
-    }
+  if (data.nonAuditDays70 !== undefined && data["ส่วนงาน"]) {
+    saveNonAuditDays70ForDept(ss, data["ส่วนงาน"], data.nonAuditDays70);
+    // If previously existed in old Non_Audit_Days, clear it so it doesn't duplicate
+    saveNonAuditDaysForDept(ss, data["ส่วนงาน"], []);
+  } else if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
+    saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
   }
 
   return { status: "success", message: "แก้ไขข้อมูลใน Google Sheet เรียบร้อยแล้ว" };

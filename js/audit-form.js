@@ -88,7 +88,21 @@ function populateAuditFormFromRow(row, existingNonAuditList = [], existingNonAud
         reason: item.reason || item["เหตุผล"] || ""
       }));
     } else {
-      form.nonAuditDays70 = [{ days: "", reason: "" }];
+      // If not yet in Non_Audit_Days 70, check if recorded in old Non_Audit_Days
+      const oldRows = Array.isArray(existingNonAuditList)
+        ? existingNonAuditList.map(item => typeof extractNonAuditRow === "function" ? extractNonAuditRow(item) : item)
+            .filter(item => item && item.date && isSameDepartment(item.department, form["ส่วนงาน"]))
+        : [];
+
+      if (oldRows.length > 0) {
+        // Pre-fill from existing records so the user doesn't have to re-enter
+        form.nonAuditDays70 = oldRows.map(item => ({
+          days: 1,
+          reason: item.reason || item.details || item.department || ""
+        }));
+      } else {
+        form.nonAuditDays70 = [{ days: "", reason: "" }];
+      }
     }
   } else {
     form.nonAuditDays70 = [{ days: "", reason: "" }];

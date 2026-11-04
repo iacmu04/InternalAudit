@@ -948,38 +948,7 @@ const app = createApp({
         formDataToSend["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] = cLast["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || c0["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || "";
       }
 
-      const isYear70 = String(formDataToSend["ปีงบประมาณ"] || "").trim() === "2570";
-
-      // Normalize nonAuditDays array (for 2569 and older)
-      const normalizedNonAuditDays = [];
-      if (Array.isArray(auditForm.value.nonAuditDays)) {
-        auditForm.value.nonAuditDays.forEach(entry => {
-          if (entry && entry.date) {
-            let isoDate = entry.date;
-            const d = parseDate(entry.date);
-            if (d) isoDate = formatISODate(d);
-
-            normalizedNonAuditDays.push({
-              "ส่วนงาน": deptName,
-              department: deptName,
-              "วันที่": isoDate,
-              date: isoDate,
-              "ประเภท": entry.reason || "ติดประชุมมหาวิทยาลัย",
-              reason: entry.reason || "ติดประชุมมหาวิทยาลัย",
-              "สาเหตุ/หมายเหตุ": entry.details || entry.reason || "ติดประชุมมหาวิทยาลัย",
-              "รายละเอียด": entry.details || ""
-            });
-          }
-        });
-      }
-      formDataToSend.nonAuditDays = normalizedNonAuditDays;
-
-      // Effective combined list for 2569
-      const effectiveNonAuditList = nonAuditDaysList.value
-        .filter(item => String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase() !== deptName.trim().toLowerCase())
-        .concat(normalizedNonAuditDays);
-
-      // Normalize nonAuditDays70 array (for 2570)
+      // Normalize nonAuditDays70 array (unified method for all entries)
       const normalizedNonAuditDays70 = [];
       let sum70Days = 0;
       if (Array.isArray(auditForm.value.nonAuditDays70)) {
@@ -994,8 +963,8 @@ const app = createApp({
               days: days,
               "เหตุผล": reason,
               reason: reason,
-              "ปีงบประมาณ": "2570",
-              fiscalYear: "2570"
+              "ปีงบประมาณ": formDataToSend["ปีงบประมาณ"] || "2570",
+              fiscalYear: formDataToSend["ปีงบประมาณ"] || "2570"
             });
             sum70Days += days;
           }
@@ -1003,7 +972,7 @@ const app = createApp({
       }
       formDataToSend.nonAuditDays70 = normalizedNonAuditDays70;
 
-      // Effective combined list for 2570
+      // Effective combined list for Non_Audit_Days 70
       const effectiveNonAudit70List = nonAuditDays70List.value
         .filter(item => {
           const ext = typeof extractNonAudit70Row === "function" ? extractNonAudit70Row(item) : item;
@@ -1011,10 +980,14 @@ const app = createApp({
         })
         .concat(normalizedNonAuditDays70);
 
+      // Clean up department from old nonAuditDaysList so this department uses Non_Audit_Days 70
+      const effectiveNonAuditList = nonAuditDaysList.value
+        .filter(item => String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase() !== deptName.trim().toLowerCase());
+
       // ═══════════════════════════════════════════════════════════
       // Calculate duration fields according to user specifications:
       // 1. ระยะเวลาตรวจสอบตามแผน (Col I): วันที่เริ่ม (G) -> วันที่สิ้นสุด (H) ลบ เสาร์-อาทิตย์, วันหยุด (Thai_Holidays)
-      // 2. ระยะเวลาตรวจจริง (Col J): ผลลัพธ์ Col I - วันไม่เข้าตรวจ (Non_Audit_Days 70 หรือ Non_Audit_Days) + จำนวนวันที่ขอขยายเวลาที่ได้รับอนุมัติในชีท Delay (Col G)
+      // 2. ระยะเวลาตรวจจริง (Col J): ผลลัพธ์ Col I - วันไม่เข้าตรวจ (Non_Audit_Days 70) + จำนวนวันที่ขอขยายเวลาที่ได้รับอนุมัติในชีท Delay (Col G)
       // 3. ระยะเวลาเสนอรายงาน อธิการบดี (Col M): วันที่ปิดตรวจ (K) -> วันที่เสนออธิการบดี (L)
       // 4. ระยะเวลาเสนอรายงาน คตส. (Col P): วันที่ปิดตรวจ (K) -> วันที่เสนอ คตส. (O)
       // ═══════════════════════════════════════════════════════════
@@ -1039,16 +1012,8 @@ const app = createApp({
       }
 
       // 2. นับวันไม่เข้าตรวจจริงสำหรับส่วนงานนี้
-      let nonAuditCount = 0;
-      if (isYear70) {
-        nonAuditCount = sum70Days;
-        console.log(`📊 2. วันที่ไม่ได้เข้าปฏิบัติงานจริง (ปี 2570 จาก Non_Audit_Days 70) = ${nonAuditCount} วัน`);
-      } else {
-        nonAuditCount = typeof countNonAuditDaysForDepartment === "function"
-          ? countNonAuditDaysForDepartment(deptName, effectiveNonAuditList)
-          : 0;
-        console.log(`📊 2. วันที่ไม่ได้เข้าปฏิบัติงานจริง (Non_Audit_Days) = ${nonAuditCount} วัน`);
-      }
+      let nonAuditCount = sum70Days;
+      console.log(`📊 2. วันที่ไม่ได้เข้าปฏิบัติงานจริง (Non_Audit_Days 70) = ${nonAuditCount} วัน`);
 
       // 3. ดึงจำนวนวันที่ขอขยายระยะเวลาที่ได้รับอนุมัติในชีท Delay (Col G) สำหรับส่วนงานนี้
       let approvedExtensionDays = 0;
@@ -1204,12 +1169,9 @@ const app = createApp({
 
       if (!handleApiResponse(res)) return;
 
-      // Update local nonAuditDaysList for calculation
-      if (isYear70) {
-        nonAuditDays70List.value = effectiveNonAudit70List;
-      } else {
-        nonAuditDaysList.value = effectiveNonAuditList;
-      }
+      // Update local lists for immediate calculation
+      nonAuditDays70List.value = effectiveNonAudit70List;
+      nonAuditDaysList.value = effectiveNonAuditList;
 
       showAuditModal.value = false;
       await loadData();

@@ -229,13 +229,15 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
     }
 
     // 2. Count non-audit days for this department:
-    // Year 2570: sum from Non_Audit_Days 70 Col A
-    // Previous years (e.g. 2569): count unique dates from Non_Audit_Days
+    // If recorded in Non_Audit_Days 70: sum from Non_Audit_Days 70 Col A (new method)
+    // Else if recorded in Non_Audit_Days: count unique dates from Non_Audit_Days (original method)
     let nonAuditCount = 0;
-    if (String(fiscalYear).trim() === "2570") {
-      nonAuditCount = typeof sumNonAuditDays70ForDepartment === "function"
-        ? sumNonAuditDays70ForDepartment(deptName, nonAuditDays70List)
-        : 0;
+    const has70 = typeof sumNonAuditDays70ForDepartment === "function"
+      ? sumNonAuditDays70ForDepartment(deptName, nonAuditDays70List)
+      : 0;
+
+    if (has70 > 0 || String(fiscalYear).trim() === "2570") {
+      nonAuditCount = has70;
     } else {
       nonAuditCount = typeof countNonAuditDaysForDepartment === "function" 
         ? countNonAuditDaysForDepartment(deptName, nonAuditDaysList) 

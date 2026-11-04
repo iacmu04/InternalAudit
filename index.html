@@ -1102,16 +1102,15 @@
                     </div>
                 </div>
 
-                <!-- NON_AUDIT_DAYS SUB-SECTION -->
-                <!-- Case A: ปีงบประมาณ 2570 ใช้ Non_Audit_Days 70 (กรอกจำนวนวันและเหตุผล) -->
-                <div v-if="auditForm['ปีงบประมาณ'] === '2570'" class="border border-purple-200 rounded-2xl p-4 bg-purple-50/40 space-y-3">
+                <!-- NON_AUDIT_DAYS SUB-SECTION (Unified: กรอกจำนวนวันและเหตุผล) -->
+                <div class="border border-purple-200 rounded-2xl p-4 bg-purple-50/40 space-y-3">
                     <div class="flex justify-between items-center border-b border-purple-200/60 pb-2.5">
                         <div>
                             <h4 class="text-sm font-black text-purple-950 flex items-center gap-2">
-                                🗓️ บันทึกวันที่ไม่ได้เข้าปฏิบัติงานจริง (ปี 2570)
+                                🗓️ บันทึกวันที่ไม่ได้เข้าปฏิบัติงานจริง
                             </h4>
                             <p class="text-[11px] text-purple-800 font-medium">
-                                บันทึกจำนวนวันและเหตุผลลงชีท Non_Audit_Days 70
+                                ระบุจำนวนวันและเหตุผล (บันทึกลงชีท Non_Audit_Days 70)
                             </p>
                         </div>
                         <button type="button" @click="addNonAudit70Row" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl shadow-2xs text-xs flex items-center gap-1">
@@ -1119,7 +1118,7 @@
                         </button>
                     </div>
 
-                    <!-- Dynamic Entries Loop for 2570 -->
+                    <!-- Dynamic Entries Loop -->
                     <div class="space-y-3">
                         <div v-if="!auditForm.nonAuditDays70 || auditForm.nonAuditDays70.length === 0" class="p-4 bg-white/80 rounded-xl border border-purple-100 text-center text-slate-400 text-xs italic font-medium">
                             ยังไม่มีรายการวันที่ไม่ได้เข้าตรวจ กดปุ่ม "+ เพิ่มรายการ" ด้านบนเพื่อระบุจำนวนวันและเหตุผล
@@ -1158,76 +1157,13 @@
                         </div>
                     </div>
 
-                    <!-- Yellow Hint Box for 2570 -->
-                    <div class="p-3 bg-amber-50/90 border border-amber-200 rounded-xl text-[11px] text-amber-900 space-y-1 font-medium">
-                        <div class="font-extrabold flex items-center gap-1.5 text-amber-950">
-                            💡 คำแนะนำ (ปี 2570):
-                        </div>
-                        <div>
-                            กรอกเฉพาะจำนวนวันรวมและเหตุผลที่ไม่ได้เข้าตรวจ โดยระบบจะนำไปบันทึกลงชีท <b>Non_Audit_Days 70</b> และนำไปหักลบออกจากระยะเวลาตรวจตามแผน (คอลัมน์ I) เพื่อคำนวณเป็นระยะเวลาตรวจจริง (คอลัมน์ J) ในชีท Main_Audit อัตโนมัติ
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Case B: ปีงบประมาณ 2569 และปีก่อนหน้า ใช้ Non_Audit_Days แบบเดิม (เลือกวันที่และประเภท) -->
-                <div v-else class="border border-purple-200 rounded-2xl p-4 bg-purple-50/40 space-y-3">
-                    <div class="flex justify-between items-center border-b border-purple-200/60 pb-2.5">
-                        <div>
-                            <h4 class="text-sm font-black text-purple-950 flex items-center gap-2">
-                                🗓️ บันทึกวันที่ไม่ได้เข้าปฏิบัติงานจริง
-                            </h4>
-                            <p class="text-[11px] text-purple-800 font-medium">
-                                ตารางบันทึกวันหยุด/ติดภารกิจอื่น (Non_Audit_Days)
-                            </p>
-                        </div>
-                        <button type="button" @click="addNonAuditDateRow" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl shadow-2xs text-xs flex items-center gap-1">
-                            + เพิ่มวันที่
-                        </button>
-                    </div>
-
-                    <!-- Dynamic Entries Loop -->
-                    <div class="space-y-3">
-                        <div v-if="!auditForm.nonAuditDays || auditForm.nonAuditDays.length === 0" class="p-4 bg-white/80 rounded-xl border border-purple-100 text-center text-slate-400 text-xs italic font-medium">
-                            ยังไม่มีรายการวันที่ไม่ได้เข้าตรวจ กดปุ่ม "+ เพิ่มวันที่" ด้านบนเพื่อระบุวันหยุด/ติดภารกิจ
-                        </div>
-
-                        <div v-for="(entry, idx) in auditForm.nonAuditDays" :key="idx" 
-                             class="p-3.5 bg-white rounded-xl border border-purple-200 shadow-2xs space-y-2">
-                            <div class="flex justify-between items-center text-xs font-extrabold text-purple-900">
-                                <span class="flex items-center gap-1">📌 รายการวันที่ไม่ได้เข้าตรวจ #{{ idx + 1 }}</span>
-                                <button type="button" @click="removeNonAuditDateRow(idx)" class="px-2.5 py-1 text-red-600 hover:bg-red-50 border border-red-200 rounded-lg text-[11px] font-bold flex items-center gap-1">
-                                    ✕ ลบ
-                                </button>
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                <div>
-                                    <label class="text-[11px] text-slate-700 font-bold block mb-1">วันที่ไม่ได้เข้าตรวจ</label>
-                                    <input type="text" v-model="entry.date" @input="entry.date = $event.target.value" @change="entry.date = $event.target.value" placeholder="วัน/เดือน/ปี (เช่น 11/02/2569)" class="flatpickr-date w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-semibold text-xs">
-                                </div>
-
-                                <div>
-                                    <label class="text-[11px] text-slate-700 font-bold block mb-1">ประเภท / เหตุผล</label>
-                                    <select v-model="entry.reason" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-bold text-xs">
-                                        <option v-for="r in nonAuditReasonOptions" :key="r" :value="r">{{ r }}</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <input type="text" v-model="entry.details" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)..." 
-                                       class="w-full p-2 border border-slate-200 rounded-lg bg-slate-50 text-xs font-semibold">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Yellow Hint Box (Screenshot 2) -->
+                    <!-- Yellow Hint Box -->
                     <div class="p-3 bg-amber-50/90 border border-amber-200 rounded-xl text-[11px] text-amber-900 space-y-1 font-medium">
                         <div class="font-extrabold flex items-center gap-1.5 text-amber-950">
                             💡 คำแนะนำ:
                         </div>
                         <div>
-                            ระบุวันที่ทีมไม่ได้เข้าตรวจ ณ หน่วยงาน (เช่น ติดประชุม, อบรมสัมมนา, วันหยุดนักขัตฤกษ์ หรือภารกิจอื่น) เพื่อใช้หักลบคำนวณวันตรวจจริง
+                            กรอกเฉพาะจำนวนวันรวมและเหตุผลที่ไม่ได้เข้าตรวจ โดยระบบจะนำไปบันทึกลงชีท <b>Non_Audit_Days 70</b> และนำไปหักลบออกจากระยะเวลาตรวจตามแผน (คอลัมน์ I) เพื่อคำนวณเป็นระยะเวลาตรวจจริง (คอลัมน์ J) ในชีท Main_Audit อัตโนมัติ (สำหรับส่วนงานที่เคยบันทึกไว้ในชีทเดิม ระบบจะดึงข้อมูลมาคำนวณด้วยเงื่อนไขเดิมอย่างถูกต้อง)
                         </div>
                     </div>
                 </div>
