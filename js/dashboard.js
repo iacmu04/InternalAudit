@@ -71,7 +71,7 @@ function getRowDateVal(row, subKey, colIdx) {
   return "";
 }
 
-function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, delayList = []) {
+function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, delayList = [], nonAuditDays70List = []) {
   let completedCount = 0;
 
   // Build department extension days and latest extension end dates from Delay requests
@@ -228,10 +228,19 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       plannedDays = !isNaN(savedPlanned) ? savedPlanned : 0;
     }
 
-    // 2. Count non-audit days for this department
-    const nonAuditCount = typeof countNonAuditDaysForDepartment === "function" 
-      ? countNonAuditDaysForDepartment(deptName, nonAuditDaysList) 
-      : 0;
+    // 2. Count non-audit days for this department:
+    // Year 2570: sum from Non_Audit_Days 70 Col A
+    // Previous years (e.g. 2569): count unique dates from Non_Audit_Days
+    let nonAuditCount = 0;
+    if (String(fiscalYear).trim() === "2570") {
+      nonAuditCount = typeof sumNonAuditDays70ForDepartment === "function"
+        ? sumNonAuditDays70ForDepartment(deptName, nonAuditDays70List)
+        : 0;
+    } else {
+      nonAuditCount = typeof countNonAuditDaysForDepartment === "function" 
+        ? countNonAuditDaysForDepartment(deptName, nonAuditDaysList) 
+        : 0;
+    }
 
     // 3. Find approved extension days from Delay sheet
     let approvedExtensionDays = 0;
@@ -241,7 +250,7 @@ function processDashboardData(rawAuditList, holidaysList, nonAuditDaysList, dela
       }
     });
 
-    // 4. Exact Formula: Actual Audit Days (Col J) = Planned (Col I) + Extension (Delay) - Non-Audit Days
+    // 4. Exact Formula: Actual Audit Days (Col J) = Planned (Col I) - Non-Audit Days + Extension (Delay)
     const totalActualAuditDays = Math.max(plannedDays + approvedExtensionDays - nonAuditCount, 0);
 
     // 2.4 Calculate Duration: Closed Audit (Col K) -> Report to President (Col L)

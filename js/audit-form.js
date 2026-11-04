@@ -6,7 +6,7 @@ function createInitialAuditFormState() {
   return {
     "ส่วนงาน": "",
     "ปีงบประมาณ": "2570",
-    "ทีม": "1",
+    "ทีม": "",
     "วันที่มอบหมายงาน": "",
     "วันที่แจ้งเข้าตรวจ": "",
     "วันที่อนุมัติแผน": "",
@@ -24,14 +24,17 @@ function createInitialAuditFormState() {
         "วันที่แจ้งหน่วยรับตรวจ_ชี้แจง": ""
       }
     ],
-    "nonAuditDays": []
+    "nonAuditDays": [],
+    "nonAuditDays70": [
+      { days: "", reason: "" }
+    ]
   };
 }
 
-function populateAuditFormFromRow(row, existingNonAuditList = []) {
+function populateAuditFormFromRow(row, existingNonAuditList = [], existingNonAudit70List = []) {
   const form = createInitialAuditFormState();
   Object.keys(form).forEach(key => {
-    if (key !== "nonAuditDays" && key !== "clarifications" && key !== "ครั้งที่ประชุม_คตส" && key !== "ปีงบประมาณ" && key !== "ทีม" && key !== "ส่วนงาน" && row[key]) {
+    if (key !== "nonAuditDays" && key !== "nonAuditDays70" && key !== "clarifications" && key !== "ครั้งที่ประชุม_คตส" && key !== "ปีงบประมาณ" && key !== "ทีม" && key !== "ส่วนงาน" && row[key]) {
       form[key] = formatDateDMY(row[key]);
     }
   });
@@ -57,7 +60,7 @@ function populateAuditFormFromRow(row, existingNonAuditList = []) {
     ];
   }
 
-  // Load existing non-audit days for this unit
+  // Load existing non-audit days for 2569 and previous years (Non_Audit_Days)
   if (Array.isArray(existingNonAuditList) && form["ส่วนงาน"]) {
     form.nonAuditDays = existingNonAuditList.map(item => extractNonAuditRow(item))
       .filter(item => {
@@ -69,6 +72,26 @@ function populateAuditFormFromRow(row, existingNonAuditList = []) {
         reason: item.reason || "ติดประชุมมหาวิทยาลัย",
         details: item.details || ""
       }));
+  }
+
+  // Load existing non-audit days for 2570 (Non_Audit_Days 70)
+  if (Array.isArray(existingNonAudit70List) && form["ส่วนงาน"]) {
+    const list70 = existingNonAudit70List.map(item => typeof extractNonAudit70Row === "function" ? extractNonAudit70Row(item) : item)
+      .filter(item => {
+        if (!item) return false;
+        return isSameDepartment(item.department, form["ส่วนงาน"]);
+      });
+
+    if (list70.length > 0) {
+      form.nonAuditDays70 = list70.map(item => ({
+        days: item.days !== undefined ? item.days : (item["จำนวนวัน"] || 0),
+        reason: item.reason || item["เหตุผล"] || ""
+      }));
+    } else {
+      form.nonAuditDays70 = [{ days: "", reason: "" }];
+    }
+  } else {
+    form.nonAuditDays70 = [{ days: "", reason: "" }];
   }
 
   return form;

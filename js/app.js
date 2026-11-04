@@ -33,6 +33,7 @@ const app = createApp({
     const masterLists = ref([]);
     const holidaysList = ref([]);
     const nonAuditDaysList = ref([]);
+    const nonAuditDays70List = ref([]);
 
     // Main Filters — Default to 2570 as requested
     const selectedFiscalYears = ref(["2570"]);
@@ -138,6 +139,7 @@ const app = createApp({
           masterLists.value = data.masterLists || [];
           holidaysList.value = data.holidays || [];
           nonAuditDaysList.value = data.nonAuditDays || [];
+          nonAuditDays70List.value = data.nonAuditDays70 || [];
 
           console.log("✅ loadData: mainAudit =", rawAuditList.value.length, "rows");
           console.log("✅ loadData: masterLists =", masterLists.value.length, "rows");
@@ -264,31 +266,54 @@ const app = createApp({
       return result;
     });
 
-    // Form department options dynamic per year
+    // Form department options dynamic per year and selected team
     const formDepartmentOptions = computed(() => {
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
+      const selectedTeam = String(auditForm.value['ทีม'] || "").replace(/^ทีม\s*/, "").trim();
+      const currentDept = auditForm.value['ส่วนงาน'];
       const deptsByYear = combinedDepartmentsByYear.value;
       const deptsForYear = deptsByYear[selectedYear] || [];
-      if (deptsForYear.length > 0) {
-        return deptsForYear.map(d => d.name).sort((a,b) => a.localeCompare(b, 'th'));
+      
+      let filtered = deptsForYear;
+      if (selectedTeam) {
+        filtered = deptsForYear.filter(d => {
+          const dTeam = String(d.team || "").replace(/^ทีม\s*/, "").trim();
+          return dTeam === selectedTeam;
+        });
       }
-      return [];
+
+      const names = filtered.map(d => d.name);
+      // If a department is already selected (e.g. edit mode or custom), ensure it stays in the list
+      if (currentDept && currentDept !== '__NEW__' && !names.includes(currentDept)) {
+        names.push(currentDept);
+      }
+
+      return names.sort((a,b) => a.localeCompare(b, 'th'));
     });
 
     const departmentOptions = computed(() => formDepartmentOptions.value);
 
     // Form Change Handlers
-    const onFiscalYearChange = () => {
+    const onTeamChange = () => {
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
-      const availableDepts = formDepartmentOptions.value;
-      if (availableDepts.length > 0) {
-        if (!availableDepts.includes(auditForm.value['ส่วนงาน'])) {
-          auditForm.value['ส่วนงาน'] = availableDepts[0] || "";
+      const selectedTeam = String(auditForm.value['ทีม'] || "").replace(/^ทีม\s*/, "").trim();
+      const currentDept = auditForm.value['ส่วนงาน'];
+
+      if (currentDept && currentDept !== '__NEW__') {
+        const deptsByYear = combinedDepartmentsByYear.value;
+        const deptsForYear = deptsByYear[selectedYear] || [];
+        const found = deptsForYear.find(d => d.name === currentDept);
+        if (found && selectedTeam) {
+          const dTeam = String(found.team || "").replace(/^ทีม\s*/, "").trim();
+          if (dTeam !== selectedTeam) {
+            auditForm.value['ส่วนงาน'] = "";
+          }
         }
-      } else {
-        auditForm.value['ส่วนงาน'] = "";
       }
-      onDepartmentChange();
+    };
+
+    const onFiscalYearChange = () => {
+      onTeamChange();
     };
 
     const onDepartmentChange = () => {
@@ -296,9 +321,9 @@ const app = createApp({
       const selectedYear = auditForm.value['ปีงบประมาณ'] || "2570";
       const deptsByYear = combinedDepartmentsByYear.value;
       const deptsForYear = deptsByYear[selectedYear] || [];
-      if (deptsForYear.length > 0 && selectedDept) {
+      if (deptsForYear.length > 0 && selectedDept && selectedDept !== '__NEW__') {
         const found = deptsForYear.find(d => d.name === selectedDept);
-        if (found && found.team) {
+        if (found && found.team && !auditForm.value['ทีม']) {
           auditForm.value['ทีม'] = found.team;
         }
       }
@@ -316,7 +341,7 @@ const app = createApp({
 
     // Filtered Audit Data
     const dashboardResult = computed(() => {
-      return processDashboardData(rawAuditList.value, holidaysList.value, nonAuditDaysList.value, delayList.value);
+      return processDashboardData(rawAuditList.value, holidaysList.value, nonAuditDaysList.value, delayList.value, nonAuditDays70List.value);
     });
 
     const filteredUnits = computed(() => {
@@ -464,10 +489,10 @@ const app = createApp({
       return result;
     });
 
-    const team1Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "1"));
-    const team2Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "2"));
-    const team3Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "3"));
-    const team4Unstarted = computed(() => unstartedUnitsList.value.filter(u => u.team === "4" || u.team === "พิเศษ"));
+    const team1Unstarted = computed(() => unstartedUnitsList.value.filter(u => String(u.team || "").replace(/^ทีม\s*/, "").trim() === "1"));
+    const team2Unstarted = computed(() => unstartedUnitsList.value.filter(u => String(u.team || "").replace(/^ทีม\s*/, "").trim() === "2"));
+    const team3Unstarted = computed(() => unstartedUnitsList.value.filter(u => String(u.team || "").replace(/^ทีม\s*/, "").trim() === "3"));
+    const team4Unstarted = computed(() => unstartedUnitsList.value.filter(u => !["1", "2", "3"].includes(String(u.team || "").replace(/^ทีม\s*/, "").trim())));
 
     // Total Planned Units for the selected year filter (from Master_Lists or recorded)
     const totalPlannedUnitsCount = computed(() => {
@@ -732,6 +757,28 @@ const app = createApp({
       }
     };
 
+    // Dynamic Non_Audit_Days 70 functions for Year 2570
+    const addNonAudit70Row = () => {
+      if (!auditForm.value.nonAuditDays70) {
+        auditForm.value.nonAuditDays70 = [];
+      }
+      auditForm.value.nonAuditDays70.push({
+        days: "",
+        reason: ""
+      });
+    };
+
+    const removeNonAudit70Row = (index) => {
+      if (auditForm.value.nonAuditDays70 && auditForm.value.nonAuditDays70.length > index) {
+        auditForm.value.nonAuditDays70.splice(index, 1);
+      }
+    };
+
+    const totalNonAuditDays70 = computed(() => {
+      if (!Array.isArray(auditForm.value.nonAuditDays70)) return 0;
+      return auditForm.value.nonAuditDays70.reduce((acc, curr) => acc + (Number(curr.days) || 0), 0);
+    });
+
     // Config Modal Actions
     const openConfigModal = () => {
       apiUrlInput.value = API.getApiUrl();
@@ -814,7 +861,7 @@ const app = createApp({
 
       if (rowToEdit) {
         editingRowIndex.value = rowToEdit._rowIndex;
-        auditForm.value = populateAuditFormFromRow(rowToEdit, nonAuditDaysList.value);
+        auditForm.value = populateAuditFormFromRow(rowToEdit, nonAuditDaysList.value, nonAuditDays70List.value);
       } else {
         editingRowIndex.value = null;
         auditForm.value = createInitialAuditFormState();
@@ -828,6 +875,11 @@ const app = createApp({
     const submitAuditForm = async () => {
       if (currentUser.value.role === "User") {
         alert("⚠️ คุณไม่มีสิทธิ์บันทึกหรือแก้ไขข้อมูล");
+        return;
+      }
+
+      if (!auditForm.value["ทีม"]) {
+        alert("กรุณาเลือกทีมที่รับผิดชอบ");
         return;
       }
 
@@ -896,7 +948,9 @@ const app = createApp({
         formDataToSend["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] = cLast["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || c0["วันที่แจ้งหน่วยรับตรวจ_ชี้แจง"] || "";
       }
 
-      // Normalize nonAuditDays array
+      const isYear70 = String(formDataToSend["ปีงบประมาณ"] || "").trim() === "2570";
+
+      // Normalize nonAuditDays array (for 2569 and older)
       const normalizedNonAuditDays = [];
       if (Array.isArray(auditForm.value.nonAuditDays)) {
         auditForm.value.nonAuditDays.forEach(entry => {
@@ -920,15 +974,47 @@ const app = createApp({
       }
       formDataToSend.nonAuditDays = normalizedNonAuditDays;
 
-      // Effective combined list for immediate accurate calculation
+      // Effective combined list for 2569
       const effectiveNonAuditList = nonAuditDaysList.value
         .filter(item => String(item["ส่วนงาน"] || item.department || "").trim().toLowerCase() !== deptName.trim().toLowerCase())
         .concat(normalizedNonAuditDays);
 
+      // Normalize nonAuditDays70 array (for 2570)
+      const normalizedNonAuditDays70 = [];
+      let sum70Days = 0;
+      if (Array.isArray(auditForm.value.nonAuditDays70)) {
+        auditForm.value.nonAuditDays70.forEach(entry => {
+          const days = Number(entry.days) || 0;
+          const reason = String(entry.reason || "").trim();
+          if (days > 0 || reason) {
+            normalizedNonAuditDays70.push({
+              "ส่วนงาน": deptName,
+              department: deptName,
+              "จำนวนวัน": days,
+              days: days,
+              "เหตุผล": reason,
+              reason: reason,
+              "ปีงบประมาณ": "2570",
+              fiscalYear: "2570"
+            });
+            sum70Days += days;
+          }
+        });
+      }
+      formDataToSend.nonAuditDays70 = normalizedNonAuditDays70;
+
+      // Effective combined list for 2570
+      const effectiveNonAudit70List = nonAuditDays70List.value
+        .filter(item => {
+          const ext = typeof extractNonAudit70Row === "function" ? extractNonAudit70Row(item) : item;
+          return !isSameDepartment(ext.department || item["ส่วนงาน"], deptName);
+        })
+        .concat(normalizedNonAuditDays70);
+
       // ═══════════════════════════════════════════════════════════
       // Calculate duration fields according to user specifications:
-      // 1. ระยะเวลาตรวจสอบตามแผน (Col I): วันที่เริ่ม (G) -> วันที่สิ้นสุด (H) ลบ เสาร์-อาทิตย์, วันหยุด (Thai_Holidays), วันไม่ตรวจ (Non_Audit_Days)
-      // 2. ระยะเวลาตรวจจริง (Col J): ผลลัพธ์ Col I + จำนวนวันที่ขอขยายเวลาที่ได้รับอนุมัติในชีท Delay (Col G) จับคู่ตามส่วนงาน
+      // 1. ระยะเวลาตรวจสอบตามแผน (Col I): วันที่เริ่ม (G) -> วันที่สิ้นสุด (H) ลบ เสาร์-อาทิตย์, วันหยุด (Thai_Holidays)
+      // 2. ระยะเวลาตรวจจริง (Col J): ผลลัพธ์ Col I - วันไม่เข้าตรวจ (Non_Audit_Days 70 หรือ Non_Audit_Days) + จำนวนวันที่ขอขยายเวลาที่ได้รับอนุมัติในชีท Delay (Col G)
       // 3. ระยะเวลาเสนอรายงาน อธิการบดี (Col M): วันที่ปิดตรวจ (K) -> วันที่เสนออธิการบดี (L)
       // 4. ระยะเวลาเสนอรายงาน คตส. (Col P): วันที่ปิดตรวจ (K) -> วันที่เสนอ คตส. (O)
       // ═══════════════════════════════════════════════════════════
@@ -953,9 +1039,16 @@ const app = createApp({
       }
 
       // 2. นับวันไม่เข้าตรวจจริงสำหรับส่วนงานนี้
-      const nonAuditCount = typeof countNonAuditDaysForDepartment === "function"
-        ? countNonAuditDaysForDepartment(deptName, effectiveNonAuditList)
-        : 0;
+      let nonAuditCount = 0;
+      if (isYear70) {
+        nonAuditCount = sum70Days;
+        console.log(`📊 2. วันที่ไม่ได้เข้าปฏิบัติงานจริง (ปี 2570 จาก Non_Audit_Days 70) = ${nonAuditCount} วัน`);
+      } else {
+        nonAuditCount = typeof countNonAuditDaysForDepartment === "function"
+          ? countNonAuditDaysForDepartment(deptName, effectiveNonAuditList)
+          : 0;
+        console.log(`📊 2. วันที่ไม่ได้เข้าปฏิบัติงานจริง (Non_Audit_Days) = ${nonAuditCount} วัน`);
+      }
 
       // 3. ดึงจำนวนวันที่ขอขยายระยะเวลาที่ได้รับอนุมัติในชีท Delay (Col G) สำหรับส่วนงานนี้
       let approvedExtensionDays = 0;
@@ -1112,7 +1205,11 @@ const app = createApp({
       if (!handleApiResponse(res)) return;
 
       // Update local nonAuditDaysList for calculation
-      nonAuditDaysList.value = effectiveNonAuditList;
+      if (isYear70) {
+        nonAuditDays70List.value = effectiveNonAudit70List;
+      } else {
+        nonAuditDaysList.value = effectiveNonAuditList;
+      }
 
       showAuditModal.value = false;
       await loadData();
@@ -1588,6 +1685,10 @@ const app = createApp({
       isEditingDelay,
       addNonAuditDateRow,
       removeNonAuditDateRow,
+      addNonAudit70Row,
+      removeNonAudit70Row,
+      totalNonAuditDays70,
+      nonAuditDays70List,
       openAuditModal,
       submitAuditForm,
       openDelayModal,
@@ -1614,6 +1715,7 @@ const app = createApp({
       formDepartmentOptions,
       delayDepartmentOptions,
       onFiscalYearChange,
+      onTeamChange,
       onDelayFiscalYearChange,
       onDepartmentChange,
       exportPdfReportAction,

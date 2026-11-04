@@ -144,6 +144,20 @@ class API {
             });
           }
 
+          // Ensure Non_Audit_Days 70 is available in Strategy 1
+          if (!json.nonAuditDays70 || json.nonAuditDays70.length === 0) {
+            try {
+              const live70 = await fetchLiveSheetCSV("Non_Audit_Days 70");
+              if (live70 && live70.length > 0) {
+                json.nonAuditDays70 = live70;
+              } else {
+                json.nonAuditDays70 = json.nonAuditDays70 || [];
+              }
+            } catch (e70) {
+              json.nonAuditDays70 = json.nonAuditDays70 || [];
+            }
+          }
+
           return json;
         }
       } catch (err) {
@@ -153,13 +167,14 @@ class API {
 
     // Strategy 2: Fallback to direct Google Sheets GViz CSV (public read)
     console.log("Fetching live data directly from Google Sheets via GViz CSV...");
-    const [mainAudit, masterListsRaw, usersRaw, holidaysRaw, nonAuditRaw, delayRaw] = await Promise.all([
+    const [mainAudit, masterListsRaw, usersRaw, holidaysRaw, nonAuditRaw, delayRaw, nonAudit70Raw] = await Promise.all([
       fetchLiveSheetCSV("Main_Audit"),
       fetchLiveSheetCSV("Master_Lists"),
       fetchLiveSheetCSV("Users"),
       fetchLiveSheetCSV("Thai_Holidays"),
       fetchLiveSheetCSV("Non_Audit_Days"),
-      fetchLiveSheetCSV("Delay")
+      fetchLiveSheetCSV("Delay"),
+      fetchLiveSheetCSV("Non_Audit_Days 70")
     ]);
 
     const masterLists = masterListsRaw.map(r => {
@@ -206,6 +221,7 @@ class API {
       users: users,
       holidays: holidaysRaw,
       nonAuditDays: nonAuditDays,
+      nonAuditDays70: nonAudit70Raw || [],
       delay: delayRaw
     };
   }

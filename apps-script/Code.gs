@@ -87,6 +87,9 @@ function doPost(e) {
     } else if (action === "saveNonAuditDays") {
       saveNonAuditDaysForDept(ss, contents.departmentName || contents.data && contents.data["ส่วนงาน"], contents.nonAuditDays || contents.data && contents.data.nonAuditDays);
       responseData = { status: "success", message: "บันทึกวันที่ไม่ได้ปฏิบัติงานเรียบร้อยแล้ว" };
+    } else if (action === "saveNonAuditDays70") {
+      saveNonAuditDays70ForDept(ss, contents.departmentName || contents.data && contents.data["ส่วนงาน"], contents.nonAuditDays70 || contents.data && contents.data.nonAuditDays70);
+      responseData = { status: "success", message: "บันทึกข้อมูล Non_Audit_Days 70 เรียบร้อยแล้ว" };
     } else {
       responseData = { status: "error", message: "Unknown action: " + action };
     }
@@ -112,6 +115,7 @@ function getAllData(ss) {
   const masterSheet = ss.getSheetByName("Master_Lists");
   const holidaysSheet = ss.getSheetByName("Thai_Holidays") || ss.getSheetByName("Holidays");
   const nonAuditSheet = ss.getSheetByName("Non_Audit_Days");
+  const nonAudit70Sheet = ss.getSheetByName("Non_Audit_Days 70") || ss.getSheetByName("Non_Audit_Days_70");
 
   return {
     status: "success",
@@ -120,7 +124,8 @@ function getAllData(ss) {
     users: readSheetData(usersSheet),
     masterLists: readSheetData(masterSheet),
     holidays: holidaysSheet ? readSheetData(holidaysSheet) : [],
-    nonAuditDays: readSheetData(nonAuditSheet)
+    nonAuditDays: readSheetData(nonAuditSheet),
+    nonAuditDays70: nonAudit70Sheet ? readSheetData(nonAudit70Sheet) : []
   };
 }
 
@@ -237,6 +242,7 @@ function saveAuditEntry(ss, data) {
   }
 
   const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
+  const isYear70 = String(data["ปีงบประมาณ"] || "").trim() === "2570";
 
   let plannedDays = -1;
   if (data["ระยะเวลาตรวจสอบตามแผน"] !== undefined && data["ระยะเวลาตรวจสอบตามแผน"] !== "") {
@@ -245,13 +251,28 @@ function saveAuditEntry(ss, data) {
     plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
   }
 
+  let nonAuditCount = 0;
+  if (isYear70) {
+    if (Array.isArray(data.nonAuditDays70)) {
+      nonAuditCount = data.nonAuditDays70.reduce((acc, curr) => acc + (Number(curr.days || curr["จำนวนวัน"]) || 0), 0);
+    } else {
+      nonAuditCount = sumNonAuditDays70ForDept(ss, data["ส่วนงาน"]);
+    }
+  } else {
+    if (Array.isArray(data.nonAuditDays)) {
+      nonAuditCount = data.nonAuditDays.length;
+    } else {
+      nonAuditCount = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
+    }
+  }
+
   let actualDays = -1;
   if (data["ระยะเวลาตรวจจริง (วัน)"] !== undefined && data["ระยะเวลาตรวจจริง (วัน)"] !== "") {
     actualDays = Number(data["ระยะเวลาตรวจจริง (วัน)"]);
   } else if (data["ระยะเวลาตรวจจริง"] !== undefined && data["ระยะเวลาตรวจจริง"] !== "") {
     actualDays = Number(data["ระยะเวลาตรวจจริง"]);
   } else if (plannedDays >= 0) {
-    actualDays = Math.max(plannedDays + approvedExtDays, 0);
+    actualDays = Math.max(plannedDays + approvedExtDays - nonAuditCount, 0);
   }
 
   let durPresident = -1;
@@ -392,8 +413,14 @@ function saveAuditEntry(ss, data) {
   }
 
   // Save non-audit days if provided
-  if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
-    saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
+  if (isYear70) {
+    if (data.nonAuditDays70 !== undefined && data["ส่วนงาน"]) {
+      saveNonAuditDays70ForDept(ss, data["ส่วนงาน"], data.nonAuditDays70);
+    }
+  } else {
+    if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
+      saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
+    }
   }
 
   return { status: "success", message: "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว" };
@@ -407,6 +434,7 @@ function updateAuditEntry(ss, rowIndex, data) {
   const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 22)).getValues()[0].map(h => String(h).trim());
 
   const approvedExtDays = getApprovedExtensionDaysForDept(ss, data["ส่วนงาน"]);
+  const isYear70 = String(data["ปีงบประมาณ"] || "").trim() === "2570";
 
   let plannedDays = -1;
   if (data["ระยะเวลาตรวจสอบตามแผน"] !== undefined && data["ระยะเวลาตรวจสอบตามแผน"] !== "") {
@@ -415,7 +443,20 @@ function updateAuditEntry(ss, rowIndex, data) {
     plannedDays = calculateDaysDiff(data["วันที่เริ่มตรวจสอบ"], data["วันที่สิ้นสุดการตรวจสอบ"]);
   }
 
-  const nonAuditCount = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
+  let nonAuditCount = 0;
+  if (isYear70) {
+    if (Array.isArray(data.nonAuditDays70)) {
+      nonAuditCount = data.nonAuditDays70.reduce((acc, curr) => acc + (Number(curr.days || curr["จำนวนวัน"]) || 0), 0);
+    } else {
+      nonAuditCount = sumNonAuditDays70ForDept(ss, data["ส่วนงาน"]);
+    }
+  } else {
+    if (Array.isArray(data.nonAuditDays)) {
+      nonAuditCount = data.nonAuditDays.length;
+    } else {
+      nonAuditCount = countNonAuditDaysForDept(ss, data["ส่วนงาน"]);
+    }
+  }
 
   let actualDays = -1;
   if (data["ระยะเวลาตรวจจริง (วัน)"] !== undefined && data["ระยะเวลาตรวจจริง (วัน)"] !== "") {
@@ -560,8 +601,14 @@ function updateAuditEntry(ss, rowIndex, data) {
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowValues]);
 
   // Save non-audit days if provided
-  if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
-    saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
+  if (isYear70) {
+    if (data.nonAuditDays70 !== undefined && data["ส่วนงาน"]) {
+      saveNonAuditDays70ForDept(ss, data["ส่วนงาน"], data.nonAuditDays70);
+    }
+  } else {
+    if (data.nonAuditDays !== undefined && data["ส่วนงาน"]) {
+      saveNonAuditDaysForDept(ss, data["ส่วนงาน"], data.nonAuditDays);
+    }
   }
 
   return { status: "success", message: "แก้ไขข้อมูลใน Google Sheet เรียบร้อยแล้ว" };
@@ -576,6 +623,7 @@ function deleteAuditEntry(ss, rowIndex) {
     sheet.deleteRow(row);
     if (deptName) {
       saveNonAuditDaysForDept(ss, deptName, []);
+      saveNonAuditDays70ForDept(ss, deptName, []);
     }
     return { status: "success", message: "ลบรายการออกจาก Google Sheet เรียบร้อยแล้ว" };
   }
@@ -691,6 +739,139 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
       sheet.appendRow(rowValues);
     });
   }
+}
+
+function saveNonAuditDays70ForDept(ss, deptName, nonAuditDays70) {
+  if (!ss) ss = getSpreadsheet();
+  if (!deptName) return;
+
+  ensureSheets(ss);
+  let sheet = ss.getSheetByName("Non_Audit_Days 70") || ss.getSheetByName("Non_Audit_Days_70");
+  if (!sheet) {
+    sheet = ss.insertSheet("Non_Audit_Days 70");
+    sheet.appendRow(["จำนวนวัน", "เหตุผล", "ส่วนงาน", "ปีงบประมาณ"]);
+  }
+
+  // If passed as string, parse it
+  if (typeof nonAuditDays70 === "string") {
+    try {
+      nonAuditDays70 = JSON.parse(nonAuditDays70);
+    } catch(e) {}
+  }
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = Math.max(sheet.getLastColumn(), 4);
+
+  // Read existing headers or initialize
+  let headers = [];
+  if (lastRow >= 1) {
+    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h).trim());
+  }
+  if (headers.length === 0 || !headers.some(h => h.includes("ส่วนงาน") || h.toLowerCase().includes("department"))) {
+    headers = ["จำนวนวัน", "เหตุผล", "ส่วนงาน", "ปีงบประมาณ"];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+
+  // 1. Delete all existing rows ONLY for this exact department
+  let deptColIdx = 2; // Col C default
+  headers.forEach((h, idx) => {
+    const hNorm = h.toLowerCase().trim();
+    if (hNorm.includes("ส่วนงาน") || hNorm === "department") {
+      deptColIdx = idx;
+    }
+  });
+
+  if (lastRow >= 2) {
+    const dataVals = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    for (let i = dataVals.length - 1; i >= 0; i--) {
+      let isMatch = false;
+      if (deptColIdx !== -1 && deptColIdx < dataVals[i].length) {
+        const cellVal = String(dataVals[i][deptColIdx] || "").trim();
+        if (cellVal && isSameDept(cellVal, deptName)) {
+          isMatch = true;
+        }
+      } else {
+        for (let j = 0; j < dataVals[i].length; j++) {
+          const cellVal = String(dataVals[i][j] || "").trim();
+          if (cellVal && isSameDept(cellVal, deptName)) {
+            isMatch = true;
+            break;
+          }
+        }
+      }
+      if (isMatch) {
+        sheet.deleteRow(i + 2);
+      }
+    }
+  }
+
+  // 2. Append new rows for this department
+  if (Array.isArray(nonAuditDays70) && nonAuditDays70.length > 0) {
+    nonAuditDays70.forEach(entry => {
+      if (!entry) return;
+      const days = Number(entry.days || entry["จำนวนวัน"] || 0);
+      const reason = String(entry.reason || entry["เหตุผล"] || "").trim();
+      if (days <= 0 && !reason) return;
+
+      const rowValues = headers.map(h => {
+        const hNorm = h.toLowerCase().trim();
+        if (hNorm.includes("จำนวนวัน") || hNorm.includes("days")) return days;
+        if (hNorm.includes("เหตุผล") || hNorm.includes("สาเหตุ") || hNorm.includes("reason")) return reason;
+        if (hNorm.includes("ส่วนงาน") || hNorm === "department") return deptName;
+        if (hNorm.includes("ปี") || hNorm.includes("year")) return "2570";
+        return "";
+      });
+
+      sheet.appendRow(rowValues);
+    });
+  }
+}
+
+function sumNonAuditDays70ForDept(ss, deptName) {
+  if (!deptName) return 0;
+  if (!ss) ss = getSpreadsheet();
+  const sheet = ss.getSheetByName("Non_Audit_Days 70") || ss.getSheetByName("Non_Audit_Days_70");
+  if (!sheet) return 0;
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = Math.max(sheet.getLastColumn(), 4);
+  if (lastRow < 2) return 0;
+
+  const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const headers = values[0].map(h => String(h).trim());
+
+  let daysColIdx = 0; // Col A
+  let deptColIdx = 2; // Col C
+  headers.forEach((h, idx) => {
+    const hNorm = h.toLowerCase().trim();
+    if (hNorm.includes("จำนวนวัน") || hNorm.includes("days")) daysColIdx = idx;
+    if (hNorm.includes("ส่วนงาน") || hNorm === "department") deptColIdx = idx;
+  });
+
+  let total = 0;
+  for (let i = 1; i < values.length; i++) {
+    let isMatch = false;
+    const cellDept = String(values[i][deptColIdx] || "").trim();
+    if (cellDept && isSameDept(cellDept, deptName)) {
+      isMatch = true;
+    } else {
+      for (let j = 0; j < values[i].length; j++) {
+        if (j !== daysColIdx) {
+          const cVal = String(values[i][j] || "").trim();
+          if (cVal && isSameDept(cVal, deptName)) {
+            isMatch = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (isMatch) {
+      const days = Number(values[i][daysColIdx]) || 0;
+      total += Math.max(days, 0);
+    }
+  }
+  return total;
 }
 
 function getApprovedExtensionDaysForDept(ss, deptName) {
@@ -928,8 +1109,17 @@ function updateMainAuditActualDaysForDept(ss, deptName) {
   for (let i = 1; i < mainValues.length; i++) {
     const rowDept = String(mainValues[i][0] || "").trim().toLowerCase(); // Col A: ส่วนงาน
     if (rowDept === deptClean) {
+      const fiscalYear = String(mainValues[i][1] || "").trim(); // Col B: ปีงบประมาณ
       const plannedDays = parseInt(mainValues[i][8]) || 0; // Col I: ระยะเวลาตรวจสอบตามแผน
-      const totalActual = plannedDays + approvedExtDays;
+      
+      let nonAuditD = 0;
+      if (fiscalYear === "2570") {
+        nonAuditD = sumNonAuditDays70ForDept(ss, deptName);
+      } else {
+        nonAuditD = countNonAuditDaysForDept(ss, deptName);
+      }
+
+      const totalActual = Math.max(plannedDays + approvedExtDays - nonAuditD, 0);
       mainSheet.getRange(i + 1, 10).setValue(totalActual); // Col J: ระยะเวลาตรวจจริง (วัน)
     }
   }
@@ -1011,18 +1201,32 @@ function resubmitExtension(ss, rowIndex, data) {
 
 function ensureSheets(ss) {
   if (!ss) ss = getSpreadsheet();
-  const required = ["Main_Audit", "Delay", "Users", "Master_Lists", "Thai_Holidays", "Non_Audit_Days"];
+  const required = ["Main_Audit", "Delay", "Users", "Master_Lists", "Thai_Holidays", "Non_Audit_Days", "Non_Audit_Days 70"];
   required.forEach(name => {
-    if (!ss.getSheetByName(name)) {
-      const sheet = ss.insertSheet(name);
+    let sheet = ss.getSheetByName(name);
+    if (!sheet && name === "Non_Audit_Days 70") {
+      sheet = ss.getSheetByName("Non_Audit_Days_70");
+    }
+    if (!sheet) {
+      sheet = ss.insertSheet(name);
       if (name === "Master_Lists") {
         sheet.appendRow(["รายชื่อส่วนงาน", "รายชื่อทีม", "รอบประชุม_คตส"]);
       } else if (name === "Thai_Holidays") {
         sheet.appendRow(["วันที่", "รายการ"]);
       } else if (name === "Non_Audit_Days") {
         sheet.appendRow(["วันที่", "ประเภท", "ส่วนงาน", "สาเหตุ/หมายเหตุ"]);
+      } else if (name === "Non_Audit_Days 70" || name === "Non_Audit_Days_70") {
+        sheet.appendRow(["จำนวนวัน", "เหตุผล", "ส่วนงาน", "ปีงบประมาณ"]);
       } else if (name === "Delay") {
         sheet.appendRow(["Timestamp", "Requestor", "Email", "Department", "Start Date", "End Date", "Total number of days", "Reason", "Leader", "LeaderStatus", "LeaderDate", "DeanStatus", "DeanDate", "Remarks"]);
+      }
+    } else if (name === "Non_Audit_Days 70" || name === "Non_Audit_Days_70") {
+      const lastCol = sheet.getLastColumn();
+      if (lastCol < 3 || !String(sheet.getRange(1, 3).getValue()).trim()) {
+        sheet.getRange(1, 3).setValue("ส่วนงาน");
+      }
+      if (lastCol < 4 || !String(sheet.getRange(1, 4).getValue()).trim()) {
+        sheet.getRange(1, 4).setValue("ปีงบประมาณ");
       }
     }
   });

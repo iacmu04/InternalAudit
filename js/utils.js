@@ -221,6 +221,58 @@ function countNonAuditDaysForDepartment(deptName, nonAuditDaysList) {
 }
 
 /**
+ * Universal extractor for Non_Audit_Days 70 row: handles Col A (จำนวนวัน), Col B (เหตุผล), Col C (ส่วนงาน)
+ */
+function extractNonAudit70Row(item) {
+  if (!item) return { days: 0, reason: "", department: "", fiscalYear: "2570" };
+
+  let daysVal = 0;
+  if (item["จำนวนวัน"] !== undefined && item["จำนวนวัน"] !== "") {
+    daysVal = Number(item["จำนวนวัน"]) || 0;
+  } else if (item.days !== undefined && item.days !== "") {
+    daysVal = Number(item.days) || 0;
+  } else if (item._col0 !== undefined && item._col0 !== "") {
+    daysVal = Number(item._col0) || 0;
+  }
+
+  let reasonVal = item["เหตุผล"] || item.reason || item["สาเหตุ/หมายเหตุ"] || item._col1 || "";
+  let deptVal = item["ส่วนงาน"] || item.department || item._col2 || "";
+  let yearVal = item["ปีงบประมาณ"] || item.fiscalYear || item._col3 || "2570";
+
+  return {
+    days: Math.max(daysVal, 0),
+    reason: String(reasonVal).trim(),
+    department: String(deptVal).trim(),
+    fiscalYear: String(yearVal).trim()
+  };
+}
+
+/**
+ * Sum total non-audit days recorded in Non_Audit_Days 70 for a department
+ */
+function sumNonAuditDays70ForDepartment(deptName, nonAuditDays70List) {
+  if (!Array.isArray(nonAuditDays70List) || !deptName) return 0;
+  let total = 0;
+  nonAuditDays70List.forEach(item => {
+    const ext = extractNonAudit70Row(item);
+    if (ext && ext.department && isSameDepartment(ext.department, deptName)) {
+      total += ext.days;
+    }
+  });
+  return total;
+}
+
+/**
+ * Get all non-audit day entries for a department from Non_Audit_Days 70
+ */
+function getNonAuditDays70ForDepartment(deptName, nonAuditDays70List) {
+  if (!Array.isArray(nonAuditDays70List) || !deptName) return [];
+  return nonAuditDays70List
+    .map(item => extractNonAudit70Row(item))
+    .filter(ext => ext && ext.department && isSameDepartment(ext.department, deptName));
+}
+
+/**
  * Calculate actual audit days between startDate and endDate
  */
 function calculateActualAuditDays(startDateStr, endDateStr, departmentName, holidaysList, nonAuditDaysList) {
