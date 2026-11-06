@@ -101,6 +101,7 @@ const app = createApp({
 
     const pdfExportForm = reactive({
       ctsMeetingNumber: "",
+      executiveSummarySubtitle: "",
       includeStatusDetails: true,
       orientation: "landscape"
     });
@@ -1267,6 +1268,38 @@ const app = createApp({
     const exportPdfReportAction = () => {
       pdfExportForm.ctsMeetingNumber = (selectedCtsCycle.value && selectedCtsCycle.value !== "ALL") ? selectedCtsCycle.value : "";
       pdfExportForm.includeStatusDetails = true;
+
+      const activeYr = (selectedFiscalYears.value && selectedFiscalYears.value[0] && selectedFiscalYears.value[0] !== "ALL") 
+        ? selectedFiscalYears.value[0] 
+        : (selectedFiscalYear.value && selectedFiscalYear.value !== "ALL" ? selectedFiscalYear.value : "2570");
+
+      let countRegular = 42;
+      let countSpecial = 13;
+
+      try {
+        const depts = (parsedMasterListsSchema.value && parsedMasterListsSchema.value.departmentsByYear && parsedMasterListsSchema.value.departmentsByYear[activeYr]) || [];
+        if (depts.length > 0) {
+          let reg = 0;
+          let spec = 0;
+          depts.forEach(d => {
+            const cleanTeam = String(d.team || "").replace(/^ทีม\s*/, "").trim();
+            if (["1", "2", "3"].includes(cleanTeam)) {
+              reg++;
+            } else {
+              spec++;
+            }
+          });
+          if (reg > 0 || spec > 0) {
+            countRegular = reg;
+            countSpecial = spec;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not calculate dynamic unit counts", e);
+      }
+
+      pdfExportForm.executiveSummarySubtitle = `หน่วยรับตรวจตามแผนประจำปี ${activeYr} จำนวน ${countRegular} ส่วนงาน งานตรวจสอบอื่น/โครงการพิเศษ จำนวน ${countSpecial} รายการ`;
+
       showPdfModal.value = true;
       nextTick(() => {
         if (window.lucide) lucide.createIcons();
@@ -1287,6 +1320,7 @@ const app = createApp({
         selectedTeam: selectedTeam.value,
         selectedPhase: selectedPhase.value,
         ctsMeetingNumber: pdfExportForm.ctsMeetingNumber.trim(),
+        executiveSummarySubtitle: (pdfExportForm.executiveSummarySubtitle || "").trim(),
         includeStatusDetails: pdfExportForm.includeStatusDetails,
         orientation: pdfExportForm.orientation || "landscape",
         totalPlannedUnitsCount: totalPlannedUnitsCount.value,

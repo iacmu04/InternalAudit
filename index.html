@@ -1626,6 +1626,20 @@
                     </p>
                 </div>
 
+                <!-- 1.1 Custom Subtitle for Executive Summary (Page 1) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-800 mb-1.5 flex items-center justify-between">
+                        <span>ข้อความสรุปเป้าหมายแผนงาน (หน้าสรุปภาพรวม)</span>
+                        <span class="text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">แก้ไขได้</span>
+                    </label>
+                    <textarea v-model="pdfExportForm.executiveSummarySubtitle" rows="2"
+                              placeholder="เช่น หน่วยรับตรวจตามแผนประจำปี 2570 จำนวน 42 ส่วนงาน งานตรวจสอบอื่น/โครงการพิเศษ จำนวน 13 รายการ"
+                              class="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"></textarea>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                        * สามารถแก้ไขข้อความเพื่อระบุจำนวนส่วนงานและโครงการพิเศษได้ตามต้องการก่อนพิมพ์ PDF
+                    </p>
+                </div>
+
                 <!-- 2. Option to include or exclude status details -->
                 <div class="p-3.5 bg-purple-50/70 border border-purple-200/80 rounded-2xl">
                     <label class="flex items-start gap-3 cursor-pointer">

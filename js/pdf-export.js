@@ -11,6 +11,7 @@ function generatePdfReport(options) {
   let totalPlannedUnitsCount = 0, completedUnitsCount = 0, overallCompletionRate = 0;
   let fiscalYearOptions = ["2570", "2569"];
   let includeStatusDetails = true;
+  let executiveSummarySubtitle = "";
 
   if (options && typeof options === 'object' && !Array.isArray(options)) {
     masterLists = options.masterLists || [];
@@ -24,6 +25,9 @@ function generatePdfReport(options) {
     completedUnitsCount = options.completedUnitsCount || 0;
     overallCompletionRate = options.overallCompletionRate || 0;
     includeStatusDetails = options.includeStatusDetails !== undefined ? options.includeStatusDetails : true;
+    if (options.executiveSummarySubtitle !== undefined && options.executiveSummarySubtitle !== null) {
+      executiveSummarySubtitle = String(options.executiveSummarySubtitle).trim();
+    }
     if (options.parsedSchema && options.parsedSchema.years && options.parsedSchema.years.length > 0) {
       fiscalYearOptions = options.parsedSchema.years;
     }
@@ -186,7 +190,7 @@ function generatePdfReport(options) {
       <tr style="background-color: #B889CF; color: #ffffff;">
         <th style="padding: 8px 10px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; font-size: 10.5pt; text-align: left; vertical-align: middle; width: 34%; font-weight: bold;">สถานะการดำเนินงาน</th>
         ${activeYears.map(yr => `
-          <th style="padding: 8px 4px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%; font-weight: bold;">จำนวนส่วนงาน<br>${yr}</th>
+          <th style="padding: 6px 3px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; font-size: 9pt; line-height: 1.2; width: 11%; font-weight: bold;">จำนวน<br>(ส่วนงาน/โครงการ)<br>${yr}</th>
           <th style="padding: 8px 4px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%; font-weight: bold;">สัดส่วน (%)<br>${yr}</th>
         `).join('')}
         <th style="padding: 8px 4px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; font-size: 10pt; line-height: 1.25; width: 11%; font-weight: bold;">จำนวนรวม<br>(${activeYears.length} ปี)</th>
@@ -271,11 +275,11 @@ function generatePdfReport(options) {
     tableHeaderHTML = `
       <tr style="background-color: #B889CF; color: #ffffff;">
         <th style="padding: 9px 14px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; font-size: 11pt; text-align: left; vertical-align: middle; font-weight: bold;">สถานะการดำเนินงาน</th>
-        <th style="padding: 9px 8px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; width: 160px; font-size: 11pt; white-space: nowrap; font-weight: bold;">
-          <div style="text-align: center; margin: 0 auto; width: 100%;">จำนวน (ส่วนงาน)</div>
+        <th style="padding: 7px 8px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; width: 160px; font-size: 10.5pt; font-weight: bold; line-height: 1.25;">
+          <div style="text-align: center; margin: 0 auto; width: 100%;">จำนวน<br>(ส่วนงาน/โครงการ)</div>
         </th>
-        <th style="padding: 9px 8px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; width: 130px; font-size: 11pt; white-space: nowrap; font-weight: bold;">
-          <div style="text-align: center; margin: 0 auto; width: 100%;">สัดส่วน (%)</div>
+        <th style="padding: 7px 8px; border: 1px solid #a372bb; background-color: #B889CF !important; color: #ffffff !important; text-align: center !important; vertical-align: middle !important; width: 130px; font-size: 10.5pt; font-weight: bold; line-height: 1.25;">
+          <div style="text-align: center; margin: 0 auto; width: 100%;">สัดส่วน<br>(%)</div>
         </th>
       </tr>
     `;
@@ -326,7 +330,7 @@ function generatePdfReport(options) {
     const allCategories = [
       {
         num: 2,
-        title: `2. ดำเนินการเสร็จสมบูรณ์ (ชี้แจงผลการดำเนินงานตามข้อเสนอแนะแล้ว) (${stats.completed.length} ส่วนงาน - ${yrPct(stats.completed.length)})`,
+        title: `2. ดำเนินการเสร็จสมบูรณ์ (ชี้แจงผลการดำเนินงานตามข้อเสนอแนะแล้ว) (${stats.completed.length} ส่วนงาน/โครงการ - ${yrPct(stats.completed.length)})`,
         headerBg: "#86E3CE",
         headerColor: "#0E5C4B",
         bodyBg: "#EFFCF9",
@@ -335,7 +339,7 @@ function generatePdfReport(options) {
       },
       {
         num: 3,
-        title: `3. รายงานผลการตรวจสอบต่ออธิการบดีแล้ว (${stats.reportedPresident.length} ส่วนงาน - ${yrPct(stats.reportedPresident.length)})`,
+        title: `3. รายงานผลการตรวจสอบต่ออธิการบดีแล้ว (${stats.reportedPresident.length} ส่วนงาน/โครงการ - ${yrPct(stats.reportedPresident.length)})`,
         headerBg: "#A7F3D0",
         headerColor: "#065F46",
         bodyBg: "#F0FDF4",
@@ -344,7 +348,7 @@ function generatePdfReport(options) {
       },
       {
         num: 4,
-        title: `4. ระหว่างสรุปปิดตรวจ (${stats.closingSummary.length} ส่วนงาน - ${yrPct(stats.closingSummary.length)})`,
+        title: `4. ระหว่างสรุปปิดตรวจ (${stats.closingSummary.length} ส่วนงาน/โครงการ - ${yrPct(stats.closingSummary.length)})`,
         headerBg: "#D0E6A5",
         headerColor: "#3D5A14",
         bodyBg: "#F6FBF0",
@@ -353,7 +357,7 @@ function generatePdfReport(options) {
       },
       {
         num: 5,
-        title: `5. ระหว่างร่างรายงาน (${stats.draftingReport.length} ส่วนงาน - ${yrPct(stats.draftingReport.length)})`,
+        title: `5. ระหว่างร่างรายงาน (${stats.draftingReport.length} ส่วนงาน/โครงการ - ${yrPct(stats.draftingReport.length)})`,
         headerBg: "#FFDD94",
         headerColor: "#7A5200",
         bodyBg: "#FFF9EC",
@@ -362,7 +366,7 @@ function generatePdfReport(options) {
       },
       {
         num: 6,
-        title: `6. ระหว่างเข้าตรวจ (${stats.auditing.length} ส่วนงาน - ${yrPct(stats.auditing.length)})`,
+        title: `6. ระหว่างเข้าตรวจ (${stats.auditing.length} ส่วนงาน/โครงการ - ${yrPct(stats.auditing.length)})`,
         headerBg: "#FA897B",
         headerColor: "#9A2C1E",
         bodyBg: "#FFF0EE",
@@ -401,7 +405,7 @@ function generatePdfReport(options) {
       return [`
         <div style="margin-bottom: ${isLandscape ? '6px' : '10px'}; border: 2px solid #B889CF; border-radius: 6px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
           <div style="background-color: #f6ecfc; padding: ${isLandscape ? '4px 10px' : '6px 12px'}; font-weight: 800; font-size: ${isLandscape ? '10pt' : '11pt'}; color: #5e327a; border-bottom: 1px solid #B889CF; font-family: 'Sarabun', sans-serif;">
-            📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)
+            📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน/โครงการ)
           </div>
           <div style="padding: ${isLandscape ? '4px 6px' : '6px 8px'}; background-color: #ffffff;">
             ${activeCards.join('')}
@@ -495,7 +499,7 @@ function generatePdfReport(options) {
     return pages.map((cardsHTML, pIdx) => `
       <div style="margin-bottom: 10px; border: 2px solid #B889CF; border-radius: 6px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
         <div style="background-color: #f6ecfc; padding: 5px 10px; font-weight: 800; font-size: 10.5pt; color: #5e327a; border-bottom: 1px solid #B889CF; font-family: 'Sarabun', sans-serif;">
-          📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน)${pIdx > 0 ? ' (ต่อ)' : ''}
+          📅 รายละเอียดงานตรวจสอบ ปีงบประมาณ พ.ศ. ${yr} (ทั้งหมด ${stats.totalPlanned} ส่วนงาน/โครงการ)${pIdx > 0 ? ' (ต่อ)' : ''}
         </div>
         <div style="padding: 6px 8px; background-color: #ffffff;">
           ${cardsHTML.join('')}
@@ -516,7 +520,7 @@ function generatePdfReport(options) {
   activeYears.forEach(yr => {
     const stats = yearStatsMap[yr];
     const yrPct = (count) => ((count / stats.totalPlanned) * 100).toFixed(1) + "%";
-    const headerTitle = `📅 รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ ปีงบประมาณ พ.ศ. ${yr} (รวม ${stats.unstarted.length} ส่วนงาน - ${yrPct(stats.unstarted.length)})`;
+    const headerTitle = `📅 รายชื่อส่วนงาน/โครงการที่ยังไม่ได้ดำเนินการ ปีงบประมาณ พ.ศ. ${yr} (รวม ${stats.unstarted.length} ส่วนงาน/โครงการ - ${yrPct(stats.unstarted.length)})`;
 
     const t1 = stats.unstartedByTeam["1"] || [];
     const t2 = stats.unstartedByTeam["2"] || [];
@@ -610,8 +614,8 @@ function generatePdfReport(options) {
         <div style="font-size: ${sectionTitleFontSize}; font-weight: bold; color: #5e327a; margin: 0 0 4px 0; padding-bottom: 3px; border-bottom: 2px solid #B889CF; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
           ส่วนที่ 1: หน้าสรุปภาพรวม (Executive Summary)
         </div>
-        <p style="font-size: 10pt; color: #64748b; margin: 0; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
-          สรุปสัดส่วนการดำเนินงานจำแนกตามสถานะเปรียบเทียบกับจำนวนหน่วยรับตรวจตามแผนประจำปี ${isMultiYear ? `(เปรียบเทียบแยกตามปีงบประมาณ ${activeYears.join(', ')})` : ''}
+        <p style="font-size: 10.5pt; color: #334155; font-weight: bold; margin: 0; line-height: 1.4; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
+          ${executiveSummarySubtitle || `หน่วยรับตรวจตามแผนประจำปี ${activeYears[0] || '2570'} จำนวน 42 ส่วนงาน งานตรวจสอบอื่น/โครงการพิเศษ จำนวน 13 รายการ`}
         </p>
       </div>
 
@@ -635,7 +639,7 @@ function generatePdfReport(options) {
         ${blockHTML}
 
         <div style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px; text-align: right; font-size: 8.5pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
-          หน้า ${pageCounter++}/${totalExactPages} (รายชื่อส่วนงานที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์${bIdx > 0 ? ' - ต่อ' : ''})
+          หน้า ${pageCounter++}/${totalExactPages} (รายชื่อส่วนงาน/โครงการที่อยู่ระหว่างดำเนินการและเสร็จสมบูรณ์${bIdx > 0 ? ' - ต่อ' : ''})
         </div>
       </div>
     `;
@@ -646,13 +650,13 @@ function generatePdfReport(options) {
     pagesHTML += `
       <div style="padding: ${pageWrapperPadding}; page-break-before: always; break-before: page; box-sizing: border-box; page-break-inside: avoid; break-inside: avoid; font-family: 'Tahoma', 'Sarabun', sans-serif;">
         <div style="font-size: ${sectionTitleFontSize}; font-weight: bold; color: #5e327a; margin: ${sectionTitleMargin}; padding-bottom: 3px; border-bottom: 2px solid #B889CF; line-height: 1.35; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
-          ส่วนที่ 3: รายชื่อส่วนงานที่ยังไม่ได้ดำเนินการ (แยกตามงานตรวจสอบ)
+          ส่วนที่ 3: รายชื่อส่วนงาน/โครงการที่ยังไม่ได้ดำเนินการ (แยกตามงานตรวจสอบ)
         </div>
         
         ${blockHTML}
 
         <div style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 4px; text-align: right; font-size: 8.5pt; color: #64748b; font-family: 'Tahoma', 'Sarabun', sans-serif !important;">
-          หน้า ${pageCounter++}/${totalExactPages} (ส่วนงานที่ยังไม่ได้ดำเนินการ${bIdx > 0 ? ' - ต่อ' : ''})
+          หน้า ${pageCounter++}/${totalExactPages} (ส่วนงาน/โครงการที่ยังไม่ได้ดำเนินการ${bIdx > 0 ? ' - ต่อ' : ''})
         </div>
       </div>
     `;
@@ -756,7 +760,7 @@ function formatDeptNameForPdf(name) {
 
 function renderCategoryListHTML(items, includeStatusDetails = true, orientation = 'landscape') {
   if (!items || items.length === 0) {
-    return `<div style="color: #94a3b8; font-style: italic; font-size: 8.5pt; padding: 2px 0; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการส่วนงานในหมวดนี้ -</div>`;
+    return `<div style="color: #94a3b8; font-style: italic; font-size: 8.5pt; padding: 2px 0; font-family: 'Sarabun', sans-serif;">- ไม่มีรายการในหมวดนี้ -</div>`;
   }
 
   // Determine column count based on orientation & details flag
@@ -865,7 +869,7 @@ function renderTeamsListHTML(teamsMap, orientation = 'landscape') {
 
   return Object.keys(teamsMap).map(key => {
     const list = teamsMap[key] || [];
-    const headerTitle = key === "4" ? `📌 งานตรวจสอบอื่น (${list.length} ส่วนงาน)` : `📌 ${teamLabels[key]} (${list.length} ส่วนงาน)`;
+    const headerTitle = key === "4" ? `📌 งานตรวจสอบอื่น (${list.length} ส่วนงาน/โครงการ)` : `📌 ${teamLabels[key]} (${list.length} ส่วนงาน/โครงการ)`;
     
     let rowsHTML = "";
     for (let i = 0; i < list.length; i += cols) {
