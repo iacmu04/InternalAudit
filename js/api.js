@@ -106,7 +106,7 @@ class API {
 
   static getCachedData() {
     try {
-      const raw = localStorage.getItem("INTERNAL_AUDIT_CACHE_DATA");
+      const raw = localStorage.getItem("INTERNAL_AUDIT_CACHE_DATA_V2");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.mainAudit) && parsed.mainAudit.length > 0) {
@@ -122,16 +122,36 @@ class API {
   static setCachedData(data) {
     if (!data || !Array.isArray(data.mainAudit)) return;
     try {
-      localStorage.setItem("INTERNAL_AUDIT_CACHE_DATA", JSON.stringify(data));
+      localStorage.setItem("INTERNAL_AUDIT_CACHE_DATA_V2", JSON.stringify(data));
     } catch (e) {
       console.warn("Error writing cache:", e);
     }
   }
 
   static async fetchInitialData() {
-    // Strategy 1: Parallel direct Google Sheets GViz CSV (Fastest: ~1.0-1.5s total!)
+    // Strategy 1: Apps Script Web App (doGet) - Most accurate & complete
+    // Reads directly from spreadsheet without dropping mixed-format date columns (e.g. Thai text dates)
+    const apiUrl = getStoredApiUrl();
+    if (apiUrl && !apiUrl.includes("AKfycbz_InternalAudit")) {
+      try {
+        console.log("⚡ Fetching complete live data from Apps Script Web App...");
+        const url = `${apiUrl}?action=getInitialData&t=${Date.now()}`;
+        const res = await fetch(url, { redirect: "follow" });
+        const text = await res.text();
+        const json = JSON.parse(text);
+        if (json && json.status === "success" && Array.isArray(json.mainAudit) && json.mainAudit.length > 0) {
+          console.log("✅ Data loaded from Apps Script Web App successfully (", json.mainAudit.length, "rows)");
+          API.setCachedData(json);
+          return json;
+        }
+      } catch (err) {
+        console.warn("Apps Script Web App GET failed, falling back to GViz CSV:", err.message);
+      }
+    }
+
+    // Strategy 2: Fallback to direct Google Sheets GViz CSV
     try {
-      console.log("⚡ Fetching live data in parallel from Google Sheets via GViz CSV...");
+      console.log("Fetching live data directly from Google Sheets via GViz CSV fallback...");
       const [mainAudit, masterListsRaw, usersRaw, holidaysRaw, nonAuditRaw, delayRaw, nonAudit70Raw] = await Promise.all([
         fetchLiveSheetCSV("Main_Audit"),
         fetchLiveSheetCSV("Master_Lists"),
@@ -191,30 +211,11 @@ class API {
           delay: delayRaw
         };
 
-        // Cache for instant load next time
         API.setCachedData(result);
         return result;
       }
     } catch (gvizErr) {
-      console.warn("Parallel GViz fetch failed, falling back to Apps Script Web App:", gvizErr);
-    }
-
-    // Strategy 2: Fallback to Apps Script Web App (doGet)
-    const apiUrl = getStoredApiUrl();
-    if (apiUrl && !apiUrl.includes("AKfycbz_InternalAudit")) {
-      try {
-        const url = `${apiUrl}?action=getInitialData&t=${Date.now()}`;
-        const res = await fetch(url, { redirect: "follow" });
-        const text = await res.text();
-        const json = JSON.parse(text);
-        if (json && json.status === "success" && json.mainAudit) {
-          console.log("✅ Data loaded from Apps Script Web App successfully");
-          API.setCachedData(json);
-          return json;
-        }
-      } catch (err) {
-        console.warn("Apps Script Web App GET failed:", err.message);
-      }
+      console.warn("Parallel GViz fetch failed:", gvizErr);
     }
 
     // If both fail, return cached data as fallback
