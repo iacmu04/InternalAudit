@@ -226,7 +226,6 @@ class API {
 
     return null;
   }
-  }
 
   static async postAction(action, payload) {
     const apiUrl = getStoredApiUrl();
