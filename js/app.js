@@ -99,6 +99,26 @@ const app = createApp({
     const showConfigModal = ref(false);
     const showPdfModal = ref(false);
 
+    const isSubmittingAuditForm = ref(false);
+
+    // Global Non-blocking Toast Notification State
+    const toast = reactive({
+      show: false,
+      message: "",
+      type: "success",
+      timeoutId: null
+    });
+
+    const showToast = (message, type = "success", duration = 3500) => {
+      if (toast.timeoutId) clearTimeout(toast.timeoutId);
+      toast.message = message;
+      toast.type = type;
+      toast.show = true;
+      toast.timeoutId = setTimeout(() => {
+        toast.show = false;
+      }, duration);
+    };
+
     const pdfExportForm = reactive({
       ctsMeetingNumber: "",
       executiveSummarySubtitle: "",
@@ -127,45 +147,49 @@ const app = createApp({
 
     const phaseStructure = PHASE_STRUCTURE;
 
-    // Load initial data from API / Google Sheets
-    const loadData = async () => {
+    const applyDataToState = (data) => {
+      if (!data) return;
+      rawAuditList.value = data.mainAudit || [];
+      delayList.value = data.delay || [];
+      userList.value = data.users || [];
+      masterLists.value = data.masterLists || [];
+      holidaysList.value = data.holidays || [];
+      nonAuditDaysList.value = data.nonAuditDays || [];
+      nonAuditDays70List.value = data.nonAuditDays70 || [];
+
+      // Sync current user with latest info from Users sheet
+      if (userList.value.length > 0 && currentUser.value.email) {
+        const matched = userList.value.find(u => (u.Email || "").toLowerCase().trim() === currentUser.value.email.toLowerCase().trim());
+        if (matched) {
+          currentUser.value = {
+            email: matched.Email,
+            name: matched.Name || matched.Email,
+            role: matched.Role || "User",
+            team: matched.Team || "ทุกทีม",
+            authorize: matched.Authorize || "all"
+          };
+        }
+      }
+    };
+
+    // Load initial data from Cache / API / Google Sheets
+    const loadData = async (forceRefresh = false) => {
       try {
-        console.log("🔄 loadData: Fetching initial data...");
-        console.log("🔄 loadData: API URL =", API.getApiUrl().substring(0, 80) + "...");
+        // 1. Instant First Paint: Load cached data on startup immediately
+        if (!forceRefresh && rawAuditList.value.length === 0) {
+          const cached = API.getCachedData();
+          if (cached) {
+            console.log("⚡ Instant load: Populated dashboard from cache in ~5ms!");
+            applyDataToState(cached);
+          }
+        }
+
+        // 2. Fetch fresh live data from Google Sheets in parallel (~1.2s)
+        console.log("🔄 loadData: Fetching live data...");
         const data = await API.fetchInitialData();
         if (data) {
-          rawAuditList.value = data.mainAudit || [];
-          delayList.value = data.delay || [];
-          userList.value = data.users || [];
-          masterLists.value = data.masterLists || [];
-          holidaysList.value = data.holidays || [];
-          nonAuditDaysList.value = data.nonAuditDays || [];
-          nonAuditDays70List.value = data.nonAuditDays70 || [];
-
-          console.log("✅ loadData: mainAudit =", rawAuditList.value.length, "rows");
-          console.log("✅ loadData: masterLists =", masterLists.value.length, "rows");
-          console.log("✅ loadData: users =", userList.value.length, "rows");
-          console.log("✅ loadData: delay =", delayList.value.length, "rows");
-          if (masterLists.value.length > 0) {
-            const r0 = masterLists.value[0];
-            console.log("✅ loadData: masterLists[0] _col3 =", r0._col3, "| _col5 =", r0._col5);
-          }
-
-          // Sync current user with latest info from Users sheet
-          if (userList.value.length > 0 && currentUser.value.email) {
-            const matched = userList.value.find(u => (u.Email || "").toLowerCase().trim() === currentUser.value.email.toLowerCase().trim());
-            if (matched) {
-              currentUser.value = {
-                email: matched.Email,
-                name: matched.Name || matched.Email,
-                role: matched.Role || "User",
-                team: matched.Team || "ทุกทีม",
-                authorize: matched.Authorize || "all"
-              };
-            }
-          }
-        } else {
-          console.error("❌ loadData: fetchInitialData returned null/undefined");
+          applyDataToState(data);
+          console.log("✅ loadData: Live data loaded and synced successfully (", rawAuditList.value.length, "rows)");
         }
       } catch (err) {
         console.error("❌ Error loading data:", err);
@@ -808,12 +832,12 @@ const app = createApp({
     // Helper for checking write response
     const handleApiResponse = (res) => {
       if (res && res.status === "need_config") {
-        alert("กรุณาเชื่อมต่อ Web App URL จาก Google Apps Script เพื่อบันทึกลง Google Sheet จริง");
+        showToast("กรุณาเชื่อมต่อ Web App URL จาก Google Apps Script เพื่อบันทึกลง Google Sheet จริง", "warning", 5000);
         openConfigModal();
         return false;
       }
       if (res && res.status === "error") {
-        alert("เกิดข้อผิดพลาดในการบันทึก: " + res.message);
+        showToast("เกิดข้อผิดพลาดในการบันทึก: " + res.message, "error", 6000);
         return false;
       }
       return true;
@@ -1161,22 +1185,30 @@ const app = createApp({
         }
       }
 
-      let res;
-      if (editingRowIndex.value) {
-        res = await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: formDataToSend });
-      } else {
-        res = await API.postAction("saveAuditEntry", { data: formDataToSend });
+      isSubmittingAuditForm.value = true;
+      try {
+        let res;
+        if (editingRowIndex.value) {
+          res = await API.postAction("updateAuditEntry", { rowIndex: editingRowIndex.value, data: formDataToSend });
+        } else {
+          res = await API.postAction("saveAuditEntry", { data: formDataToSend });
+        }
+
+        if (!handleApiResponse(res)) return;
+
+        // Update local lists for immediate calculation
+        nonAuditDays70List.value = effectiveNonAudit70List;
+        nonAuditDaysList.value = effectiveNonAuditList;
+
+        showAuditModal.value = false;
+        showToast(res.message || "บันทึกข้อมูลลง Google Sheet เรียบร้อยแล้ว", "success");
+        await loadData(true);
+      } catch (submitErr) {
+        console.error("Error submitting audit form:", submitErr);
+        showToast("เกิดข้อผิดพลาดในการบันทึก: " + submitErr.message, "error");
+      } finally {
+        isSubmittingAuditForm.value = false;
       }
-
-      if (!handleApiResponse(res)) return;
-
-      // Update local lists for immediate calculation
-      nonAuditDays70List.value = effectiveNonAudit70List;
-      nonAuditDaysList.value = effectiveNonAuditList;
-
-      showAuditModal.value = false;
-      await loadData();
-      alert(res.message || "บันทึกข้อมูลเรียบร้อยแล้ว");
     };
 
     // Delay Form Department Options filtered by selected fiscal year in delayForm
@@ -1261,8 +1293,8 @@ const app = createApp({
       if (!handleApiResponse(res)) return;
 
       showDelayModal.value = false;
-      await loadData();
-      alert(res.message || "เสนอขอขยายเวลาเรียบร้อยแล้ว");
+      showToast(res.message || "เสนอขอขยายเวลาเรียบร้อยแล้ว", "success");
+      await loadData(true);
     };
 
     const exportPdfReportAction = () => {
@@ -1383,8 +1415,8 @@ const app = createApp({
         userRole: currentUser.value.role
       });
       if (!handleApiResponse(res)) return;
-      await loadData();
-      alert(res.message || "ดำเนินการเรียบร้อยแล้ว");
+      showToast(res.message || "ดำเนินการเรียบร้อยแล้ว", "success");
+      await loadData(true);
     };
 
     const promptReject = async (rowIndex) => {
@@ -1399,8 +1431,8 @@ const app = createApp({
           userRole: currentUser.value.role
         });
         if (!handleApiResponse(res)) return;
-        await loadData();
-        alert(res.message || "ดำเนินการตีกลับเรียบร้อยแล้ว");
+        showToast(res.message || "ดำเนินการตีกลับเรียบร้อยแล้ว", "success");
+        await loadData(true);
       }
     };
 
@@ -1429,8 +1461,8 @@ const app = createApp({
       }
       const res = await API.postAction("deleteAuditEntry", { rowIndex: rowIndex });
       if (!handleApiResponse(res)) return;
-      await loadData();
-      alert("ลบรายการเรียบร้อยแล้ว");
+      showToast("ลบรายการออกจาก Google Sheet เรียบร้อยแล้ว", "success");
+      await loadData(true);
     };
 
     const GOOGLE_CLIENT_ID = "1032937309757-qdbtdlmrin42ah85cedoadj1l0td73ls.apps.googleusercontent.com";
@@ -1719,7 +1751,10 @@ const app = createApp({
       getDelayFields,
       selectedDelayDrawerYear,
       delayDrawerYearOptions,
-      filteredAccessibleDelayList
+      filteredAccessibleDelayList,
+      isSubmittingAuditForm,
+      toast,
+      showToast
     };
   }
 });

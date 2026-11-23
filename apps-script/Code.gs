@@ -107,7 +107,6 @@ function doPost(e) {
 
 function getAllData(ss) {
   if (!ss) ss = getSpreadsheet();
-  ensureSheets(ss);
   
   const mainAuditSheet = ss.getSheetByName("Main_Audit");
   const delaySheet = ss.getSheetByName("Delay");
@@ -140,7 +139,7 @@ function readSheetData(sheet) {
   const rows = [];
 
   for (let i = 1; i < values.length; i++) {
-    const rowObj = { _rowIndex: i + 1, _headers: headers };
+    const rowObj = { _rowIndex: i + 1 };
     let hasVal = false;
     for (let j = 0; j < headers.length; j++) {
       let val = values[i][j];
@@ -642,7 +641,6 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
   if (!ss) ss = getSpreadsheet();
   if (!deptName) return;
   
-  ensureSheets(ss);
   let sheet = ss.getSheetByName("Non_Audit_Days");
   if (!sheet) {
     sheet = ss.insertSheet("Non_Audit_Days");
@@ -669,7 +667,7 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 
-  // 1. Delete all existing rows ONLY for this exact department
+  // Find department column index
   let deptColIdx = -1;
   headers.forEach((h, idx) => {
     const hNorm = h.toLowerCase().trim();
@@ -678,31 +676,26 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
     }
   });
 
+  // 1. In-memory filter: Keep rows for all OTHER departments (instant, zero deleteRow calls)
+  let remainingRows = [];
   if (lastRow >= 2) {
-    const dataVals = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-    for (let i = dataVals.length - 1; i >= 0; i--) {
-      let isMatch = false;
-      if (deptColIdx !== -1 && deptColIdx < dataVals[i].length) {
-        const cellVal = String(dataVals[i][deptColIdx] || "").trim();
-        if (cellVal && isSameDept(cellVal, deptName)) {
-          isMatch = true;
-        }
+    const dataVals = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+    remainingRows = dataVals.filter(row => {
+      if (deptColIdx !== -1 && deptColIdx < row.length) {
+        const cellVal = String(row[deptColIdx] || "").trim();
+        if (cellVal && isSameDept(cellVal, deptName)) return false;
       } else {
-        for (let j = 0; j < dataVals[i].length; j++) {
-          const cellVal = String(dataVals[i][j] || "").trim();
-          if (cellVal && isSameDept(cellVal, deptName)) {
-            isMatch = true;
-            break;
-          }
+        for (let j = 0; j < row.length; j++) {
+          const cellVal = String(row[j] || "").trim();
+          if (cellVal && isSameDept(cellVal, deptName)) return false;
         }
       }
-      if (isMatch) {
-        sheet.deleteRow(i + 2);
-      }
-    }
+      return true;
+    });
   }
 
-  // 2. Append new rows (deduplicating by date within the input list)
+  // 2. Prepare new rows in memory (deduplicating by date within input list)
+  const newRows = [];
   if (Array.isArray(nonAuditDays) && nonAuditDays.length > 0) {
     const seenDates = {};
     nonAuditDays.forEach(entry => {
@@ -725,9 +718,17 @@ function saveNonAuditDaysForDept(ss, deptName, nonAuditDays) {
         if (hNorm.includes("สาเหตุ") || hNorm.includes("หมายเหตุ") || hNorm.includes("รายละเอียด") || hNorm === "reason" || hNorm === "details") return details;
         return "";
       });
-
-      sheet.appendRow(rowValues);
+      newRows.push(rowValues);
     });
+  }
+
+  // 3. Single-batch write (combines remaining and new rows in 1 instant call)
+  const allRows = remainingRows.concat(newRows);
+  if (lastRow >= 2) {
+    sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
+  }
+  if (allRows.length > 0) {
+    sheet.getRange(2, 1, allRows.length, headers.length).setValues(allRows);
   }
 }
 
@@ -735,7 +736,6 @@ function saveNonAuditDays70ForDept(ss, deptName, nonAuditDays70) {
   if (!ss) ss = getSpreadsheet();
   if (!deptName) return;
 
-  ensureSheets(ss);
   let sheet = ss.getSheetByName("Non_Audit_Days 70") || ss.getSheetByName("Non_Audit_Days_70");
   if (!sheet) {
     sheet = ss.insertSheet("Non_Audit_Days 70");
@@ -762,7 +762,6 @@ function saveNonAuditDays70ForDept(ss, deptName, nonAuditDays70) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 
-  // 1. Delete all existing rows ONLY for this exact department
   let deptColIdx = 2; // Col C default
   headers.forEach((h, idx) => {
     const hNorm = h.toLowerCase().trim();
@@ -771,31 +770,26 @@ function saveNonAuditDays70ForDept(ss, deptName, nonAuditDays70) {
     }
   });
 
+  // 1. In-memory filter: Keep rows for all OTHER departments (instant, zero deleteRow calls)
+  let remainingRows = [];
   if (lastRow >= 2) {
-    const dataVals = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-    for (let i = dataVals.length - 1; i >= 0; i--) {
-      let isMatch = false;
-      if (deptColIdx !== -1 && deptColIdx < dataVals[i].length) {
-        const cellVal = String(dataVals[i][deptColIdx] || "").trim();
-        if (cellVal && isSameDept(cellVal, deptName)) {
-          isMatch = true;
-        }
+    const dataVals = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+    remainingRows = dataVals.filter(row => {
+      if (deptColIdx !== -1 && deptColIdx < row.length) {
+        const cellVal = String(row[deptColIdx] || "").trim();
+        if (cellVal && isSameDept(cellVal, deptName)) return false;
       } else {
-        for (let j = 0; j < dataVals[i].length; j++) {
-          const cellVal = String(dataVals[i][j] || "").trim();
-          if (cellVal && isSameDept(cellVal, deptName)) {
-            isMatch = true;
-            break;
-          }
+        for (let j = 0; j < row.length; j++) {
+          const cellVal = String(row[j] || "").trim();
+          if (cellVal && isSameDept(cellVal, deptName)) return false;
         }
       }
-      if (isMatch) {
-        sheet.deleteRow(i + 2);
-      }
-    }
+      return true;
+    });
   }
 
-  // 2. Append new rows for this department
+  // 2. Prepare new rows for this department in memory
+  const newRows = [];
   if (Array.isArray(nonAuditDays70) && nonAuditDays70.length > 0) {
     nonAuditDays70.forEach(entry => {
       if (!entry) return;
@@ -811,9 +805,17 @@ function saveNonAuditDays70ForDept(ss, deptName, nonAuditDays70) {
         if (hNorm.includes("ปี") || hNorm.includes("year")) return "2570";
         return "";
       });
-
-      sheet.appendRow(rowValues);
+      newRows.push(rowValues);
     });
+  }
+
+  // 3. Single-batch write (combines remaining and new rows in 1 instant call)
+  const allRows = remainingRows.concat(newRows);
+  if (lastRow >= 2) {
+    sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
+  }
+  if (allRows.length > 0) {
+    sheet.getRange(2, 1, allRows.length, headers.length).setValues(allRows);
   }
 }
 

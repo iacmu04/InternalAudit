@@ -1169,8 +1169,17 @@
                 </div>
 
                 <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                    <button type="button" @click="showAuditModal = false" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">ยกเลิก</button>
-                    <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-xs">💾 บันทึกข้อมูลทั้งหมด</button>
+                    <button type="button" @click="showAuditModal = false" :disabled="isSubmittingAuditForm" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold transition-all">ยกเลิก</button>
+                    <button type="submit" :disabled="isSubmittingAuditForm" 
+                            :class="isSubmittingAuditForm ? 'opacity-70 cursor-not-allowed bg-indigo-500' : 'bg-indigo-600 hover:bg-indigo-700'"
+                            class="px-6 py-2.5 text-white font-black rounded-xl shadow-xs transition-all flex items-center gap-2">
+                        <svg v-if="isSubmittingAuditForm" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span v-if="isSubmittingAuditForm">กำลังบันทึกข้อมูล กรุณารอสักครู่...</span>
+                        <span v-else>💾 บันทึกข้อมูลทั้งหมด</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -1686,6 +1695,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Global Non-blocking Toast Notification -->
+    <transition enter-active-class="transform ease-out duration-300 transition" 
+                enter-from-class="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2" 
+                enter-to-class="translate-y-0 opacity-100 sm:translate-x-0" 
+                leave-active-class="transition ease-in duration-200" 
+                leave-from-class="opacity-100" 
+                leave-to-class="opacity-0">
+        <div v-if="toast.show" class="fixed top-5 right-5 z-[9999] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl border text-xs font-bold transition-all max-w-md pointer-events-auto"
+             :class="{
+                 'bg-emerald-900/95 text-white border-emerald-500 shadow-emerald-950/30': toast.type === 'success',
+                 'bg-red-900/95 text-white border-red-500 shadow-red-950/30': toast.type === 'error',
+                 'bg-amber-900/95 text-white border-amber-500 shadow-amber-950/30': toast.type === 'warning',
+                 'bg-slate-900/95 text-white border-purple-500 shadow-purple-950/30': toast.type === 'info'
+             }">
+            <span class="text-base">
+                <span v-if="toast.type === 'success'">✅</span>
+                <span v-else-if="toast.type === 'error'">❌</span>
+                <span v-else-if="toast.type === 'warning'">⚠️</span>
+                <span v-else>ℹ️</span>
+            </span>
+            <span class="flex-1 whitespace-pre-line leading-relaxed font-semibold">{{ toast.message }}</span>
+            <button @click="toast.show = false" class="text-slate-400 hover:text-white p-1 rounded-lg transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </transition>
 
 </div>
 

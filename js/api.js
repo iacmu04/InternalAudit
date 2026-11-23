@@ -104,10 +104,103 @@ class API {
     setStoredApiUrl(url);
   }
 
+  static getCachedData() {
+    try {
+      const raw = localStorage.getItem("INTERNAL_AUDIT_CACHE_DATA");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.mainAudit) && parsed.mainAudit.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Error reading cache:", e);
+    }
+    return null;
+  }
+
+  static setCachedData(data) {
+    if (!data || !Array.isArray(data.mainAudit)) return;
+    try {
+      localStorage.setItem("INTERNAL_AUDIT_CACHE_DATA", JSON.stringify(data));
+    } catch (e) {
+      console.warn("Error writing cache:", e);
+    }
+  }
+
   static async fetchInitialData() {
+    // Strategy 1: Parallel direct Google Sheets GViz CSV (Fastest: ~1.0-1.5s total!)
+    try {
+      console.log("⚡ Fetching live data in parallel from Google Sheets via GViz CSV...");
+      const [mainAudit, masterListsRaw, usersRaw, holidaysRaw, nonAuditRaw, delayRaw, nonAudit70Raw] = await Promise.all([
+        fetchLiveSheetCSV("Main_Audit"),
+        fetchLiveSheetCSV("Master_Lists"),
+        fetchLiveSheetCSV("Users"),
+        fetchLiveSheetCSV("Thai_Holidays"),
+        fetchLiveSheetCSV("Non_Audit_Days"),
+        fetchLiveSheetCSV("Delay"),
+        fetchLiveSheetCSV("Non_Audit_Days 70")
+      ]);
+
+      if (mainAudit && mainAudit.length > 0) {
+        const masterLists = masterListsRaw.map(r => {
+          const keys = Object.keys(r).filter(k => k !== "_rowIndex");
+          const colDVal = r["ประเภท_เหตุผล_ไม่เข้าตรวจ"] || r["ประเภท/เหตุผล"] || r["เหตุผล_ไม่เข้าตรวจ"] || r["คอลัมน์ D"] || (keys.length >= 4 ? r[keys[3]] : "");
+          return {
+            ...r,
+            "ส่วนงาน": r["รายชื่อส่วนงาน"] || r["ส่วนงาน"] || "",
+            "ทีม": r["รายชื่อทีม"] || r["ทีม"] || "",
+            "ครั้งที่ประชุม_คตส": r["รอบประชุม_คตส"] || r["ครั้งที่ประชุม_คตส"] || r["ครั้งที่ประชุม คตส."] || "",
+            "ประเภท_เหตุผล_ไม่เข้าตรวจ": colDVal
+          };
+        });
+
+        const users = usersRaw.map(r => {
+          const keys = Object.keys(r);
+          return {
+            "Email": r["Email"] || r[keys.find(k => k.toLowerCase().includes("email"))] || r[keys[0]] || "",
+            "Name": r["Name"] || r[keys.find(k => k.toLowerCase().includes("name"))] || r[keys[1]] || "",
+            "Role": r["Role"] || r[keys.find(k => k.toLowerCase().includes("role"))] || r[keys[2]] || "User",
+            "Team": r["Team"] || r[keys.find(k => k.toLowerCase().includes("team"))] || r[keys[3]] || "",
+            "Authorize": r["Authorize"] || r[keys.find(k => k.toLowerCase().includes("authorize"))] || r[keys[4]] || ""
+          };
+        });
+
+        const nonAuditDays = nonAuditRaw.map(r => {
+          const extracted = typeof extractNonAuditRow === "function" ? extractNonAuditRow(r) : null;
+          if (extracted && extracted.date) {
+            return {
+              ...r,
+              "วันที่": formatISODate(extracted.date),
+              "ส่วนงาน": extracted.department || r["ส่วนงาน"] || r.department || "",
+              "ประเภท": extracted.reason || r["ประเภท"] || r.reason || "",
+              "สาเหตุ/หมายเหตุ": extracted.details || r["สาเหตุ/หมายเหตุ"] || r["รายละเอียด"] || extracted.reason || ""
+            };
+          }
+          return r;
+        });
+
+        const result = {
+          status: "success",
+          mainAudit: mainAudit,
+          masterLists: masterLists,
+          users: users,
+          holidays: holidaysRaw,
+          nonAuditDays: nonAuditDays,
+          nonAuditDays70: nonAudit70Raw || [],
+          delay: delayRaw
+        };
+
+        // Cache for instant load next time
+        API.setCachedData(result);
+        return result;
+      }
+    } catch (gvizErr) {
+      console.warn("Parallel GViz fetch failed, falling back to Apps Script Web App:", gvizErr);
+    }
+
+    // Strategy 2: Fallback to Apps Script Web App (doGet)
     const apiUrl = getStoredApiUrl();
-    
-    // Strategy 1: Try fetching via Apps Script Web App (doGet)
     if (apiUrl && !apiUrl.includes("AKfycbz_InternalAudit")) {
       try {
         const url = `${apiUrl}?action=getInitialData&t=${Date.now()}`;
@@ -116,114 +209,23 @@ class API {
         const json = JSON.parse(text);
         if (json && json.status === "success" && json.mainAudit) {
           console.log("✅ Data loaded from Apps Script Web App successfully");
-          
-          // Always ensure Master_Lists has exact column indices _col0.._col6 for Depts and Teams
-          // Col D (idx 3) = 2569 Dept, Col E (idx 4) = 2569 Team, Col F (idx 5) = 2570 Dept, Col G (idx 6) = 2570 Team
-          if (!json.masterLists || json.masterLists.length === 0 || json.masterLists[0]._col5 === undefined || json.masterLists[0]._col6 === undefined) {
-            console.log("🔄 Fetching live Master_Lists via GViz CSV to get exact team columns (Col E for 2569, Col G for 2570)...");
-            const liveMaster = await fetchLiveSheetCSV("Master_Lists");
-            if (liveMaster && liveMaster.length > 0) {
-              json.masterLists = liveMaster;
-            }
-          }
-
-          // Normalize Non_Audit_Days in Strategy 1 as well
-          if (Array.isArray(json.nonAuditDays)) {
-            json.nonAuditDays = json.nonAuditDays.map(r => {
-              const extracted = typeof extractNonAuditRow === "function" ? extractNonAuditRow(r) : null;
-              if (extracted && extracted.date) {
-                return {
-                  ...r,
-                  "วันที่": formatISODate(extracted.date),
-                  "ส่วนงาน": extracted.department || r["ส่วนงาน"] || r.department || "",
-                  "ประเภท": extracted.reason || r["ประเภท"] || r.reason || "",
-                  "สาเหตุ/หมายเหตุ": extracted.details || r["สาเหตุ/หมายเหตุ"] || r["รายละเอียด"] || extracted.reason || ""
-                };
-              }
-              return r;
-            });
-          }
-
-          // Ensure Non_Audit_Days 70 is available in Strategy 1
-          if (!json.nonAuditDays70 || json.nonAuditDays70.length === 0) {
-            try {
-              const live70 = await fetchLiveSheetCSV("Non_Audit_Days 70");
-              if (live70 && live70.length > 0) {
-                json.nonAuditDays70 = live70;
-              } else {
-                json.nonAuditDays70 = json.nonAuditDays70 || [];
-              }
-            } catch (e70) {
-              json.nonAuditDays70 = json.nonAuditDays70 || [];
-            }
-          }
-
+          API.setCachedData(json);
           return json;
         }
       } catch (err) {
-        console.warn("Apps Script Web App GET failed, falling back to GViz CSV:", err.message);
+        console.warn("Apps Script Web App GET failed:", err.message);
       }
     }
 
-    // Strategy 2: Fallback to direct Google Sheets GViz CSV (public read)
-    console.log("Fetching live data directly from Google Sheets via GViz CSV...");
-    const [mainAudit, masterListsRaw, usersRaw, holidaysRaw, nonAuditRaw, delayRaw, nonAudit70Raw] = await Promise.all([
-      fetchLiveSheetCSV("Main_Audit"),
-      fetchLiveSheetCSV("Master_Lists"),
-      fetchLiveSheetCSV("Users"),
-      fetchLiveSheetCSV("Thai_Holidays"),
-      fetchLiveSheetCSV("Non_Audit_Days"),
-      fetchLiveSheetCSV("Delay"),
-      fetchLiveSheetCSV("Non_Audit_Days 70")
-    ]);
+    // If both fail, return cached data as fallback
+    const cachedFallback = API.getCachedData();
+    if (cachedFallback) {
+      console.warn("Returning cached data due to network failures");
+      return cachedFallback;
+    }
 
-    const masterLists = masterListsRaw.map(r => {
-      const keys = Object.keys(r).filter(k => k !== "_rowIndex");
-      const colDVal = r["ประเภท_เหตุผล_ไม่เข้าตรวจ"] || r["ประเภท/เหตุผล"] || r["เหตุผล_ไม่เข้าตรวจ"] || r["คอลัมน์ D"] || (keys.length >= 4 ? r[keys[3]] : "");
-      return {
-        ...r,
-        "ส่วนงาน": r["รายชื่อส่วนงาน"] || r["ส่วนงาน"] || "",
-        "ทีม": r["รายชื่อทีม"] || r["ทีม"] || "",
-        "ครั้งที่ประชุม_คตส": r["รอบประชุม_คตส"] || r["ครั้งที่ประชุม_คตส"] || r["ครั้งที่ประชุม คตส."] || "",
-        "ประเภท_เหตุผล_ไม่เข้าตรวจ": colDVal
-      };
-    });
-
-    const users = usersRaw.map(r => {
-      const keys = Object.keys(r);
-      return {
-        "Email": r["Email"] || r[keys.find(k => k.toLowerCase().includes("email"))] || r[keys[0]] || "",
-        "Name": r["Name"] || r[keys.find(k => k.toLowerCase().includes("name"))] || r[keys[1]] || "",
-        "Role": r["Role"] || r[keys.find(k => k.toLowerCase().includes("role"))] || r[keys[2]] || "User",
-        "Team": r["Team"] || r[keys.find(k => k.toLowerCase().includes("team"))] || r[keys[3]] || "",
-        "Authorize": r["Authorize"] || r[keys.find(k => k.toLowerCase().includes("authorize"))] || r[keys[4]] || ""
-      };
-    });
-
-    const nonAuditDays = nonAuditRaw.map(r => {
-      const extracted = typeof extractNonAuditRow === "function" ? extractNonAuditRow(r) : null;
-      if (extracted && extracted.date) {
-        return {
-          ...r,
-          "วันที่": formatISODate(extracted.date),
-          "ส่วนงาน": extracted.department || r["ส่วนงาน"] || r.department || "",
-          "ประเภท": extracted.reason || r["ประเภท"] || r.reason || "",
-          "สาเหตุ/หมายเหตุ": extracted.details || r["สาเหตุ/หมายเหตุ"] || r["รายละเอียด"] || extracted.reason || ""
-        };
-      }
-      return r;
-    });
-
-    return {
-      status: "success",
-      mainAudit: mainAudit,
-      masterLists: masterLists,
-      users: users,
-      holidays: holidaysRaw,
-      nonAuditDays: nonAuditDays,
-      nonAuditDays70: nonAudit70Raw || [],
-      delay: delayRaw
-    };
+    return null;
+  }
   }
 
   static async postAction(action, payload) {
